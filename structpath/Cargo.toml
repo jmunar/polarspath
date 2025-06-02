@@ -1,0 +1,19 @@
+[package]
+name = "structpath"
+version = "0.1.0"
+edition = "2021"
+description = "A library for dynamically accessing nested Rust structures using path notation"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+structpath_derive = { optional = true, path = "../structpath_derive" }
+thiserror = "1.0"
+
+[dev-dependencies]
+structpath_derive = { path = "../structpath_derive" }
+trybuild = "1.0" 
+
+[features]
+default = ["std", "derive"]
+derive = ["structpath_derive"]
+std = []
