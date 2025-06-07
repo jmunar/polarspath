@@ -1,3 +1,5 @@
+use crate::StructPathTrait;
+
 /// Trait for types that can be used as struct values
 pub trait StructValue: Send + Sync + 'static {
     fn as_any(&self) -> &dyn std::any::Any;
@@ -38,23 +40,9 @@ pub enum Value {
     Integer(i64),
     Float(f64),
     Boolean(bool),
-    Enum(Box<dyn StructValue>),
-    Struct(Box<dyn StructValue>),
+    Boxable(Box<dyn StructValue>),
 
-    StringArray(Vec<String>),
-    IntegerArray(Vec<i64>),
-    FloatArray(Vec<f64>),
-    BooleanArray(Vec<bool>),
-    EnumArray(Vec<Box<dyn StructValue>>),
-    StructArray(Vec<Box<dyn StructValue>>),
-
-    StringOptArray(Vec<Option<String>>),
-    IntegerOptArray(Vec<Option<i64>>),
-    FloatOptArray(Vec<Option<f64>>),
-    BooleanOptArray(Vec<Option<bool>>),
-    EnumOptArray(Vec<Option<Box<dyn StructValue>>>),
-    StructOptArray(Vec<Option<Box<dyn StructValue>>>),
-
+    Array(Vec<Value>),
     Optional(Option<Box<Value>>),
 }
 
@@ -100,51 +88,9 @@ impl From<bool> for Value {
     }
 }
 
-impl From<Vec<String>> for Value {
-    fn from(value: Vec<String>) -> Self {
-        Self::StringArray(value)
-    }
-}
-
-impl From<Vec<i64>> for Value {
-    fn from(value: Vec<i64>) -> Self {
-        Self::IntegerArray(value)
-    }
-}
-
-impl From<Vec<f64>> for Value {
-    fn from(value: Vec<f64>) -> Self {
-        Self::FloatArray(value)
-    }
-}
-
-impl From<Vec<bool>> for Value {
-    fn from(value: Vec<bool>) -> Self {
-        Self::BooleanArray(value)
-    }
-}
-
-impl From<Vec<Option<String>>> for Value {
-    fn from(value: Vec<Option<String>>) -> Self {
-        Self::StringOptArray(value)
-    }
-}
-
-impl From<Vec<Option<i64>>> for Value {
-    fn from(value: Vec<Option<i64>>) -> Self {
-        Self::IntegerOptArray(value)
-    }
-}
-
-impl From<Vec<Option<f64>>> for Value {
-    fn from(value: Vec<Option<f64>>) -> Self {
-        Self::FloatOptArray(value)
-    }
-}
-
-impl From<Vec<Option<bool>>> for Value {
-    fn from(value: Vec<Option<bool>>) -> Self {
-        Self::BooleanOptArray(value)
+impl<T: StructValue + StructPathTrait> From<T> for Value {
+    fn from(value: T) -> Self {
+        Self::Boxable(value.clone_box())
     }
 }
 
@@ -154,58 +100,19 @@ impl<T: Into<Value>> From<Option<T>> for Value {
     }
 }
 
-impl From<(&Vec<String>, usize)> for Value {
-    fn from((vec, index): (&Vec<String>, usize)) -> Self {
+impl<T: Into<Value>> From<Vec<T>> for Value {
+    fn from(value: Vec<T>) -> Self {
+        Self::Array(value.into_iter().map(|t| t.into()).collect())
+    }
+}
+
+impl<T: Into<Value> + Clone> From<(&Vec<T>, usize)> for Value {
+    fn from((vec, index): (&Vec<T>, usize)) -> Self {
         vec[index].clone().into()
     }
 }
 
-impl From<(&Vec<i64>, usize)> for Value {
-    fn from((vec, index): (&Vec<i64>, usize)) -> Self {
-        vec[index].into()
-    }
-}
-
-impl From<(&Vec<f64>, usize)> for Value {
-    fn from((vec, index): (&Vec<f64>, usize)) -> Self {
-        vec[index].into()
-    }
-}
-
-impl From<(&Vec<bool>, usize)> for Value {
-    fn from((vec, index): (&Vec<bool>, usize)) -> Self {
-        vec[index].into()
-    }
-}
-
-impl From<(&Vec<Option<String>>, usize)> for Value {
-    fn from((vec, index): (&Vec<Option<String>>, usize)) -> Self {
-        vec[index].clone().into()
-    }
-}
-
-impl From<(&Vec<Option<i64>>, usize)> for Value {
-    fn from((vec, index): (&Vec<Option<i64>>, usize)) -> Self {
-        vec[index].into()
-    }
-}
-
-impl From<(&Vec<Option<f64>>, usize)> for Value {
-    fn from((vec, index): (&Vec<Option<f64>>, usize)) -> Self {
-        vec[index].into()
-    }
-}
-
-impl From<(&Vec<Option<bool>>, usize)> for Value {
-    fn from((vec, index): (&Vec<Option<bool>>, usize)) -> Self {
-        vec[index].into()
-    }
-}
-
-impl<T> From<(&Option<Vec<T>>, usize)> for Value
-where
-    T: Clone + Into<Value>,
-{
+impl<T: Into<Value> + Clone> From<(&Option<Vec<T>>, usize)> for Value {
     fn from((opt_vec, index): (&Option<Vec<T>>, usize)) -> Self {
         match opt_vec {
             Some(vec) => vec[index].clone().into(),
