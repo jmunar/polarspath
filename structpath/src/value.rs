@@ -1,3 +1,5 @@
+use crate::traits::StructPathTrait;
+
 /// Trait for types that can be used as struct values
 pub trait StructValue: Send + Sync + 'static {
     fn as_any(&self) -> &dyn std::any::Any;
@@ -14,6 +16,12 @@ impl<T: Clone + Send + Sync + 'static> StructValue for T {
     }
 }
 
+impl std::fmt::Debug for Box<dyn StructValue> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StructValue").finish()
+    }
+}
+
 impl Clone for Box<dyn StructValue> {
     fn clone(&self) -> Self {
         self.clone_box()
@@ -26,9 +34,45 @@ impl PartialEq for Box<dyn StructValue> {
     }
 }
 
-impl std::fmt::Debug for Box<dyn StructValue> {
+/// Trait for vector-like types that can be used as array values
+pub trait ArrayValue: Send + Sync + 'static {
+    fn as_any(&self) -> &dyn std::any::Any;
+    fn clone_box(&self) -> Box<dyn ArrayValue>;
+    fn debug(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result;
+}
+
+impl<T: Clone + Send + Sync + 'static> ArrayValue for Vec<T>
+where
+    T: Into<Value> + Clone + std::fmt::Debug + PartialEq,
+{
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn clone_box(&self) -> Box<dyn ArrayValue> {
+        Box::new(self.clone())
+    }
+
+    fn debug(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_list().entries(self.iter()).finish()
+    }
+}
+
+impl std::fmt::Debug for Box<dyn ArrayValue> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("StructValue").finish()
+        self.as_ref().debug(f)
+    }
+}
+
+impl Clone for Box<dyn ArrayValue> {
+    fn clone(&self) -> Self {
+        self.as_ref().clone_box()
+    }
+}
+
+impl PartialEq for Box<dyn ArrayValue> {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_any().type_id() == other.as_any().type_id()
     }
 }
 
@@ -38,40 +82,66 @@ pub enum Value {
     Integer(i64),
     Float(f64),
     Boolean(bool),
-    Enum(Box<dyn StructValue>),
-    Struct(Box<dyn StructValue>),
-
-    StringArray(Vec<String>),
-    IntegerArray(Vec<i64>),
-    FloatArray(Vec<f64>),
-    BooleanArray(Vec<bool>),
-    EnumArray(Vec<Box<dyn StructValue>>),
-    StructArray(Vec<Box<dyn StructValue>>),
-
-    StringOptArray(Vec<Option<String>>),
-    IntegerOptArray(Vec<Option<i64>>),
-    FloatOptArray(Vec<Option<f64>>),
-    BooleanOptArray(Vec<Option<bool>>),
-    EnumOptArray(Vec<Option<Box<dyn StructValue>>>),
-    StructOptArray(Vec<Option<Box<dyn StructValue>>>),
-
+    Boxable(Box<dyn StructValue>),
+    Array(Box<dyn ArrayValue>),
     Optional(Option<Box<Value>>),
 }
 
 impl Value {
-    /// Returns a reference to the inner value if this is an Optional variant
-    pub fn as_ref(&self) -> Option<&Value> {
+    pub fn unwrap(&self) -> &Value {
         match self {
-            Value::Optional(Some(value)) => Some(value),
-            _ => None,
+            Value::Optional(Some(value)) => value,
+            _ => panic!("Value is not an optional"),
         }
     }
 
-    /// Takes ownership of the inner value if this is an Optional variant
-    pub fn into_inner(self) -> Option<Value> {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Value::String(value) => value,
+            _ => panic!("Value is not a string"),
+        }
+    }
+
+    pub fn as_i64(&self) -> i64 {
+        match self {
+            Value::Integer(value) => *value,
+            _ => panic!("Value is not an integer"),
+        }
+    }
+
+    pub fn as_f64(&self) -> f64 {
+        match self {
+            Value::Float(value) => *value,
+            _ => panic!("Value is not a float"),
+        }
+    }
+
+    pub fn as_bool(&self) -> bool {
+        match self {
+            Value::Boolean(value) => *value,
+            _ => panic!("Value is not a boolean"),
+        }
+    }
+
+    pub fn as_struct<T: StructValue + 'static>(&self) -> &T {
+        match self {
+            Value::Boxable(boxed) => boxed.as_ref().as_any().downcast_ref::<T>().unwrap(),
+            _ => panic!("Value is not a boxable"),
+        }
+    }
+
+    pub fn as_array<T: ArrayValue + 'static>(&self) -> &T {
+        match self {
+            Value::Array(boxed) => boxed.as_ref().as_any().downcast_ref::<T>().unwrap(),
+            _ => panic!("Value is not an array"),
+        }
+    }
+
+    pub fn as_option(self) -> Option<Value> {
         match self {
             Value::Optional(Some(value)) => Some(*value),
-            _ => None,
+            Value::Optional(None) => None,
+            _ => panic!("Value is not an optional"),
         }
     }
 }
@@ -100,51 +170,9 @@ impl From<bool> for Value {
     }
 }
 
-impl From<Vec<String>> for Value {
-    fn from(value: Vec<String>) -> Self {
-        Self::StringArray(value)
-    }
-}
-
-impl From<Vec<i64>> for Value {
-    fn from(value: Vec<i64>) -> Self {
-        Self::IntegerArray(value)
-    }
-}
-
-impl From<Vec<f64>> for Value {
-    fn from(value: Vec<f64>) -> Self {
-        Self::FloatArray(value)
-    }
-}
-
-impl From<Vec<bool>> for Value {
-    fn from(value: Vec<bool>) -> Self {
-        Self::BooleanArray(value)
-    }
-}
-
-impl From<Vec<Option<String>>> for Value {
-    fn from(value: Vec<Option<String>>) -> Self {
-        Self::StringOptArray(value)
-    }
-}
-
-impl From<Vec<Option<i64>>> for Value {
-    fn from(value: Vec<Option<i64>>) -> Self {
-        Self::IntegerOptArray(value)
-    }
-}
-
-impl From<Vec<Option<f64>>> for Value {
-    fn from(value: Vec<Option<f64>>) -> Self {
-        Self::FloatOptArray(value)
-    }
-}
-
-impl From<Vec<Option<bool>>> for Value {
-    fn from(value: Vec<Option<bool>>) -> Self {
-        Self::BooleanOptArray(value)
+impl<T: StructValue + StructPathTrait> From<T> for Value {
+    fn from(value: T) -> Self {
+        Self::Boxable(value.clone_box())
     }
 }
 
@@ -154,58 +182,22 @@ impl<T: Into<Value>> From<Option<T>> for Value {
     }
 }
 
-impl From<(&Vec<String>, usize)> for Value {
-    fn from((vec, index): (&Vec<String>, usize)) -> Self {
-        vec[index].clone().into()
-    }
-}
-
-impl From<(&Vec<i64>, usize)> for Value {
-    fn from((vec, index): (&Vec<i64>, usize)) -> Self {
-        vec[index].into()
-    }
-}
-
-impl From<(&Vec<f64>, usize)> for Value {
-    fn from((vec, index): (&Vec<f64>, usize)) -> Self {
-        vec[index].into()
-    }
-}
-
-impl From<(&Vec<bool>, usize)> for Value {
-    fn from((vec, index): (&Vec<bool>, usize)) -> Self {
-        vec[index].into()
-    }
-}
-
-impl From<(&Vec<Option<String>>, usize)> for Value {
-    fn from((vec, index): (&Vec<Option<String>>, usize)) -> Self {
-        vec[index].clone().into()
-    }
-}
-
-impl From<(&Vec<Option<i64>>, usize)> for Value {
-    fn from((vec, index): (&Vec<Option<i64>>, usize)) -> Self {
-        vec[index].into()
-    }
-}
-
-impl From<(&Vec<Option<f64>>, usize)> for Value {
-    fn from((vec, index): (&Vec<Option<f64>>, usize)) -> Self {
-        vec[index].into()
-    }
-}
-
-impl From<(&Vec<Option<bool>>, usize)> for Value {
-    fn from((vec, index): (&Vec<Option<bool>>, usize)) -> Self {
-        vec[index].into()
-    }
-}
-
-impl<T> From<(&Option<Vec<T>>, usize)> for Value
+impl<T: Into<Value> + Clone + Send + Sync + 'static> From<Vec<T>> for Value
 where
-    T: Clone + Into<Value>,
+    T: std::fmt::Debug + PartialEq,
 {
+    fn from(value: Vec<T>) -> Self {
+        Self::Array(Box::new(value))
+    }
+}
+
+impl<T: Into<Value> + Clone> From<(&Vec<T>, usize)> for Value {
+    fn from((vec, index): (&Vec<T>, usize)) -> Self {
+        vec[index].clone().into()
+    }
+}
+
+impl<T: Into<Value> + Clone> From<(&Option<Vec<T>>, usize)> for Value {
     fn from((opt_vec, index): (&Option<Vec<T>>, usize)) -> Self {
         match opt_vec {
             Some(vec) => vec[index].clone().into(),

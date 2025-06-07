@@ -40,8 +40,8 @@ enum DataType {
 }
 
 impl DataType {
-    fn new(attrs: &[Attribute]) -> Self {
-        let type_hint_opt = extract_type_hint(attrs);
+    fn new(field: &syn::Field) -> Self {
+        let type_hint_opt = extract_type_hint(field.attrs.as_ref());
         match type_hint_opt {
             Some(type_hint) => match type_hint.as_str() {
                 "enum" => DataType::Enum,
@@ -156,7 +156,7 @@ struct FieldInfo {
 impl FieldInfo {
     fn new(field: &syn::Field) -> Self {
         let name = field.ident.clone().unwrap();
-        let data_type = DataType::new(&field.attrs);
+        let data_type = DataType::new(field);
         let vector_type = VectorType::new(&field.ty);
         Self {
             name,
@@ -178,39 +178,7 @@ pub fn derive_struct_path_impl(input: DeriveInput) -> TokenStream {
                 }
             }
         },
-        Data::Enum(_) => {
-            return quote! {
-                impl From<#type_name> for Value {
-                    fn from(value: #type_name) -> Self {
-                        Self::Enum(value.clone_box())
-                    }
-                }
-
-                impl From<Vec<#type_name>> for Value {
-                    fn from(value: Vec<#type_name>) -> Self {
-                        Self::EnumArray(value.iter().map(|e| e.clone_box()).collect())
-                    }
-                }
-
-                impl From<Vec<Option<#type_name>>> for Value {
-                    fn from(value: Vec<Option<#type_name>>) -> Self {
-                        Self::EnumOptArray(value.iter().map(|e| e.as_ref().map(|e| e.clone_box())).collect())
-                    }
-                }
-
-                impl From<(&Vec<#type_name>, usize)> for Value {
-                    fn from((vec, index): (&Vec<#type_name>, usize)) -> Self {
-                        Self::Enum(vec[index].clone_box())
-                    }
-                }
-
-                impl From<(&Vec<Option<#type_name>>, usize)> for Value {
-                    fn from((vec, index): (&Vec<Option<#type_name>>, usize)) -> Self {
-                        Self::Optional(vec[index].as_ref().map(|e| Box::new(Value::Enum(e.clone_box()))))
-                    }
-                }
-            }
-        }
+        Data::Enum(_) => return quote! {},
         _ => {
             return quote! {
                 compile_error!("StructPath can only be derived for structs and enums");
@@ -312,35 +280,6 @@ pub fn derive_struct_path_impl(input: DeriveInput) -> TokenStream {
         );
 
     quote! {
-        impl From<#type_name> for Value {
-            fn from(value: #type_name) -> Self {
-                Self::Struct(value.clone_box())
-            }
-        }
-
-        impl From<Vec<#type_name>> for Value {
-            fn from(value: Vec<#type_name>) -> Self {
-                Self::StructArray(value.iter().map(|e| e.clone_box()).collect())
-            }
-        }
-
-        impl From<Vec<Option<#type_name>>> for Value {
-            fn from(value: Vec<Option<#type_name>>) -> Self {
-                Self::StructOptArray(value.iter().map(|e| e.as_ref().map(|e| e.clone_box())).collect())
-            }
-        }
-
-        impl From<(&Vec<#type_name>, usize)> for Value {
-            fn from((vec, index): (&Vec<#type_name>, usize)) -> Self {
-                Self::Struct(vec[index].clone_box())
-            }
-        }
-
-        impl From<(&Vec<Option<#type_name>>, usize)> for Value {
-            fn from((vec, index): (&Vec<Option<#type_name>>, usize)) -> Self {
-                Self::Optional(vec[index].as_ref().map(|e| Box::new(Value::Struct(e.clone_box()))))
-            }
-        }
 
         impl StructPathTrait for #type_name {
             fn get_value_by_path(&self, path: &Path) -> Result<Value, StructPathError> {
@@ -406,15 +345,15 @@ mod tests {
         match input.fields {
             Fields::Named(fields_named) => {
                 assert_eq!(
-                    DataType::new(fields_named.named.get(0).unwrap().attrs.as_ref()),
+                    DataType::new(&fields_named.named.get(0).unwrap()),
                     DataType::Basic
                 );
                 assert_eq!(
-                    DataType::new(fields_named.named.get(1).unwrap().attrs.as_ref()),
+                    DataType::new(&fields_named.named.get(1).unwrap()),
                     DataType::Enum
                 );
                 assert_eq!(
-                    DataType::new(fields_named.named.get(2).unwrap().attrs.as_ref()),
+                    DataType::new(&fields_named.named.get(2).unwrap()),
                     DataType::Struct
                 );
             }
