@@ -8,13 +8,13 @@ use std::str::FromStr;
 //     Cat,
 // }
 
-#[derive(StructPath, Debug, Clone)]
+#[derive(StructPath, Debug, Clone, PartialEq)]
 struct Parent {
     name: String,
     age: i64,
 }
 
-#[derive(StructPath, Debug, Clone)]
+#[derive(StructPath, Debug, Clone, PartialEq)]
 struct User {
     name: String,
     age: i64,
