@@ -1,4 +1,4 @@
-use structpath::{Path, PathComponent, StructPath, StructPathError, StructPathTrait, Value};
+use structpath::prelude::*;
 
 use std::str::FromStr;
 
@@ -24,7 +24,7 @@ struct User {
     // pets: Option<Vec<Pet>>,
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let user = User {
         name: "John".to_string(),
         age: 32,
@@ -34,12 +34,15 @@ fn main() {
         }],
         // pets: Some(vec![Pet::Dog]),
     };
-    let age = user.get_value("age").unwrap();
-    assert_eq!(age, Value::Integer(32));
 
-    let father_name = user.get_value("parent[0].name").unwrap();
-    assert_eq!(father_name, Value::String("Joseph".to_string()));
+    let age = user.get_value("age")?;
+    assert_eq!(age.as_i64(), 32);
 
-    // let pet_name = user.get_value("pets[0]").unwrap();
+    let father_name = user.get_value("parent[0].name")?;
+    assert_eq!(father_name.as_str(), "Joseph");
+
+    // let pet_name = user.get_value("pets[0]")?;
     // assert_eq!(pet_name, Value::Boxable(Pet::Dog.clone_box()));
+
+    Ok(())
 }

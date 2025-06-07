@@ -1,4 +1,4 @@
-use crate::{Path, StructPathError, Value};
+use crate::{error::StructPathError, path::Path, value::Value};
 
 pub trait StructPathTrait {
     fn get_value_by_path(&self, path: &Path) -> Result<Value, StructPathError>;

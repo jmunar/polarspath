@@ -1,4 +1,4 @@
-use crate::StructPathTrait;
+use crate::traits::StructPathTrait;
 
 /// Trait for types that can be used as struct values
 pub trait StructValue: Send + Sync + 'static {
@@ -47,19 +47,60 @@ pub enum Value {
 }
 
 impl Value {
-    /// Returns a reference to the inner value if this is an Optional variant
-    pub fn as_ref(&self) -> Option<&Value> {
-        match self {
-            Value::Optional(Some(value)) => Some(value),
-            _ => None,
-        }
-    }
-
     /// Takes ownership of the inner value if this is an Optional variant
     pub fn into_inner(self) -> Option<Value> {
         match self {
             Value::Optional(Some(value)) => Some(*value),
-            _ => None,
+            _ => panic!("Value is not an optional"),
+        }
+    }
+
+    pub fn unwrap(&self) -> &Value {
+        match self {
+            Value::Optional(Some(value)) => value,
+            _ => panic!("Value is not an optional"),
+        }
+    }
+
+    pub fn unbox<T: StructValue + 'static>(&self) -> &T {
+        match self {
+            Value::Boxable(boxed) => boxed.as_ref().as_any().downcast_ref::<T>().unwrap(),
+            _ => panic!("Value is not a boxable"),
+        }
+    }
+
+    pub fn as_str(&self) -> &str {
+        match self {
+            Value::String(value) => value,
+            _ => panic!("Value is not a string"),
+        }
+    }
+
+    pub fn as_i64(&self) -> i64 {
+        match self {
+            Value::Integer(value) => *value,
+            _ => panic!("Value is not an integer"),
+        }
+    }
+
+    pub fn as_f64(&self) -> f64 {
+        match self {
+            Value::Float(value) => *value,
+            _ => panic!("Value is not a float"),
+        }
+    }
+
+    pub fn as_bool(&self) -> bool {
+        match self {
+            Value::Boolean(value) => *value,
+            _ => panic!("Value is not a boolean"),
+        }
+    }
+
+    pub fn as_box(&self) -> &dyn StructValue {
+        match self {
+            Value::Boxable(value) => value,
+            _ => panic!("Value is not a boxable"),
         }
     }
 }
