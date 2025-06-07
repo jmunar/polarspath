@@ -156,7 +156,7 @@ struct FieldInfo {
 impl FieldInfo {
     fn new(field: &syn::Field) -> Self {
         let name = field.ident.clone().unwrap();
-        let data_type = DataType::new(&field);
+        let data_type = DataType::new(field);
         let vector_type = VectorType::new(&field.ty);
         Self {
             name,
@@ -178,9 +178,7 @@ pub fn derive_struct_path_impl(input: DeriveInput) -> TokenStream {
                 }
             }
         },
-        Data::Enum(_) => {
-            return quote! {}
-        }
+        Data::Enum(_) => return quote! {},
         _ => {
             return quote! {
                 compile_error!("StructPath can only be derived for structs and enums");
