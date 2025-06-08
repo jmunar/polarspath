@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package sample;
+
+message User {
+  message Pet {
+    string name = 1;
+    int64 birth_year = 2;
+  }
+
+  message Father {
+    string name = 1;
+    int64 age = 2;
+  }
+
+  message Mother {
+    string name = 1;
+    int64 age = 2;
+  }
+
+  // enum Loyalty {
+  //   SILVER = 0;
+  //   GOLD = 1;
+  //   PLATINUM = 2;
+  // }
+
+  string name = 1;
+  int64 age = 2;
+  optional string email = 3;
+  bool is_active = 4;
+  Pet favourite_pet = 5;
+  repeated string tags = 6;
+  // Loyalty loyalty = 7;
+  repeated Pet pets = 8;
+  // oneof favorite_parent {
+  //   Father father = 9;
+  //   Mother mother = 10;
+  // }
+} 
