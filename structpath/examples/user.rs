@@ -1,6 +1,4 @@
-use structpath::prelude::*;
-
-use std::str::FromStr;
+use structpath::StructPath;
 
 // #[derive(StructPath, Debug, Clone)]
 // enum Pet {

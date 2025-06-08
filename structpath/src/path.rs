@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 /// Represents a single component in a path
 #[derive(Debug, Clone, PartialEq)]
 pub enum PathComponent {
@@ -52,10 +50,11 @@ pub enum PathParseError {
     UnexpectedChar(char),
 }
 
-impl FromStr for Path {
-    type Err = PathParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+/// We don't implement the FromStr trait to avoid extra imports
+/// This prevent us from e.g. using `"pets[0].name".parse::<Path>()`
+impl Path {
+    #[allow(clippy::should_implement_trait)]
+    pub fn from_str(s: &str) -> Result<Self, PathParseError> {
         if s.is_empty() {
             return Err(PathParseError::EmptyPath);
         }
@@ -126,14 +125,14 @@ mod tests {
 
     #[test]
     fn test_simple_path() {
-        let path = "name".parse::<Path>().unwrap();
+        let path = Path::from_str("name").unwrap();
         assert_eq!(path.components.len(), 1);
         assert_eq!(path.components[0], PathComponent::Field("name".to_string()));
     }
 
     #[test]
     fn test_nested_path() {
-        let path = "father.name".parse::<Path>().unwrap();
+        let path = Path::from_str("father.name").unwrap();
         assert_eq!(path.components.len(), 2);
         assert_eq!(
             path.components[0],
@@ -144,7 +143,7 @@ mod tests {
 
     #[test]
     fn test_array_index() {
-        let path = "pets[0].name".parse::<Path>().unwrap();
+        let path = Path::from_str("pets[0].name").unwrap();
         assert_eq!(path.components.len(), 2);
         assert_eq!(
             path.components[0],
@@ -155,11 +154,11 @@ mod tests {
 
     #[test]
     fn test_invalid_paths() {
-        assert!("".parse::<Path>().is_err());
-        assert!(".".parse::<Path>().is_err());
-        assert!("pets[".parse::<Path>().is_err());
-        assert!("pets[a]".parse::<Path>().is_err());
-        assert!("pets[0".parse::<Path>().is_err());
-        assert!("name ".parse::<Path>().is_err());
+        assert!(Path::from_str("").is_err());
+        assert!(Path::from_str(".").is_err());
+        assert!(Path::from_str("pets[").is_err());
+        assert!(Path::from_str("pets[a]").is_err());
+        assert!(Path::from_str("pets[0").is_err());
+        assert!(Path::from_str("name ").is_err());
     }
 }
