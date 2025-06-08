@@ -1,6 +1,4 @@
-use structpath::prelude::*;
-
-use std::str::FromStr;
+use structpath::StructPath;
 
 fn main() {
     test_get_value_by_field_scalar();

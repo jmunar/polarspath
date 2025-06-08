@@ -224,7 +224,7 @@ pub fn derive_struct_path_impl(input: DeriveInput) -> TokenStream {
                 VectorType::ScalarOptional => quote! {
                     stringify!(#field_name) => match self.#field_name.as_ref() {
                         Some(s) => s.get_value_by_path(&remaining_path),
-                        None => Ok(Value::Optional(None))
+                        None => Ok(::structpath::Value::Optional(None))
                     }
                 },
                 _ => quote! {
@@ -254,22 +254,22 @@ pub fn derive_struct_path_impl(input: DeriveInput) -> TokenStream {
                     VectorType::VectorRequiredElementsOptional => quote! {
                         stringify!(#field_name) => match self.#field_name[index].as_ref() {
                             Some(s) => s.get_value_by_path(&remaining_path),
-                            None => Ok(Value::Optional(None)),
+                            None => Ok(::structpath::Value::Optional(None)),
                         }
                     },
                     VectorType::VectorOptionalElementsRequired => quote! {
                         stringify!(#field_name) => match self.#field_name.as_ref(){
                             Some(s) => s[index].get_value_by_path(&remaining_path),
-                            None => Ok(Value::Optional(None)),
+                            None => Ok(::structpath::Value::Optional(None)),
                         }
                     },
                     VectorType::VectorOptionalElementsOptional => quote! {
                         stringify!(#field_name) => match self.#field_name.as_ref(){
                             Some(s) => match s[index].as_ref() {
                                 Some(s) => s.get_value_by_path(&remaining_path),
-                                None => Ok(Value::Optional(None)),
+                                None => Ok(::structpath::Value::Optional(None)),
                             },
-                            None => Ok(Value::Optional(None)),
+                            None => Ok(::structpath::Value::Optional(None)),
                         }
                     },
                     _ => quote! {
@@ -281,21 +281,21 @@ pub fn derive_struct_path_impl(input: DeriveInput) -> TokenStream {
 
     quote! {
 
-        impl StructPathTrait for #type_name {
-            fn get_value_by_path(&self, path: &Path) -> Result<Value, StructPathError> {
+        impl ::structpath::StructPath for #type_name {
+            fn get_value_by_path(&self, path: &::structpath::Path) -> Result<::structpath::Value, ::structpath::StructPathError> {
                 if path.components.len() > 1 {
                     let path_component = path.components[0].clone();
-                    let remaining_path = Path {
+                    let remaining_path = ::structpath::Path {
                         components: path.components[1..].to_vec(),
                     };
                     return match path_component {
-                        PathComponent::Field(field) => match field.as_str() {
+                        ::structpath::PathComponent::Field(field) => match field.as_str() {
                             #(#expr_nested_field,)*
-                            _ => Err(StructPathError::FieldNotFound(field)),
+                            _ => Err(::structpath::StructPathError::FieldNotFound(field)),
                         },
-                        PathComponent::ArrayIndex(field, index) => match field.as_str() {
+                        ::structpath::PathComponent::ArrayIndex(field, index) => match field.as_str() {
                             #(#expr_nested_index,)*
-                            _ => Err(StructPathError::FieldNotFound(field)),
+                            _ => Err(::structpath::StructPathError::FieldNotFound(field)),
                         },
                     }
                 }
@@ -303,22 +303,22 @@ pub fn derive_struct_path_impl(input: DeriveInput) -> TokenStream {
                 let path_component = path.components[0].clone();
 
                 match path_component {
-                    PathComponent::Field(field) => match field.as_str() {
+                    ::structpath::PathComponent::Field(field) => match field.as_str() {
                         #(#expr_final_field,)*
-                        _ => Err(StructPathError::FieldNotFound(field)),
+                        _ => Err(::structpath::StructPathError::FieldNotFound(field)),
                     },
-                    PathComponent::ArrayIndex(field, index) => match field.as_str() {
+                    ::structpath::PathComponent::ArrayIndex(field, index) => match field.as_str() {
                         #(#expr_final_index,)*
-                        _ => Err(StructPathError::FieldNotFound(field)),
+                        _ => Err(::structpath::StructPathError::FieldNotFound(field)),
                     },
                 }
             }
 
-            fn get_value(&self, path: &str) -> Result<Value, StructPathError> {
-                let path = Path::from_str(path);
+            fn get_value(&self, path: &str) -> Result<::structpath::Value, ::structpath::StructPathError> {
+                let path = ::structpath::Path::from_str(path);
                 match path {
                     Ok(path) => self.get_value_by_path(&path),
-                    Err(e) => Err(StructPathError::InvalidPath(e.to_string())),
+                    Err(e) => Err(::structpath::StructPathError::InvalidPath(e.to_string())),
                 }
             }
         }

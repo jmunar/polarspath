@@ -1,8 +1,12 @@
 mod error;
 mod path;
-pub mod prelude;
 mod traits;
 mod value;
+
+pub use error::StructPathError;
+pub use path::{Path, PathComponent};
+pub use traits::StructPath;
+pub use value::Value;
 
 #[cfg(feature = "derive")]
 extern crate structpath_derive;

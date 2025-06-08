@@ -1,4 +1,4 @@
-use crate::traits::StructPathTrait;
+use crate::traits::StructPath;
 
 /// Trait for types that can be used as struct values
 pub trait StructValue: Send + Sync + 'static {
@@ -170,7 +170,7 @@ impl From<bool> for Value {
     }
 }
 
-impl<T: StructValue + StructPathTrait> From<T> for Value {
+impl<T: StructValue + StructPath> From<T> for Value {
     fn from(value: T) -> Self {
         Self::Boxable(value.clone_box())
     }
