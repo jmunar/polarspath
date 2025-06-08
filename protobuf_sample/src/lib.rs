@@ -136,4 +136,35 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_get_value_group() -> Result<(), Box<dyn std::error::Error>> {
+        let group = sample::Group {
+            name: "My Group".to_string(),
+            admin: Some(create_test_user()),
+            members: vec![create_test_user()],
+        };
+
+        let name = group.get_value("name")?;
+        assert_eq!(name.as_str(), "My Group");
+
+        let admin = group.get_value("admin")?;
+        assert_eq!(
+            admin.unwrap().as_struct::<sample::User>().to_owned(),
+            create_test_user()
+        );
+        let admin_name = group.get_value("admin.name")?;
+        assert_eq!(admin_name.as_str(), "John Doe");
+
+        let members = group.get_value("members")?;
+        assert_eq!(
+            members.as_array::<Vec<sample::User>>().to_owned(),
+            vec![create_test_user()]
+        );
+
+        let member0_pet0_birth_year = group.get_value("members[0].pets[0].birth_year")?;
+        assert_eq!(member0_pet0_birth_year.as_i64(), 2020);
+
+        Ok(())
+    }
 }
