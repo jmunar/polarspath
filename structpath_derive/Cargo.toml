@@ -11,5 +11,6 @@ proc-macro = true
 [dependencies]
 proc-macro2 = "1.0"
 quote = "1.0"
+structpath_types = { path = "../structpath_types" }
 syn = { version = "2.0", features = ["full"] }
 thiserror = "1.0"

@@ -48,6 +48,11 @@ Currently, `get_value()` can only access objects being:
 - `i64`
 - `f64`
 - `bool`
-- structs with implemented `StructPathTrait` (`StructPath` macro)
+- arbitrary objects (boxing them)
 - optionals of the above types
 - vectors of the above types
+- nested objects with implemented `StructPath` trait (`StructPath` macro)
+
+Missing:
+- add more scalar types
+- handle nested vectors

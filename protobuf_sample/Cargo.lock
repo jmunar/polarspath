@@ -301,6 +301,7 @@ name = "structpath"
 version = "0.1.0"
 dependencies = [
  "structpath_derive",
+ "structpath_types",
  "thiserror",
 ]
 
@@ -310,8 +311,17 @@ version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
+ "structpath_types",
  "syn",
  "thiserror",
+]
+
+[[package]]
+name = "structpath_types"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
 ]
 
 [[package]]

@@ -57,7 +57,7 @@ mod tests {
         assert_eq!(
             favourite_pet
                 .unwrap()
-                .as_struct::<sample::user::Pet>()
+                .as_unboxed::<sample::user::Pet>()
                 .to_owned(),
             sample::user::Pet {
                 name: "Buddy".to_string(),
@@ -89,7 +89,7 @@ mod tests {
         );
         let pet0 = user.get_value("pets[0]")?;
         assert_eq!(
-            pet0.as_struct::<sample::user::Pet>().to_owned(),
+            pet0.as_unboxed::<sample::user::Pet>().to_owned(),
             sample::user::Pet {
                 name: "Buddy".to_string(),
                 birth_year: 2020,
@@ -150,7 +150,7 @@ mod tests {
 
         let admin = group.get_value("admin")?;
         assert_eq!(
-            admin.unwrap().as_struct::<sample::User>().to_owned(),
+            admin.unwrap().as_unboxed::<sample::User>().to_owned(),
             create_test_user()
         );
         let admin_name = group.get_value("admin.name")?;
