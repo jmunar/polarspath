@@ -11,7 +11,7 @@ pub enum StructPathError {
     #[error("Type mismatch: expected {expected}, got {actual}")]
     TypeMismatch { expected: String, actual: String },
 
-    #[error("Array index out of bounds: {0}")]
+    #[error("Vector index out of bounds: {0}")]
     IndexOutOfBounds(usize),
 
     #[error("Cannot access field of null value")]

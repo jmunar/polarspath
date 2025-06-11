@@ -1,0 +1,10 @@
+[package]
+name = "structpath_types"
+version = "0.1.0"
+edition = "2021"
+description = "Common objects for structpath and structpath_derive"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
