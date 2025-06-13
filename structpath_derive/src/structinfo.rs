@@ -1,10 +1,7 @@
-use proc_macro2::TokenStream;
-use quote::quote;
 use structpath_types::FieldType;
 use syn::PathArguments::AngleBracketed;
 use syn::{
-    AngleBracketedGenericArguments, Attribute, Data, DeriveInput, Expr, Fields, GenericArgument,
-    Lit, Meta, Type,
+    AngleBracketedGenericArguments, Attribute, Expr, GenericArgument, Lit, Meta, Type,
 };
 
 fn get_angle_bracketed_inner(type_path: &syn::TypePath) -> Option<&Type> {
@@ -78,47 +75,5 @@ pub fn parse_field_type(field_type: &Type, attrs: &[Attribute]) -> FieldType {
             None => FieldType::Unknown,
         },
         _ => FieldType::Unknown,
-    }
-}
-
-pub fn derive_struct_info_impl(input: DeriveInput) -> TokenStream {
-    let type_name = input.ident;
-
-    let fields: Vec<TokenStream> = match input.data {
-        Data::Struct(data_struct) if matches!(data_struct.fields, Fields::Named(_)) => {
-            if let Fields::Named(fields_named) = data_struct.fields {
-                fields_named
-                    .named
-                    .iter()
-                    .map(|field| {
-                        let field_name = field.ident.clone().unwrap();
-                        let field_type = parse_field_type(&field.ty, &field.attrs);
-                        quote! {
-                            ::structpath_types::FieldInfo {
-                                name: stringify!(#field_name).to_string(),
-                                r#type: #field_type,
-                            }
-                        }
-                    })
-                    .collect()
-            } else {
-                unreachable!()
-            }
-        }
-        _ => {
-            return quote! {
-                compile_error!("StructInfo can only be derived for structs with named fields");
-            }
-        }
-    };
-
-    quote! {
-        impl ::structpath::StructInfo for #type_name {
-            fn get_fields_info() -> ::structpath_types::FieldsInfo {
-                ::structpath_types::FieldsInfo {
-                    fields: vec![#(#fields),*],
-                }
-            }
-        }
     }
 }

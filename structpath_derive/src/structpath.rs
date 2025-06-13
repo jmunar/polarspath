@@ -75,6 +75,8 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
         }
     };
 
+    let expr_fields_info: Vec<TokenStream> = fields.iter().clone().map(|field| quote!{#field}).collect();
+
     let expr_final_field = fields.iter().map(|field| {
         let field_name = syn::Ident::new(&field.name, proc_macro2::Span::call_site());
         let field_expr = value_from_field(&field.r#type, quote! { self.#field_name });
@@ -191,6 +193,13 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
     quote! {
 
         impl ::structpath::StructPath for #type_name {
+
+            fn get_fields_info() -> ::structpath_types::FieldsInfo {
+                ::structpath_types::FieldsInfo {
+                    fields: vec![#(#expr_fields_info),*],
+                }
+            }
+
             fn get_value_by_path(&self, path: &::structpath::Path) -> Result<::structpath::Value, ::structpath::StructPathError> {
                 if path.components.len() > 1 {
                     let path_component = path.components[0].clone();

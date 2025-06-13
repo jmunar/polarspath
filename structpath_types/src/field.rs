@@ -34,17 +34,36 @@ impl ToTokens for FieldType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FieldsInfo {
     pub fields: Vec<FieldInfo>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FieldInfo {
     pub name: String,
     pub r#type: FieldType,
 }
 
+impl ToTokens for FieldInfo {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let self_name = &self.name;
+        let self_type = &self.r#type;
+        tokens.extend(quote! {
+            ::structpath_types::FieldInfo {
+                name: stringify!(#self_name).to_string(),
+                r#type: #self_type,
+            }
+        });
+    }
+}
+
+// quote! {
+//     ::structpath_types::FieldInfo {
+//         name: stringify!(#field_name).to_string(),
+//         r#type: #field_type,
+//     }
+// }
 #[cfg(test)]
 mod tests {
     use super::*;

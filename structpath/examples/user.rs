@@ -1,17 +1,17 @@
-use structpath::{StructInfo, StructPath};
+use structpath::StructPath;
 
 #[derive(Debug, Clone, PartialEq)]
 enum Pet {
     Dog,
 }
 
-#[derive(StructInfo, StructPath, Debug, Clone, PartialEq)]
+#[derive(StructPath, Debug, Clone, PartialEq)]
 struct Parent {
     name: String,
     age: i64,
 }
 
-#[derive(StructInfo, StructPath, Debug, Clone, PartialEq)]
+#[derive(StructPath, Debug, Clone, PartialEq)]
 struct User {
     name: String,
     age: i64,
