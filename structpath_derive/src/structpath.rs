@@ -1,48 +1,7 @@
-use crate::structinfo::parse_field_type;
+use crate::utils::{parse_field_type, value_from_field};
 use proc_macro2::TokenStream;
 use quote::quote;
 use structpath_types::{FieldInfo, FieldType};
-
-fn value_from_field(field_type: &FieldType, field_value: TokenStream) -> TokenStream {
-    match field_type {
-        FieldType::String => quote! {
-            ::structpath::Value::String(#field_value.clone())
-        },
-        FieldType::Integer => quote! {
-            ::structpath::Value::Integer(#field_value)
-        },
-        FieldType::Float => quote! {
-            ::structpath::Value::Float(#field_value)
-        },
-        FieldType::Boolean => quote! {
-            ::structpath::Value::Boolean(#field_value)
-        },
-        FieldType::StructPath => quote! {
-            ::structpath::Value::Boxed(Box::new(#field_value.clone()))
-        },
-        FieldType::Unknown => quote! {
-            ::structpath::Value::Boxed(Box::new(#field_value.clone()))
-        },
-        FieldType::Vec(_) => quote! {
-            ::structpath::Value::Vec(Box::new(#field_value.clone()))
-        },
-        FieldType::Option(inner) => {
-            let inner_value = value_from_field(inner, quote! { t });
-            match inner.as_ref() {
-                FieldType::String
-                | FieldType::StructPath
-                | FieldType::Unknown
-                | FieldType::Vec(_)
-                | FieldType::Option(_) => quote! {
-                    ::structpath::Value::Option(#field_value.as_ref().map(|t| Box::new(#inner_value)))
-                },
-                _ => quote! {
-                    ::structpath::Value::Option(#field_value.map(|t| Box::new(#inner_value)))
-                },
-            }
-        }
-    }
-}
 
 pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
     let type_name = input.ident;
@@ -75,7 +34,8 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
         }
     };
 
-    let expr_fields_info: Vec<TokenStream> = fields.iter().clone().map(|field| quote!{#field}).collect();
+    let expr_fields_info: Vec<TokenStream> =
+        fields.iter().clone().map(|field| quote! {#field}).collect();
 
     let expr_final_field = fields.iter().map(|field| {
         let field_name = syn::Ident::new(&field.name, proc_macro2::Span::call_site());
@@ -240,21 +200,5 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                 }
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_value_from_field() {
-        let field_type = FieldType::String;
-        let field_value = quote! { test };
-        let value = value_from_field(&field_type, field_value);
-        assert_eq!(
-            value.to_string(),
-            quote! { ::structpath::Value::String(test.clone()) }.to_string()
-        );
     }
 }

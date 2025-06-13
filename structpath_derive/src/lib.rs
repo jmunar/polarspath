@@ -1,5 +1,5 @@
-mod structinfo;
 mod structpath;
+mod utils;
 
 use proc_macro::TokenStream;
 use structpath::derive_struct_path_impl;
