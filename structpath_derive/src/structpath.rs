@@ -28,9 +28,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
             }
         }
         _ => {
-            return quote! {
-                compile_error!("StructPath can only be derived for structs with named fields");
-            }
+            return quote! {}
         }
     };
 

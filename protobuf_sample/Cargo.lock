@@ -237,6 +237,7 @@ dependencies = [
  "prost",
  "prost-build",
  "structpath",
+ "structpath_types",
 ]
 
 [[package]]

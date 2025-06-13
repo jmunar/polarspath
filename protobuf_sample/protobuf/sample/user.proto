@@ -18,11 +18,11 @@ message User {
     int64 age = 2;
   }
 
-  // enum Loyalty {
-  //   SILVER = 0;
-  //   GOLD = 1;
-  //   PLATINUM = 2;
-  // }
+  enum Loyalty {
+    SILVER = 0;
+    GOLD = 1;
+    PLATINUM = 2;
+  }
 
   string name = 1;
   int64 age = 2;
@@ -30,10 +30,10 @@ message User {
   bool is_active = 4;
   Pet favourite_pet = 5;
   repeated string tags = 6;
-  // Loyalty loyalty = 7;
+  Loyalty loyalty = 7;
   repeated Pet pets = 8;
-  // oneof favorite_parent {
-  //   Father father = 9;
-  //   Mother mother = 10;
-  // }
+  oneof favorite_parent {
+    Father father = 9;
+    Mother mother = 10;
+  }
 } 
