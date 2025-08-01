@@ -2,7 +2,7 @@
 name = "protobuf_sample"
 version = "0.1.0"
 edition = "2021"
-description = "Sample Protocol Buffer messages for the polars_protobuf project"
+description = "Sample Protocol Buffer messages for the polarspath project"
 license = "MIT"
 
 [dependencies]

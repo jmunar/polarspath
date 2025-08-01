@@ -13,3 +13,9 @@ extern crate structpath_derive;
 
 #[cfg(feature = "derive")]
 pub use structpath_derive::StructPath;
+
+#[cfg(feature = "derive")]
+extern crate structpath_types;
+
+#[cfg(feature = "derive")]
+pub use structpath_types::FieldType;
