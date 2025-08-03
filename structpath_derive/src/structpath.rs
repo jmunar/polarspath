@@ -1,13 +1,27 @@
 use crate::utils::{parse_field_type, value_from_field};
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
 use structpath_types::{FieldInfo, FieldType};
 
 fn expr_type_nested_scalar(field: &FieldInfo) -> Option<TokenStream> {
     let field_name = format_ident!("{}", &field.name);
     match &field.r#type {
-        FieldType::StructPath => None,
-        FieldType::Option(inner_type) if matches!(**inner_type, FieldType::StructPath) => None,
+        FieldType::StructPath(inner_type_name) => {
+            let inner_type = Ident::new(inner_type_name, Span::call_site());
+            Some(quote! {
+                stringify!(#field_name) => #inner_type::get_type_by_path(&remaining_path)
+            })
+        }
+        FieldType::Option(mid_type) if matches!(**mid_type, FieldType::StructPath(_)) => {
+            if let FieldType::StructPath(inner_type_name) = &**mid_type {
+                let inner_type = Ident::new(inner_type_name, Span::call_site());
+                Some(quote! {
+                    stringify!(#field_name) => #inner_type::get_type_by_path(&remaining_path).map(|t| ::structpath::FieldType::Option(Box::new(t)))
+                })
+            } else {
+                None
+            }
+        }
         _ => None,
     }
 }
@@ -15,10 +29,10 @@ fn expr_type_nested_scalar(field: &FieldInfo) -> Option<TokenStream> {
 fn expr_value_nested_scalar(field: &FieldInfo) -> Option<TokenStream> {
     let field_name = format_ident!("{}", &field.name);
     match &field.r#type {
-        FieldType::StructPath => Some(quote! {
+        FieldType::StructPath(_) => Some(quote! {
             stringify!(#field_name) => self.#field_name.get_value_by_path(&remaining_path)
         }),
-        FieldType::Option(inner_type) if matches!(**inner_type, FieldType::StructPath) => {
+        FieldType::Option(inner_type) if matches!(**inner_type, FieldType::StructPath(_)) => {
             Some(quote! {
                 stringify!(#field_name) => match self.#field_name.as_ref() {
                     Some(s) => s.get_value_by_path(&remaining_path),
@@ -33,23 +47,47 @@ fn expr_value_nested_scalar(field: &FieldInfo) -> Option<TokenStream> {
 fn expr_type_nested_array(field: &FieldInfo) -> Option<TokenStream> {
     let field_name = format_ident!("{}", &field.name);
     match &field.r#type {
-        FieldType::Vec(inner_type) => {
-            if **inner_type == FieldType::StructPath {
-                None
-            } else if **inner_type == FieldType::Option(Box::new(FieldType::StructPath)) {
-                None
-            } else {
-                None
+        FieldType::Vec(inner_type) => match &**inner_type {
+            FieldType::StructPath(inner_type_name) => {
+                let inner_type = Ident::new(inner_type_name, Span::call_site());
+                Some(quote! {
+                    stringify!(#field_name) => #inner_type::get_type_by_path(&remaining_path)
+                })
             }
-        }
-        FieldType::Option(mid_type) if matches!(**mid_type, FieldType::Vec(_)) => {
-            if let FieldType::Vec(ref inner_type) = **mid_type {
-                if **inner_type == FieldType::StructPath {
-                    None
-                } else if **inner_type == FieldType::Option(Box::new(FieldType::StructPath)) {
-                    None
+            FieldType::Option(inner_type2) if matches!(**inner_type2, FieldType::StructPath(_)) => {
+                if let FieldType::StructPath(inner_type_name) = &**inner_type2 {
+                    let inner_type = Ident::new(inner_type_name, Span::call_site());
+                    Some(quote! {
+                        stringify!(#field_name) => #inner_type::get_type_by_path(&remaining_path).map(|t| ::structpath::FieldType::Option(Box::new(t)))
+                    })
                 } else {
                     None
+                }
+            }
+            _ => None,
+        },
+        FieldType::Option(mid_type) if matches!(**mid_type, FieldType::Vec(_)) => {
+            if let FieldType::Vec(ref inner_type) = **mid_type {
+                match &**inner_type {
+                    FieldType::StructPath(inner_type_name) => {
+                        let inner_type = Ident::new(inner_type_name, Span::call_site());
+                        Some(quote! {
+                            stringify!(#field_name) => #inner_type::get_type_by_path(&remaining_path).map(|t| ::structpath::FieldType::Option(Box::new(t)))
+                        })
+                    }
+                    FieldType::Option(inner_type2)
+                        if matches!(**inner_type2, FieldType::StructPath(_)) =>
+                    {
+                        if let FieldType::StructPath(inner_type_name) = &**inner_type2 {
+                            let inner_type = Ident::new(inner_type_name, Span::call_site());
+                            Some(quote! {
+                                stringify!(#field_name) => #inner_type::get_type_by_path(&remaining_path).map(|t| ::structpath::FieldType::Option(Box::new(::structpath::FieldType::Option(Box::new(t)))))
+                            })
+                        } else {
+                            None
+                        }
+                    }
+                    _ => None,
                 }
             } else {
                 None
@@ -62,43 +100,43 @@ fn expr_type_nested_array(field: &FieldInfo) -> Option<TokenStream> {
 fn expr_value_nested_array(field: &FieldInfo) -> Option<TokenStream> {
     let field_name = format_ident!("{}", &field.name);
     match &field.r#type {
-        FieldType::Vec(inner_type) => {
-            if **inner_type == FieldType::StructPath {
-                Some(quote! {
-                    stringify!(#field_name) => self.#field_name[index].get_value_by_path(&remaining_path)
-                })
-            } else if **inner_type == FieldType::Option(Box::new(FieldType::StructPath)) {
+        FieldType::Vec(inner_type) => match &**inner_type {
+            FieldType::StructPath(_) => Some(quote! {
+                stringify!(#field_name) => self.#field_name[index].get_value_by_path(&remaining_path)
+            }),
+            FieldType::Option(inner_type2) if matches!(**inner_type2, FieldType::StructPath(_)) => {
                 Some(quote! {
                     stringify!(#field_name) => match self.#field_name[index].as_ref() {
                         Some(s) => s.get_value_by_path(&remaining_path),
                         None => Ok(::structpath::Value::Option(None))
                     }
                 })
-            } else {
-                None
             }
-        }
+            _ => None,
+        },
         FieldType::Option(mid_type) if matches!(**mid_type, FieldType::Vec(_)) => {
             if let FieldType::Vec(ref inner_type) = **mid_type {
-                if **inner_type == FieldType::StructPath {
-                    Some(quote! {
+                match &**inner_type {
+                    FieldType::StructPath(_) => Some(quote! {
                         stringify!(#field_name) => match self.#field_name.as_ref() {
                             Some(vec) => vec[index].get_value_by_path(&remaining_path),
                             None => Ok(::structpath::Value::Option(None)),
                         }
-                    })
-                } else if **inner_type == FieldType::Option(Box::new(FieldType::StructPath)) {
-                    Some(quote! {
-                        stringify!(#field_name) => match self.#field_name.as_ref() {
-                            Some(vec) => match vec[index].as_ref() {
-                                Some(s) => s.get_value_by_path(&remaining_path),
-                                None => Ok(::structpath::Value::Option(None))
-                            },
-                            None => Ok(::structpath::Value::Option(None)),
-                        }
-                    })
-                } else {
-                    None
+                    }),
+                    FieldType::Option(inner_type2)
+                        if matches!(**inner_type2, FieldType::StructPath(_)) =>
+                    {
+                        Some(quote! {
+                            stringify!(#field_name) => match self.#field_name.as_ref() {
+                                Some(vec) => match vec[index].as_ref() {
+                                    Some(s) => s.get_value_by_path(&remaining_path),
+                                    None => Ok(::structpath::Value::Option(None))
+                                },
+                                None => Ok(::structpath::Value::Option(None)),
+                            }
+                        })
+                    }
+                    _ => None,
                 }
             } else {
                 None

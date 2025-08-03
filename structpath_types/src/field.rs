@@ -7,7 +7,7 @@ pub enum FieldType {
     Integer,
     Float,
     Boolean,
-    StructPath,
+    StructPath(String),
     Option(Box<FieldType>),
     Vec(Box<FieldType>),
     Unknown,
@@ -20,7 +20,9 @@ impl ToTokens for FieldType {
             FieldType::Integer => quote! { ::structpath_types::FieldType::Integer },
             FieldType::Float => quote! { ::structpath_types::FieldType::Float },
             FieldType::Boolean => quote! { ::structpath_types::FieldType::Boolean },
-            FieldType::StructPath => quote! { ::structpath_types::FieldType::StructPath },
+            FieldType::StructPath(inner) => {
+                quote! { ::structpath_types::FieldType::StructPath(#inner.to_string()) }
+            }
             FieldType::Option(inner) => {
                 quote! { ::structpath_types::FieldType::Option(Box::new(#inner)) }
             }
@@ -94,12 +96,12 @@ mod tests {
             ":: structpath_types :: FieldType :: Boolean"
         );
 
-        let field_type = FieldType::StructPath;
+        let field_type = FieldType::StructPath("MyStruct".to_string());
         let mut tokens = TokenStream::new();
         field_type.to_tokens(&mut tokens);
         assert_eq!(
             tokens.to_string(),
-            ":: structpath_types :: FieldType :: StructPath"
+            ":: structpath_types :: FieldType :: StructPath (\"MyStruct\")"
         );
 
         let field_type = FieldType::Option(Box::new(FieldType::String));

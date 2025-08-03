@@ -68,7 +68,7 @@ pub fn parse_field_type(field_type: &Type, attrs: &[Attribute]) -> FieldType {
                             parse_field_type(get_angle_bracketed_inner(type_path).unwrap(), attrs);
                         FieldType::Option(Box::new(inner_type))
                     }
-                    _ if is_structpath(attrs) => FieldType::StructPath,
+                    _ if is_structpath(attrs) => FieldType::StructPath(segment_name),
                     _ => FieldType::Unknown,
                 }
             }
@@ -92,7 +92,7 @@ pub fn value_from_field(field_type: &FieldType, field_value: TokenStream) -> Tok
         FieldType::Boolean => quote! {
             ::structpath::Value::Boolean(#field_value)
         },
-        FieldType::StructPath => quote! {
+        FieldType::StructPath(_) => quote! {
             ::structpath::Value::Boxed(Box::new(#field_value.clone()))
         },
         FieldType::Unknown => quote! {
@@ -105,7 +105,7 @@ pub fn value_from_field(field_type: &FieldType, field_value: TokenStream) -> Tok
             let inner_value = value_from_field(inner, quote! { t });
             match inner.as_ref() {
                 FieldType::String
-                | FieldType::StructPath
+                | FieldType::StructPath(_)
                 | FieldType::Unknown
                 | FieldType::Vec(_)
                 | FieldType::Option(_) => quote! {

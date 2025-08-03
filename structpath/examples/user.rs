@@ -47,15 +47,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(name_type, FieldType::String);
     let age_type = User::get_type("age")?;
     assert_eq!(age_type, FieldType::Integer);
-    let parent_favorite = User::get_type("parent_favorite")?;
-    assert_eq!(parent_favorite, FieldType::StructPath);
+    let parent_favorite_type = User::get_type("parent_favorite")?;
+    assert_eq!(
+        parent_favorite_type,
+        FieldType::StructPath("Parent".to_string())
+    );
+    let parent_favorite_name_type = User::get_type("parent_favorite.name")?;
+    assert_eq!(parent_favorite_name_type, FieldType::String);
     let parents_type = User::get_type("parents")?;
     assert_eq!(
         parents_type,
-        FieldType::Vec(Box::new(FieldType::StructPath))
+        FieldType::Vec(Box::new(FieldType::StructPath("Parent".to_string())))
     );
     let parent_0_type = User::get_type("parents[0]")?;
-    assert_eq!(parent_0_type, FieldType::StructPath);
+    assert_eq!(parent_0_type, FieldType::StructPath("Parent".to_string()));
     let pets_type = User::get_type("pets")?;
     assert_eq!(
         pets_type,
@@ -68,6 +73,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(name.as_str(), "John");
     let age = user.get_value("age")?;
     assert_eq!(age.as_i64(), 32);
+    let parent_favorite_name = user.get_value("parent_favorite.name")?;
+    assert_eq!(parent_favorite_name.as_str(), "Mary");
     let parent_0_name = user.get_value("parents[0].name")?;
     assert_eq!(parent_0_name.as_str(), "Joseph");
     let pet_0 = user.get_value("pets[0]")?;
