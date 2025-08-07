@@ -18,3 +18,8 @@ target/
 
 # Python
 __pycache__/
+
+# Project
+.python-version
+work-notebooks/
+*.so

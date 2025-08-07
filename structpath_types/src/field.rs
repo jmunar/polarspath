@@ -101,7 +101,7 @@ mod tests {
         field_type.to_tokens(&mut tokens);
         assert_eq!(
             tokens.to_string(),
-            ":: structpath_types :: FieldType :: StructPath (\"MyStruct\")"
+            ":: structpath_types :: FieldType :: StructPath (\"MyStruct\" . to_string ())"
         );
 
         let field_type = FieldType::Option(Box::new(FieldType::String));

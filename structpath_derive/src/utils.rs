@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use structpath_types::FieldType;
 use syn::PathArguments::AngleBracketed;
 use syn::{AngleBracketedGenericArguments, Attribute, Expr, GenericArgument, Lit, Meta, Type};
@@ -68,7 +68,9 @@ pub fn parse_field_type(field_type: &Type, attrs: &[Attribute]) -> FieldType {
                             parse_field_type(get_angle_bracketed_inner(type_path).unwrap(), attrs);
                         FieldType::Option(Box::new(inner_type))
                     }
-                    _ if is_structpath(attrs) => FieldType::StructPath(segment_name),
+                    _ if is_structpath(attrs) => {
+                        FieldType::StructPath(type_path.to_token_stream().to_string())
+                    }
                     _ => FieldType::Unknown,
                 }
             }

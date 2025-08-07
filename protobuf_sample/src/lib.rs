@@ -5,7 +5,42 @@ pub mod sample {
 #[cfg(test)]
 mod tests {
     use super::sample;
-    use structpath::StructPath;
+    use structpath::{FieldType, StructPath};
+
+    #[test]
+    fn test_get_type_user() -> Result<(), Box<dyn std::error::Error>> {
+        let type_ = sample::User::get_type("name")?;
+        assert_eq!(type_, FieldType::String);
+        let type_ = sample::User::get_type("age")?;
+        assert_eq!(type_, FieldType::Integer);
+        let type_ = sample::User::get_type("email")?;
+        assert_eq!(type_, FieldType::Option(Box::new(FieldType::String)));
+        let type_ = sample::User::get_type("is_active")?;
+        assert_eq!(type_, FieldType::Boolean);
+        let type_ = sample::User::get_type("favourite_pet")?;
+        assert_eq!(
+            type_,
+            FieldType::Option(Box::new(FieldType::StructPath("user :: Pet".to_string())))
+        );
+        let type_ = sample::User::get_type("favourite_pet.name")?;
+        assert_eq!(type_, FieldType::String);
+        let type_ = sample::User::get_type("tags")?;
+        assert_eq!(type_, FieldType::Vec(Box::new(FieldType::String)));
+        let type_ = sample::User::get_type("loyalty")?;
+        assert_eq!(type_, FieldType::Unknown);
+        let type_ = sample::User::get_type("pets")?;
+        assert_eq!(
+            type_,
+            FieldType::Vec(Box::new(FieldType::StructPath("user :: Pet".to_string())))
+        );
+        let type_ = sample::User::get_type("pets[0]")?;
+        assert_eq!(type_, FieldType::StructPath("user :: Pet".to_string()));
+        let type_ = sample::User::get_type("pets[0].name")?;
+        assert_eq!(type_, FieldType::String);
+        let type_ = sample::User::get_type("pets[0].birth_year")?;
+        assert_eq!(type_, FieldType::Integer);
+        Ok(())
+    }
 
     /// Create a new user with arbitrary values
     fn create_test_user() -> sample::User {
@@ -65,6 +100,9 @@ mod tests {
             }
         );
 
+        let favourite_pet_name = user.get_value("favourite_pet.name")?;
+        assert_eq!(favourite_pet_name.as_str(), "Buddy");
+
         let tags = user.get_value("tags")?;
         assert_eq!(
             tags.as_array::<Vec<String>>().to_owned(),
@@ -121,6 +159,9 @@ mod tests {
 
         let favourite_pet = user.get_value("favourite_pet")?;
         assert_eq!(favourite_pet.as_option(), None);
+
+        let favourite_pet_name = user.get_value("favourite_pet.name")?;
+        assert_eq!(favourite_pet_name.as_option(), None);
 
         let tags = user.get_value("tags")?;
         assert_eq!(
