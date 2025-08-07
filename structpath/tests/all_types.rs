@@ -1,28 +1,5 @@
 use structpath::{FieldType, StructPath};
 
-fn main() {
-    test_get_type_by_field().unwrap();
-    test_get_type_by_index().unwrap();
-    test_nested_get_type().unwrap();
-    test_get_value_by_field_scalar().unwrap();
-    test_get_value_by_field_scalar_optional().unwrap();
-    test_get_value_by_field_scalar_optional_none().unwrap();
-    test_get_value_by_field_required_array_required_items().unwrap();
-    test_get_value_by_field_optional_array_required_items().unwrap();
-    test_get_value_by_field_optional_array_is_none_required_items().unwrap();
-    test_get_value_by_field_required_array_optional_items().unwrap();
-    test_get_value_by_field_optional_array_optional_items().unwrap();
-    test_get_value_by_field_optional_array_is_none_optional_items().unwrap();
-    test_get_value_by_index_required_array_required_items().unwrap();
-    test_get_value_by_index_optional_array_required_items().unwrap();
-    test_get_value_by_index_optional_array_is_none_required_items().unwrap();
-    test_get_value_by_index_required_array_optional_items().unwrap();
-    test_get_value_by_index_optional_array_optional_items().unwrap();
-    test_get_value_by_index_optional_array_is_none_optional_items().unwrap();
-    test_nested_get_value().unwrap();
-    test_nested_get_value_optional_array_is_none().unwrap();
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum SampleEnum {
     A,
@@ -181,6 +158,7 @@ pub fn build_sample_struct_with_null_optionals() -> SampleStruct {
     }
 }
 
+#[test]
 fn test_get_type_by_field() -> Result<(), Box<dyn std::error::Error>> {
     let v = SampleStruct::get_type("f_string_scalar_required")?;
     assert_eq!(v, FieldType::String);
@@ -343,6 +321,7 @@ fn test_get_type_by_field() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[test]
 fn test_get_type_by_index() -> Result<(), Box<dyn std::error::Error>> {
     let v = SampleStruct::get_type("f_string_vector_required_elements_required[0]")?;
     assert_eq!(v, FieldType::String);
@@ -429,26 +408,25 @@ fn test_get_type_by_index() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[test]
 fn test_nested_get_type() -> Result<(), Box<dyn std::error::Error>> {
     let v = SampleStruct::get_type("f_struct_scalar_required.subf_string")?;
     assert_eq!(v, FieldType::String);
     let v = SampleStruct::get_type("f_struct_scalar_optional.subf_string")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::String)));
+    assert_eq!(v, FieldType::String);
     let v = SampleStruct::get_type("f_struct_vector_required_elements_required[0].subf_string")?;
     assert_eq!(v, FieldType::String);
     let v = SampleStruct::get_type("f_struct_vector_optional_elements_required[0].subf_string")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::String)));
+    assert_eq!(v, FieldType::String);
     let v = SampleStruct::get_type("f_struct_vector_required_elements_optional[0].subf_string")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::String)));
+    assert_eq!(v, FieldType::String);
     let v = SampleStruct::get_type("f_struct_vector_optional_elements_optional[0].subf_string")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Option(Box::new(FieldType::String))))
-    );
+    assert_eq!(v, FieldType::String);
 
     Ok(())
 }
 
+#[test]
 fn test_get_value_by_field_scalar() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct();
     let v = sample_struct.get_value("f_string_scalar_required")?;
@@ -472,6 +450,7 @@ fn test_get_value_by_field_scalar() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[test]
 fn test_get_value_by_field_scalar_optional() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct();
 
@@ -496,6 +475,7 @@ fn test_get_value_by_field_scalar_optional() -> Result<(), Box<dyn std::error::E
     Ok(())
 }
 
+#[test]
 fn test_get_value_by_field_scalar_optional_none() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct_with_null_optionals();
 
@@ -515,6 +495,7 @@ fn test_get_value_by_field_scalar_optional_none() -> Result<(), Box<dyn std::err
     Ok(())
 }
 
+#[test]
 fn test_get_value_by_field_required_array_required_items() -> Result<(), Box<dyn std::error::Error>>
 {
     let sample_struct = build_sample_struct();
@@ -546,6 +527,7 @@ fn test_get_value_by_field_required_array_required_items() -> Result<(), Box<dyn
     Ok(())
 }
 
+#[test]
 fn test_get_value_by_field_optional_array_required_items() -> Result<(), Box<dyn std::error::Error>>
 {
     let sample_struct = build_sample_struct();
@@ -583,6 +565,7 @@ fn test_get_value_by_field_optional_array_required_items() -> Result<(), Box<dyn
     Ok(())
 }
 
+#[test]
 fn test_get_value_by_field_optional_array_is_none_required_items(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct_with_null_optionals();
@@ -603,6 +586,7 @@ fn test_get_value_by_field_optional_array_is_none_required_items(
     Ok(())
 }
 
+#[test]
 fn test_get_value_by_field_required_array_optional_items() -> Result<(), Box<dyn std::error::Error>>
 {
     let sample_struct = build_sample_struct();
@@ -646,6 +630,7 @@ fn test_get_value_by_field_required_array_optional_items() -> Result<(), Box<dyn
     Ok(())
 }
 
+#[test]
 fn test_get_value_by_field_optional_array_optional_items() -> Result<(), Box<dyn std::error::Error>>
 {
     let sample_struct = build_sample_struct();
@@ -691,6 +676,7 @@ fn test_get_value_by_field_optional_array_optional_items() -> Result<(), Box<dyn
     Ok(())
 }
 
+#[test]
 fn test_get_value_by_field_optional_array_is_none_optional_items(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct_with_null_optionals();
@@ -711,6 +697,7 @@ fn test_get_value_by_field_optional_array_is_none_optional_items(
     Ok(())
 }
 
+#[test]
 fn test_get_value_by_index_required_array_required_items() -> Result<(), Box<dyn std::error::Error>>
 {
     let sample_struct = build_sample_struct();
@@ -736,6 +723,7 @@ fn test_get_value_by_index_required_array_required_items() -> Result<(), Box<dyn
     Ok(())
 }
 
+#[test]
 fn test_get_value_by_index_optional_array_required_items() -> Result<(), Box<dyn std::error::Error>>
 {
     let sample_struct = build_sample_struct();
@@ -761,6 +749,7 @@ fn test_get_value_by_index_optional_array_required_items() -> Result<(), Box<dyn
     Ok(())
 }
 
+#[test]
 fn test_get_value_by_index_optional_array_is_none_required_items(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct_with_null_optionals();
@@ -781,6 +770,7 @@ fn test_get_value_by_index_optional_array_is_none_required_items(
     Ok(())
 }
 
+#[test]
 fn test_get_value_by_index_required_array_optional_items() -> Result<(), Box<dyn std::error::Error>>
 {
     let sample_struct = build_sample_struct();
@@ -824,6 +814,7 @@ fn test_get_value_by_index_required_array_optional_items() -> Result<(), Box<dyn
     Ok(())
 }
 
+#[test]
 fn test_get_value_by_index_optional_array_optional_items() -> Result<(), Box<dyn std::error::Error>>
 {
     let sample_struct = build_sample_struct();
@@ -867,6 +858,7 @@ fn test_get_value_by_index_optional_array_optional_items() -> Result<(), Box<dyn
     Ok(())
 }
 
+#[test]
 fn test_get_value_by_index_optional_array_is_none_optional_items(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct_with_null_optionals();
@@ -887,6 +879,7 @@ fn test_get_value_by_index_optional_array_is_none_optional_items(
     Ok(())
 }
 
+#[test]
 fn test_nested_get_value() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct();
 
@@ -906,9 +899,12 @@ fn test_nested_get_value() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[test]
 fn test_nested_get_value_optional_array_is_none() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct_with_null_optionals();
 
+    let v = sample_struct.get_value("f_struct_scalar_optional.subf_string")?;
+    assert_eq!(v.as_option(), None);
     let v = sample_struct.get_value("f_struct_vector_optional_elements_required[0].subf_string")?;
     assert_eq!(v.as_option(), None);
     let v = sample_struct.get_value("f_struct_vector_optional_elements_optional[0].subf_string")?;
