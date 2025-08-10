@@ -5,7 +5,7 @@ pub mod sample {
 #[cfg(test)]
 mod tests {
     use super::sample;
-    use structpath::{FieldType, StructPath};
+    use structpath::{FieldType, FromValue, StructPath};
 
     #[test]
     fn test_get_type_user() -> Result<(), Box<dyn std::error::Error>> {
@@ -76,45 +76,42 @@ mod tests {
         let user = create_test_user();
 
         let name = user.get_value("name")?;
-        assert_eq!(name.as_str(), "John Doe");
+        assert_eq!(<&str>::from_value(&name), "John Doe");
 
         let age = user.get_value("age")?;
-        assert_eq!(age.as_i64(), 30);
+        assert_eq!(i64::from_value(age), 30);
 
         let email = user.get_value("email")?;
-        assert_eq!(email.unwrap().as_str(), "john.doe@example.com");
+        assert_eq!(String::from_value(email), "john.doe@example.com");
 
         let is_active = user.get_value("is_active")?;
-        assert_eq!(is_active.as_bool(), true);
+        assert_eq!(bool::from_value(is_active), true);
 
         // Note that protobuf sub-messages are always optional
         let favourite_pet = user.get_value("favourite_pet")?;
         assert_eq!(
-            favourite_pet
-                .unwrap()
-                .as_unboxed::<sample::user::Pet>()
-                .to_owned(),
-            sample::user::Pet {
+            <&sample::user::Pet>::from_value(&favourite_pet),
+            &sample::user::Pet {
                 name: "Buddy".to_string(),
                 birth_year: 2020,
             }
         );
 
         let favourite_pet_name = user.get_value("favourite_pet.name")?;
-        assert_eq!(favourite_pet_name.as_str(), "Buddy");
+        assert_eq!(String::from_value(favourite_pet_name), "Buddy");
 
         let tags = user.get_value("tags")?;
         assert_eq!(
-            tags.as_array::<Vec<String>>().to_owned(),
-            vec!["premium".to_string(), "verified".to_string()]
+            <&Vec<String>>::from_value(&tags),
+            &vec!["premium".to_string(), "verified".to_string()]
         );
         let tag0 = user.get_value("tags[0]")?;
-        assert_eq!(tag0.as_str(), "premium");
+        assert_eq!(String::from_value(tag0), "premium");
 
         let pets = user.get_value("pets")?;
         assert_eq!(
-            pets.as_array::<Vec<sample::user::Pet>>().to_owned(),
-            vec![
+            <&Vec<sample::user::Pet>>::from_value(&pets),
+            &vec![
                 sample::user::Pet {
                     name: "Buddy".to_string(),
                     birth_year: 2020,
@@ -127,16 +124,16 @@ mod tests {
         );
         let pet0 = user.get_value("pets[0]")?;
         assert_eq!(
-            pet0.as_unboxed::<sample::user::Pet>().to_owned(),
-            sample::user::Pet {
+            <&sample::user::Pet>::from_value(&pet0),
+            &sample::user::Pet {
                 name: "Buddy".to_string(),
                 birth_year: 2020,
             }
         );
         let pet0_name = user.get_value("pets[0].name")?;
-        assert_eq!(pet0_name.as_str(), "Buddy");
+        assert_eq!(String::from_value(pet0_name), "Buddy");
         let pet0_birth_year = user.get_value("pets[0].birth_year")?;
-        assert_eq!(pet0_birth_year.as_i64(), 2020);
+        assert_eq!(i64::from_value(pet0_birth_year), 2020);
 
         Ok(())
     }
@@ -146,16 +143,16 @@ mod tests {
         let user = sample::User::default();
 
         let name = user.get_value("name")?;
-        assert_eq!(name.as_str(), "");
+        assert_eq!(String::from_value(name), "");
 
         let age = user.get_value("age")?;
-        assert_eq!(age.as_i64(), 0);
+        assert_eq!(i64::from_value(age), 0);
 
         let email = user.get_value("email")?;
         assert_eq!(email.as_option(), None);
 
         let is_active = user.get_value("is_active")?;
-        assert_eq!(is_active.as_bool(), false);
+        assert_eq!(bool::from_value(is_active), false);
 
         let favourite_pet = user.get_value("favourite_pet")?;
         assert_eq!(favourite_pet.as_option(), None);
@@ -164,15 +161,12 @@ mod tests {
         assert_eq!(favourite_pet_name.as_option(), None);
 
         let tags = user.get_value("tags")?;
-        assert_eq!(
-            tags.as_array::<Vec<String>>().to_owned(),
-            vec![] as Vec<String>
-        );
+        assert_eq!(<&Vec<String>>::from_value(&tags), &Vec::<String>::new());
 
         let pets = user.get_value("pets")?;
         assert_eq!(
-            pets.as_array::<Vec<sample::user::Pet>>().to_owned(),
-            vec![] as Vec<sample::user::Pet>
+            <&Vec<sample::user::Pet>>::from_value(&pets),
+            &Vec::<sample::user::Pet>::new()
         );
 
         Ok(())
@@ -187,24 +181,21 @@ mod tests {
         };
 
         let name = group.get_value("name")?;
-        assert_eq!(name.as_str(), "My Group");
+        assert_eq!(String::from_value(name), "My Group");
 
         let admin = group.get_value("admin")?;
-        assert_eq!(
-            admin.unwrap().as_unboxed::<sample::User>().to_owned(),
-            create_test_user()
-        );
+        assert_eq!(<&sample::User>::from_value(&admin), &create_test_user());
         let admin_name = group.get_value("admin.name")?;
-        assert_eq!(admin_name.as_str(), "John Doe");
+        assert_eq!(String::from_value(admin_name), "John Doe");
 
         let members = group.get_value("members")?;
         assert_eq!(
-            members.as_array::<Vec<sample::User>>().to_owned(),
-            vec![create_test_user()]
+            <&Vec<sample::User>>::from_value(&members),
+            &vec![create_test_user()]
         );
 
         let member0_pet0_birth_year = group.get_value("members[0].pets[0].birth_year")?;
-        assert_eq!(member0_pet0_birth_year.as_i64(), 2020);
+        assert_eq!(i64::from_value(member0_pet0_birth_year), 2020);
 
         Ok(())
     }

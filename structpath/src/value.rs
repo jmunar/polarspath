@@ -43,63 +43,122 @@ pub enum Value {
     Option(Option<Box<Value>>),
 }
 
-impl Value {
-    pub fn unwrap(&self) -> &Value {
-        match self {
-            Value::Option(Some(value)) => value,
-            _ => panic!("Value is not an optional"),
-        }
-    }
+pub trait FromValue<T> {
+    fn from_value(value: T) -> Self;
+}
 
-    pub fn as_str(&self) -> &str {
-        match self {
+// Macro to generate FromValue implementations for primitive types
+macro_rules! impl_from_value_and_partial_eq {
+    ($type:ty, $variant:path, $panic_msg:expr) => {
+        impl FromValue<Value> for $type {
+            fn from_value(value: Value) -> $type {
+                match value {
+                    $variant(inner_value) => inner_value,
+                    Value::Option(Some(mid_value)) if matches!(*mid_value, $variant(_)) => {
+                        let $variant(inner_value) = *mid_value else {
+                            unreachable!()
+                        };
+                        inner_value
+                    }
+                    _ => panic!($panic_msg),
+                }
+            }
+        }
+
+        impl PartialEq<$type> for Value {
+            fn eq(&self, other: &$type) -> bool {
+                match self {
+                    $variant(inner_value) => PartialEq::eq(inner_value, other),
+                    Value::Option(Some(mid_value)) if matches!(**mid_value, $variant(_)) => {
+                        let $variant(ref inner_value) = **mid_value else {
+                            unreachable!()
+                        };
+                        PartialEq::eq(inner_value, other)
+                    }
+                    _ => false,
+                }
+            }
+        }
+    };
+}
+
+// Use the macro to generate implementations
+impl_from_value_and_partial_eq!(i64, Value::Integer, "Value is not an integer");
+impl_from_value_and_partial_eq!(f64, Value::Float, "Value is not a float");
+impl_from_value_and_partial_eq!(bool, Value::Boolean, "Value is not a boolean");
+impl_from_value_and_partial_eq!(String, Value::String, "Value is not a string");
+
+impl<'a> FromValue<&'a Value> for &'a str {
+    fn from_value(value: &'a Value) -> &'a str {
+        match value {
             Value::String(value) => value,
+            Value::Option(Some(value)) => <&str>::from_value(&**value),
             _ => panic!("Value is not a string"),
         }
     }
+}
 
-    pub fn as_string(&self) -> String {
-        match self {
-            Value::String(value) => value.clone(),
-            _ => panic!("Value is not a string"),
+impl<'a> PartialEq<&'a str> for Value {
+    fn eq(&self, other: &&'a str) -> bool {
+        PartialEq::eq(&<&str>::from_value(self), other)
+    }
+}
+
+impl<'a> FromValue<&'a Value> for Option<&'a str> {
+    fn from_value(value: &'a Value) -> Option<&'a str> {
+        match value {
+            Value::Option(None) => None,
+            Value::Option(Some(mid_type)) if matches!(**mid_type, Value::String(_)) => {
+                if let Value::String(ref inner_type) = **mid_type {
+                    Some(inner_type.as_str())
+                } else {
+                    panic!("Unreachable")
+                }
+            }
+            _ => {
+                panic!("Value is not a string")
+            }
         }
     }
+}
 
-    pub fn as_i64(&self) -> i64 {
-        match self {
-            Value::Integer(value) => *value,
-            _ => panic!("Value is not an integer"),
-        }
-    }
-
-    pub fn as_f64(&self) -> f64 {
-        match self {
-            Value::Float(value) => *value,
-            _ => panic!("Value is not a float"),
-        }
-    }
-
-    pub fn as_bool(&self) -> bool {
-        match self {
-            Value::Boolean(value) => *value,
-            _ => panic!("Value is not a boolean"),
-        }
-    }
-
-    pub fn as_unboxed<T: BoxedValue + 'static>(&self) -> &T {
-        match self {
-            Value::Boxed(boxed) => boxed.as_ref().as_any().downcast_ref::<T>().unwrap(),
+impl<'a, T: BoxedValue> FromValue<&'a Value> for &'a T {
+    fn from_value(value: &'a Value) -> &'a T {
+        match value {
+            Value::Boxed(boxed) | Value::Vec(boxed) => {
+                boxed.as_ref().as_any().downcast_ref::<T>().unwrap()
+            }
+            Value::Option(Some(value)) => <&T>::from_value(&**value),
             _ => panic!("Value is not a boxable"),
         }
     }
+}
 
-    pub fn as_array<T: BoxedValue + 'static>(&self) -> &T {
-        match self {
-            Value::Vec(boxed) => boxed.as_ref().as_any().downcast_ref::<T>().unwrap(),
-            _ => panic!("Value is not an array"),
+impl<T: FromValue<Value>> FromValue<Value> for Option<T> {
+    fn from_value(value: Value) -> Option<T> {
+        match value {
+            Value::Option(None) => None,
+            Value::Option(Some(inner_type)) => Some(<T>::from_value(*inner_type)),
+            _ => panic!("Value is not an optional"),
         }
     }
+}
 
+impl<'a, T: BoxedValue> FromValue<&'a Value> for Option<&'a T> {
+    fn from_value(value: &'a Value) -> Option<&'a T> {
+        match value {
+            Value::Option(None) => None,
+            Value::Option(Some(ref mid_type))
+                if matches!(**mid_type, Value::Boxed(_) | Value::Vec(_)) =>
+            {
+                Some(<&T>::from_value(mid_type))
+            }
+            _ => panic!("Value is not a boxable"),
+        }
+    }
+}
+
+impl Value {
     pub fn as_option(self) -> Option<Value> {
         match self {
             Value::Option(Some(value)) => Some(*value),

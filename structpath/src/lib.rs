@@ -6,7 +6,7 @@ mod value;
 pub use error::StructPathError;
 pub use path::{Path, PathComponent};
 pub use traits::StructPath;
-pub use value::Value;
+pub use value::{FromValue, Value};
 
 #[cfg(feature = "derive")]
 extern crate structpath_derive;
