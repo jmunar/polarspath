@@ -4,7 +4,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use structpath_types::{FieldInfo, FieldType};
 
-fn expr_type_nested_scalar(field: &FieldInfo) -> Option<TokenStream> {
+fn expr_type_nested_field(field: &FieldInfo) -> Option<TokenStream> {
     let field_name = format_ident!("{}", &field.name);
     match &field.r#type {
         FieldType::StructPath(inner_type_name) => {
@@ -27,7 +27,7 @@ fn expr_type_nested_scalar(field: &FieldInfo) -> Option<TokenStream> {
     }
 }
 
-fn expr_value_nested_scalar(field: &FieldInfo) -> Option<TokenStream> {
+fn expr_value_nested_field(field: &FieldInfo) -> Option<TokenStream> {
     let field_name = format_ident!("{}", &field.name);
     match &field.r#type {
         FieldType::StructPath(_) => Some(quote! {
@@ -147,7 +147,7 @@ fn expr_value_nested_array(field: &FieldInfo) -> Option<TokenStream> {
     }
 }
 
-fn expr_type_final_scalar(field: &FieldInfo) -> TokenStream {
+fn expr_type_final_field(field: &FieldInfo) -> TokenStream {
     let field_name = format_ident!("{}", &field.name);
     let field_type = &field.r#type;
     quote! {
@@ -155,7 +155,7 @@ fn expr_type_final_scalar(field: &FieldInfo) -> TokenStream {
     }
 }
 
-fn expr_value_final_scalar(field: &FieldInfo) -> TokenStream {
+fn expr_value_final_field(field: &FieldInfo) -> TokenStream {
     let field_name = format_ident!("{}", &field.name);
     let field_expr = value_from_field(&field.r#type, quote! { self.#field_name });
     quote! {
@@ -244,12 +244,12 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
     let fields_info: Vec<TokenStream> =
         fields.iter().clone().map(|field| quote! {#field}).collect();
 
-    let types_nested_scalar = fields.iter().filter_map(expr_type_nested_scalar);
-    let values_nested_scalar = fields.iter().filter_map(expr_value_nested_scalar);
+    let types_nested_field = fields.iter().filter_map(expr_type_nested_field);
+    let values_nested_field = fields.iter().filter_map(expr_value_nested_field);
     let types_nested_array = fields.iter().filter_map(expr_type_nested_array);
     let values_nested_array = fields.iter().filter_map(expr_value_nested_array);
-    let types_final_scalar = fields.iter().map(expr_type_final_scalar);
-    let values_final_scalar = fields.iter().map(expr_value_final_scalar);
+    let types_final_field = fields.iter().map(expr_type_final_field);
+    let values_final_field = fields.iter().map(expr_value_final_field);
     let types_final_array = fields.iter().filter_map(expr_type_final_array);
     let values_final_array = fields.iter().filter_map(expr_value_final_array);
 
@@ -271,7 +271,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                     };
                     return match path_component {
                         ::structpath::PathComponent::Field(field) => match field.as_str() {
-                            #(#types_nested_scalar,)*
+                            #(#types_nested_field,)*
                             _ => Err(::structpath::StructPathError::FieldNotFound(field)),
                         },
                         ::structpath::PathComponent::ArrayIndex(field, index) => match field.as_str() {
@@ -284,7 +284,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
 
                 match path_component {
                     ::structpath::PathComponent::Field(field) => match field.as_str() {
-                        #(#types_final_scalar,)*
+                        #(#types_final_field,)*
                         _ => Err(::structpath::StructPathError::FieldNotFound(field)),
                     },
                     ::structpath::PathComponent::ArrayIndex(field, index) => match field.as_str() {
@@ -310,7 +310,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                     };
                     return match path_component {
                         ::structpath::PathComponent::Field(field) => match field.as_str() {
-                            #(#values_nested_scalar,)*
+                            #(#values_nested_field,)*
                             _ => Err(::structpath::StructPathError::FieldNotFound(field)),
                         },
                         ::structpath::PathComponent::ArrayIndex(field, index) => match field.as_str() {
@@ -324,7 +324,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
 
                 match path_component {
                     ::structpath::PathComponent::Field(field) => match field.as_str() {
-                        #(#values_final_scalar,)*
+                        #(#values_final_field,)*
                         _ => Err(::structpath::StructPathError::FieldNotFound(field)),
                     },
                     ::structpath::PathComponent::ArrayIndex(field, index) => match field.as_str() {

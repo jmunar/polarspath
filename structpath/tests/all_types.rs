@@ -439,13 +439,13 @@ fn test_get_value_by_field_scalar() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(bool::from_value(v), true);
     let v = sample_struct.get_value("f_struct_scalar_required")?;
     assert_eq!(
-        <&SampleSubstruct>::from_value(&v),
+        v,
         &SampleSubstruct {
             subf_string: "sub1".to_string()
         }
     );
     let v = sample_struct.get_value("f_enum_scalar_required")?;
-    assert_eq!(<&SampleEnum>::from_value(&v), &SampleEnum::A);
+    assert_eq!(v, &SampleEnum::A);
 
     Ok(())
 }
@@ -455,22 +455,22 @@ fn test_get_value_by_field_scalar_optional() -> Result<(), Box<dyn std::error::E
     let sample_struct = build_sample_struct();
 
     let v = sample_struct.get_value("f_string_scalar_optional")?;
-    assert_eq!(<Option<&str>>::from_value(&v), Some("world"));
+    assert_eq!(v, Some("world"));
     let v = sample_struct.get_value("f_integer_scalar_optional")?;
-    assert_eq!(<Option<i64>>::from_value(v), Some(456));
+    assert_eq!(v, Some(456));
     let v = sample_struct.get_value("f_float_scalar_optional")?;
-    assert_eq!(<Option<f64>>::from_value(v), Some(4.56));
+    assert_eq!(v, Some(4.56));
     let v = sample_struct.get_value("f_boolean_scalar_optional")?;
-    assert_eq!(<Option<bool>>::from_value(v), Some(false));
+    assert_eq!(v, Some(false));
     let v = sample_struct.get_value("f_struct_scalar_optional")?;
     assert_eq!(
-        <Option<&SampleSubstruct>>::from_value(&v),
+        v,
         Some(&SampleSubstruct {
             subf_string: "sub2".to_string()
         })
     );
     let v = sample_struct.get_value("f_enum_scalar_optional")?;
-    assert_eq!(<Option<&SampleEnum>>::from_value(&v), Some(&SampleEnum::B));
+    assert_eq!(v, Some(&SampleEnum::B));
 
     Ok(())
 }
@@ -480,17 +480,17 @@ fn test_get_value_by_field_scalar_optional_none() -> Result<(), Box<dyn std::err
     let sample_struct = build_sample_struct_with_null_optionals();
 
     let v = sample_struct.get_value("f_string_scalar_optional")?;
-    assert_eq!(<Option<&str>>::from_value(&v), None);
+    assert_eq!(v, None::<&str>);
     let v = sample_struct.get_value("f_integer_scalar_optional")?;
-    assert_eq!(<Option<i64>>::from_value(v), None);
+    assert_eq!(v, None::<i64>);
     let v = sample_struct.get_value("f_float_scalar_optional")?;
-    assert_eq!(<Option<f64>>::from_value(v), None);
+    assert_eq!(v, None::<f64>);
     let v = sample_struct.get_value("f_boolean_scalar_optional")?;
-    assert_eq!(<Option<bool>>::from_value(v), None);
+    assert_eq!(v, None::<bool>);
     let v = sample_struct.get_value("f_struct_scalar_optional")?;
-    assert_eq!(<Option<&SampleSubstruct>>::from_value(&v), None);
+    assert_eq!(v, None::<&SampleSubstruct>);
     let v = sample_struct.get_value("f_enum_scalar_optional")?;
-    assert_eq!(<Option<&SampleEnum>>::from_value(&v), None);
+    assert_eq!(v, None::<&SampleEnum>);
 
     Ok(())
 }
@@ -501,28 +501,22 @@ fn test_get_value_by_field_required_array_required_items() -> Result<(), Box<dyn
     let sample_struct = build_sample_struct();
 
     let v = sample_struct.get_value("f_string_vector_required_elements_required")?;
-    assert_eq!(
-        <&Vec<String>>::from_value(&v),
-        &vec!["hello".to_string(), "world".to_string()]
-    );
+    assert_eq!(v, &vec!["hello".to_string(), "world".to_string()]);
     let v = sample_struct.get_value("f_integer_vector_required_elements_required")?;
-    assert_eq!(<&Vec<i64>>::from_value(&v), &vec![123, 456]);
+    assert_eq!(v, &vec![123_i64, 456_i64]);
     let v = sample_struct.get_value("f_float_vector_required_elements_required")?;
-    assert_eq!(<&Vec<f64>>::from_value(&v), &vec![1.23, 4.56]);
+    assert_eq!(v, &vec![1.23, 4.56]);
     let v = sample_struct.get_value("f_boolean_vector_required_elements_required")?;
-    assert_eq!(<&Vec<bool>>::from_value(&v), &vec![true, false]);
+    assert_eq!(v, &vec![true, false]);
     let v = sample_struct.get_value("f_struct_vector_required_elements_required")?;
     assert_eq!(
-        <&Vec<SampleSubstruct>>::from_value(&v),
+        v,
         &vec![SampleSubstruct {
             subf_string: "sub3".to_string()
         }],
     );
     let v = sample_struct.get_value("f_enum_vector_required_elements_required")?;
-    assert_eq!(
-        <&Vec<SampleEnum>>::from_value(&v),
-        &vec![SampleEnum::A, SampleEnum::B]
-    );
+    assert_eq!(v, &vec![SampleEnum::A, SampleEnum::B]);
 
     Ok(())
 }
@@ -533,31 +527,22 @@ fn test_get_value_by_field_optional_array_required_items() -> Result<(), Box<dyn
     let sample_struct = build_sample_struct();
 
     let v = sample_struct.get_value("f_string_vector_optional_elements_required")?;
-    assert_eq!(
-        <Option<&Vec<String>>>::from_value(&v),
-        Some(&vec!["hello".to_string(), "world".to_string()])
-    );
+    assert_eq!(v, Some(&vec!["hello".to_string(), "world".to_string()]));
     let v = sample_struct.get_value("f_integer_vector_optional_elements_required")?;
-    assert_eq!(<Option<&Vec<i64>>>::from_value(&v), Some(&vec![123, 456]));
+    assert_eq!(v, Some(&vec![123_i64, 456_i64]));
     let v = sample_struct.get_value("f_float_vector_optional_elements_required")?;
-    assert_eq!(<Option<&Vec<f64>>>::from_value(&v), Some(&vec![1.23, 4.56]));
+    assert_eq!(v, Some(&vec![1.23, 4.56]));
     let v = sample_struct.get_value("f_boolean_vector_optional_elements_required")?;
-    assert_eq!(
-        <Option<&Vec<bool>>>::from_value(&v),
-        Some(&vec![true, false])
-    );
+    assert_eq!(v, Some(&vec![true, false]));
     let v = sample_struct.get_value("f_struct_vector_optional_elements_required")?;
     assert_eq!(
-        <Option<&Vec<SampleSubstruct>>>::from_value(&v),
+        v,
         Some(&vec![SampleSubstruct {
             subf_string: "sub4".to_string(),
-        }]),
+        }])
     );
     let v = sample_struct.get_value("f_enum_vector_optional_elements_required")?;
-    assert_eq!(
-        <Option<&Vec<SampleEnum>>>::from_value(&v),
-        Some(&vec![SampleEnum::A, SampleEnum::B])
-    );
+    assert_eq!(v, Some(&vec![SampleEnum::A, SampleEnum::B]));
 
     Ok(())
 }
@@ -568,17 +553,17 @@ fn test_get_value_by_field_optional_array_is_none_required_items(
     let sample_struct = build_sample_struct_with_null_optionals();
 
     let v = sample_struct.get_value("f_string_vector_optional_elements_required")?;
-    assert_eq!(<Option<&Vec<String>>>::from_value(&v), None);
+    assert_eq!(v, None::<&Vec<String>>);
     let v = sample_struct.get_value("f_integer_vector_optional_elements_required")?;
-    assert_eq!(<Option<&Vec<i64>>>::from_value(&v), None);
+    assert_eq!(v, None::<&Vec<i64>>);
     let v = sample_struct.get_value("f_float_vector_optional_elements_required")?;
-    assert_eq!(<Option<&Vec<f64>>>::from_value(&v), None);
+    assert_eq!(v, None::<&Vec<f64>>);
     let v = sample_struct.get_value("f_boolean_vector_optional_elements_required")?;
-    assert_eq!(<Option<&Vec<bool>>>::from_value(&v), None);
+    assert_eq!(v, None::<&Vec<bool>>);
     let v = sample_struct.get_value("f_struct_vector_optional_elements_required")?;
-    assert_eq!(<Option<&Vec<SampleSubstruct>>>::from_value(&v), None);
+    assert_eq!(v, None::<&Vec<SampleSubstruct>>);
     let v = sample_struct.get_value("f_enum_vector_optional_elements_required")?;
-    assert_eq!(<Option<&Vec<SampleEnum>>>::from_value(&v), None);
+    assert_eq!(v, None::<&Vec<SampleEnum>>);
 
     Ok(())
 }
@@ -589,22 +574,16 @@ fn test_get_value_by_field_required_array_optional_items() -> Result<(), Box<dyn
     let sample_struct = build_sample_struct();
 
     let v = sample_struct.get_value("f_string_vector_required_elements_optional")?;
-    assert_eq!(
-        <&Vec<Option<String>>>::from_value(&v),
-        &vec![Some("hello".to_string()), None]
-    );
+    assert_eq!(v, &vec![Some("hello".to_string()), None]);
     let v = sample_struct.get_value("f_integer_vector_required_elements_optional")?;
-    assert_eq!(<&Vec<Option<i64>>>::from_value(&v), &vec![Some(123), None]);
+    assert_eq!(v, &vec![Some(123_i64), None]);
     let v = sample_struct.get_value("f_float_vector_required_elements_optional")?;
-    assert_eq!(<&Vec<Option<f64>>>::from_value(&v), &vec![Some(1.23), None]);
+    assert_eq!(v, &vec![Some(1.23), None]);
     let v = sample_struct.get_value("f_boolean_vector_required_elements_optional")?;
-    assert_eq!(
-        <&Vec<Option<bool>>>::from_value(&v),
-        &vec![Some(true), None]
-    );
+    assert_eq!(v, &vec![Some(true), None]);
     let v = sample_struct.get_value("f_struct_vector_required_elements_optional")?;
     assert_eq!(
-        <&Vec<Option<SampleSubstruct>>>::from_value(&v),
+        v,
         &vec![
             Some(SampleSubstruct {
                 subf_string: "sub5".to_string(),
@@ -613,10 +592,7 @@ fn test_get_value_by_field_required_array_optional_items() -> Result<(), Box<dyn
         ]
     );
     let v = sample_struct.get_value("f_enum_vector_required_elements_optional")?;
-    assert_eq!(
-        <&Vec<Option<SampleEnum>>>::from_value(&v),
-        &vec![Some(SampleEnum::A), None]
-    );
+    assert_eq!(v, &vec![Some(SampleEnum::A), None]);
 
     Ok(())
 }
@@ -627,28 +603,16 @@ fn test_get_value_by_field_optional_array_optional_items() -> Result<(), Box<dyn
     let sample_struct = build_sample_struct();
 
     let v = sample_struct.get_value("f_string_vector_optional_elements_optional")?;
-    assert_eq!(
-        <Option<&Vec<Option<String>>>>::from_value(&v),
-        Some(&vec![Some("hello".to_string()), None])
-    );
+    assert_eq!(v, Some(&vec![Some("hello".to_string()), None]));
     let v = sample_struct.get_value("f_integer_vector_optional_elements_optional")?;
-    assert_eq!(
-        <Option<&Vec<Option<i64>>>>::from_value(&v),
-        Some(&vec![Some(123), None])
-    );
+    assert_eq!(v, Some(&vec![Some(123_i64), None]));
     let v = sample_struct.get_value("f_float_vector_optional_elements_optional")?;
-    assert_eq!(
-        <Option<&Vec<Option<f64>>>>::from_value(&v),
-        Some(&vec![Some(1.23), None])
-    );
+    assert_eq!(v, Some(&vec![Some(1.23), None]));
     let v = sample_struct.get_value("f_boolean_vector_optional_elements_optional")?;
-    assert_eq!(
-        <Option<&Vec<Option<bool>>>>::from_value(&v),
-        Some(&vec![Some(true), None])
-    );
+    assert_eq!(v, Some(&vec![Some(true), None]));
     let v = sample_struct.get_value("f_struct_vector_optional_elements_optional")?;
     assert_eq!(
-        <Option<&Vec<Option<SampleSubstruct>>>>::from_value(&v),
+        v,
         Some(&vec![
             Some(SampleSubstruct {
                 subf_string: "sub6".to_string(),
@@ -657,10 +621,7 @@ fn test_get_value_by_field_optional_array_optional_items() -> Result<(), Box<dyn
         ])
     );
     let v = sample_struct.get_value("f_enum_vector_optional_elements_optional")?;
-    assert_eq!(
-        <Option<&Vec<Option<SampleEnum>>>>::from_value(&v),
-        Some(&vec![Some(SampleEnum::A), None])
-    );
+    assert_eq!(v, Some(&vec![Some(SampleEnum::A), None]));
 
     Ok(())
 }
@@ -671,20 +632,17 @@ fn test_get_value_by_field_optional_array_is_none_optional_items(
     let sample_struct = build_sample_struct_with_null_optionals();
 
     let v = sample_struct.get_value("f_string_vector_optional_elements_optional")?;
-    assert_eq!(<Option<&Vec<Option<String>>>>::from_value(&v), None);
+    assert_eq!(v, None::<&Vec<Option<String>>>);
     let v = sample_struct.get_value("f_integer_vector_optional_elements_optional")?;
-    assert_eq!(<Option<&Vec<Option<i64>>>>::from_value(&v), None);
+    assert_eq!(v, None::<&Vec<Option<i64>>>);
     let v = sample_struct.get_value("f_float_vector_optional_elements_optional")?;
-    assert_eq!(<Option<&Vec<Option<f64>>>>::from_value(&v), None);
+    assert_eq!(v, None::<&Vec<Option<f64>>>);
     let v = sample_struct.get_value("f_boolean_vector_optional_elements_optional")?;
-    assert_eq!(<Option<&Vec<Option<bool>>>>::from_value(&v), None);
+    assert_eq!(v, None::<&Vec<Option<bool>>>);
     let v = sample_struct.get_value("f_struct_vector_optional_elements_optional")?;
-    assert_eq!(
-        <Option<&Vec<Option<SampleSubstruct>>>>::from_value(&v),
-        None
-    );
+    assert_eq!(v, None::<&Vec<Option<SampleSubstruct>>>);
     let v = sample_struct.get_value("f_enum_vector_optional_elements_optional")?;
-    assert_eq!(<Option<&Vec<Option<SampleEnum>>>>::from_value(&v), None);
+    assert_eq!(v, None::<&Vec<Option<SampleEnum>>>);
 
     Ok(())
 }
@@ -695,22 +653,22 @@ fn test_get_value_by_index_required_array_required_items() -> Result<(), Box<dyn
     let sample_struct = build_sample_struct();
 
     let v = sample_struct.get_value("f_string_vector_required_elements_required[0]")?;
-    assert_eq!(String::from_value(v), "hello");
+    assert_eq!(v, "hello");
     let v = sample_struct.get_value("f_integer_vector_required_elements_required[0]")?;
-    assert_eq!(i64::from_value(v), 123);
+    assert_eq!(v, 123_i64);
     let v = sample_struct.get_value("f_float_vector_required_elements_required[0]")?;
-    assert_eq!(f64::from_value(v), 1.23);
+    assert_eq!(v, 1.23);
     let v = sample_struct.get_value("f_boolean_vector_required_elements_required[0]")?;
-    assert_eq!(bool::from_value(v), true);
+    assert_eq!(v, true);
     let v = sample_struct.get_value("f_struct_vector_required_elements_required[0]")?;
     assert_eq!(
-        <&SampleSubstruct>::from_value(&v),
+        v,
         &SampleSubstruct {
-            subf_string: "sub3".to_string()
+            subf_string: "sub3".to_string(),
         }
     );
     let v = sample_struct.get_value("f_enum_vector_required_elements_required[0]")?;
-    assert_eq!(<&SampleEnum>::from_value(&v), &SampleEnum::A);
+    assert_eq!(v, &SampleEnum::A);
 
     Ok(())
 }
@@ -721,22 +679,22 @@ fn test_get_value_by_index_optional_array_required_items() -> Result<(), Box<dyn
     let sample_struct = build_sample_struct();
 
     let v = sample_struct.get_value("f_string_vector_optional_elements_required[0]")?;
-    assert_eq!(String::from_value(v), "hello".to_string());
+    assert_eq!(v, "hello");
     let v = sample_struct.get_value("f_integer_vector_optional_elements_required[0]")?;
-    assert_eq!(i64::from_value(v), 123);
+    assert_eq!(v, 123_i64);
     let v = sample_struct.get_value("f_float_vector_optional_elements_required[0]")?;
-    assert_eq!(f64::from_value(v), 1.23);
+    assert_eq!(v, 1.23);
     let v = sample_struct.get_value("f_boolean_vector_optional_elements_required[0]")?;
-    assert_eq!(bool::from_value(v), true);
+    assert_eq!(v, true);
     let v = sample_struct.get_value("f_struct_vector_optional_elements_required[0]")?;
     assert_eq!(
-        <&SampleSubstruct>::from_value(&v),
+        v,
         &SampleSubstruct {
-            subf_string: "sub4".to_string()
+            subf_string: "sub4".to_string(),
         }
     );
     let v = sample_struct.get_value("f_enum_vector_optional_elements_required[0]")?;
-    assert_eq!(<&SampleEnum>::from_value(&v), &SampleEnum::A);
+    assert_eq!(v, &SampleEnum::A);
 
     Ok(())
 }
@@ -747,17 +705,17 @@ fn test_get_value_by_index_optional_array_is_none_required_items(
     let sample_struct = build_sample_struct_with_null_optionals();
 
     let v = sample_struct.get_value("f_string_vector_optional_elements_required[0]")?;
-    assert_eq!(v.as_option(), None);
+    assert_eq!(v, None::<&str>);
     let v = sample_struct.get_value("f_integer_vector_optional_elements_required[0]")?;
-    assert_eq!(v.as_option(), None);
+    assert_eq!(v, None::<&i64>);
     let v = sample_struct.get_value("f_float_vector_optional_elements_required[0]")?;
-    assert_eq!(v.as_option(), None);
+    assert_eq!(v, None::<&f64>);
     let v = sample_struct.get_value("f_boolean_vector_optional_elements_required[0]")?;
-    assert_eq!(v.as_option(), None);
+    assert_eq!(v, None::<&bool>);
     let v = sample_struct.get_value("f_struct_vector_optional_elements_required[0]")?;
-    assert_eq!(v.as_option(), None);
+    assert_eq!(v, None::<&SampleSubstruct>);
     let v = sample_struct.get_value("f_enum_vector_optional_elements_required[0]")?;
-    assert_eq!(v.as_option(), None);
+    assert_eq!(v, None::<&SampleEnum>);
 
     Ok(())
 }
@@ -768,37 +726,34 @@ fn test_get_value_by_index_required_array_optional_items() -> Result<(), Box<dyn
     let sample_struct = build_sample_struct();
 
     let v = sample_struct.get_value("f_string_vector_required_elements_optional[0]")?;
-    assert_eq!(String::from_value(v), "hello");
+    assert_eq!(v, Some("hello"));
     let v = sample_struct.get_value("f_string_vector_required_elements_optional[1]")?;
-    assert_eq!(v.as_option(), None);
+    assert_eq!(v, None::<&str>);
     let v = sample_struct.get_value("f_integer_vector_required_elements_optional[0]")?;
-    assert_eq!(i64::from_value(v), 123);
+    assert_eq!(v, Some(123_i64));
     let v = sample_struct.get_value("f_integer_vector_required_elements_optional[1]")?;
-    assert_eq!(v.as_option(), None);
+    assert_eq!(v, None::<&i64>);
     let v = sample_struct.get_value("f_float_vector_required_elements_optional[0]")?;
-    assert_eq!(f64::from_value(v), 1.23);
+    assert_eq!(v, Some(1.23));
     let v = sample_struct.get_value("f_float_vector_required_elements_optional[1]")?;
-    assert_eq!(v.as_option(), None);
+    assert_eq!(v, None::<&f64>);
     let v = sample_struct.get_value("f_boolean_vector_required_elements_optional[0]")?;
-    assert_eq!(bool::from_value(v), true);
+    assert_eq!(v, Some(true));
     let v = sample_struct.get_value("f_boolean_vector_required_elements_optional[1]")?;
-    assert_eq!(v.as_option(), None);
+    assert_eq!(v, None::<&bool>);
     let v = sample_struct.get_value("f_struct_vector_required_elements_optional[0]")?;
     assert_eq!(
-        <&SampleSubstruct>::from_value(&v),
-        &SampleSubstruct {
-            subf_string: "sub5".to_string()
-        }
+        v,
+        Some(&SampleSubstruct {
+            subf_string: "sub5".to_string(),
+        })
     );
     let v = sample_struct.get_value("f_struct_vector_required_elements_optional[1]")?;
-    assert_eq!(v.as_option(), None);
+    assert_eq!(v, None::<&SampleSubstruct>);
     let v = sample_struct.get_value("f_enum_vector_required_elements_optional[0]")?;
-    assert_eq!(
-        <&SampleEnum>::from_value(&v.as_option().unwrap()),
-        &SampleEnum::A
-    );
+    assert_eq!(v, Some(&SampleEnum::A));
     let v = sample_struct.get_value("f_enum_vector_required_elements_optional[1]")?;
-    assert_eq!(v.as_option(), None);
+    assert_eq!(v, None::<&SampleEnum>);
 
     Ok(())
 }

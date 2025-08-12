@@ -88,19 +88,43 @@ impl_from_value_and_partial_eq!(f64, Value::Float, "Value is not a float");
 impl_from_value_and_partial_eq!(bool, Value::Boolean, "Value is not a boolean");
 impl_from_value_and_partial_eq!(String, Value::String, "Value is not a string");
 
+impl<T: FromValue<Value>> FromValue<Value> for Option<T> {
+    fn from_value(value: Value) -> Option<T> {
+        match value {
+            Value::Option(None) => None,
+            Value::Option(Some(inner_type)) => Some(<T>::from_value(*inner_type)),
+            _ => panic!("Value is not an optional"),
+        }
+    }
+}
+
 impl<'a> FromValue<&'a Value> for &'a str {
     fn from_value(value: &'a Value) -> &'a str {
         match value {
-            Value::String(value) => value,
-            Value::Option(Some(value)) => <&str>::from_value(&**value),
+            Value::String(inner_value) => inner_value,
+            Value::Option(Some(mid_value)) if matches!(**mid_value, Value::String(_)) => {
+                let Value::String(ref inner_value) = **mid_value else {
+                    unreachable!()
+                };
+                inner_value
+            }
             _ => panic!("Value is not a string"),
         }
     }
 }
 
-impl<'a> PartialEq<&'a str> for Value {
-    fn eq(&self, other: &&'a str) -> bool {
-        PartialEq::eq(&<&str>::from_value(self), other)
+impl PartialEq<&str> for Value {
+    fn eq(&self, other: &&str) -> bool {
+        match self {
+            Value::String(inner_value) => PartialEq::eq(inner_value, other),
+            Value::Option(Some(mid_value)) if matches!(**mid_value, Value::String(_)) => {
+                let Value::String(ref inner_value) = **mid_value else {
+                    unreachable!()
+                };
+                PartialEq::eq(inner_value, other)
+            }
+            _ => false,
+        }
     }
 }
 
@@ -109,11 +133,10 @@ impl<'a> FromValue<&'a Value> for Option<&'a str> {
         match value {
             Value::Option(None) => None,
             Value::Option(Some(mid_type)) if matches!(**mid_type, Value::String(_)) => {
-                if let Value::String(ref inner_type) = **mid_type {
-                    Some(inner_type.as_str())
-                } else {
-                    panic!("Unreachable")
-                }
+                let Value::String(ref inner_type) = **mid_type else {
+                    unreachable!()
+                };
+                Some(inner_type.as_str())
             }
             _ => {
                 panic!("Value is not a string")
@@ -125,21 +148,52 @@ impl<'a> FromValue<&'a Value> for Option<&'a str> {
 impl<'a, T: BoxedValue> FromValue<&'a Value> for &'a T {
     fn from_value(value: &'a Value) -> &'a T {
         match value {
-            Value::Boxed(boxed) | Value::Vec(boxed) => {
-                boxed.as_ref().as_any().downcast_ref::<T>().unwrap()
+            Value::Boxed(inner_value) | Value::Vec(inner_value) => {
+                inner_value.as_ref().as_any().downcast_ref::<T>().unwrap()
             }
-            Value::Option(Some(value)) => <&T>::from_value(&**value),
+            Value::Option(Some(mid_value)) if matches!(**mid_value, Value::Boxed(_)) => {
+                let Value::Boxed(ref inner_value) = **mid_value else {
+                    unreachable!()
+                };
+                inner_value.as_ref().as_any().downcast_ref::<T>().unwrap()
+            }
+            Value::Option(Some(mid_value)) if matches!(**mid_value, Value::Vec(_)) => {
+                let Value::Vec(ref inner_value) = **mid_value else {
+                    unreachable!()
+                };
+                inner_value.as_ref().as_any().downcast_ref::<T>().unwrap()
+            }
             _ => panic!("Value is not a boxable"),
         }
     }
 }
 
-impl<T: FromValue<Value>> FromValue<Value> for Option<T> {
-    fn from_value(value: Value) -> Option<T> {
-        match value {
-            Value::Option(None) => None,
-            Value::Option(Some(inner_type)) => Some(<T>::from_value(*inner_type)),
-            _ => panic!("Value is not an optional"),
+impl<T: BoxedValue + PartialEq<T>> PartialEq<&T> for Value {
+    fn eq(&self, other: &&T) -> bool {
+        match self {
+            Value::Boxed(inner_value) | Value::Vec(inner_value) => PartialEq::eq(
+                inner_value.as_ref().as_any().downcast_ref::<T>().unwrap(),
+                other,
+            ),
+            Value::Option(Some(mid_value)) if matches!(**mid_value, Value::Boxed(_)) => {
+                let Value::Boxed(ref inner_value) = **mid_value else {
+                    unreachable!()
+                };
+                PartialEq::eq(
+                    inner_value.as_ref().as_any().downcast_ref::<T>().unwrap(),
+                    other,
+                )
+            }
+            Value::Option(Some(mid_value)) if matches!(**mid_value, Value::Vec(_)) => {
+                let Value::Vec(ref inner_value) = **mid_value else {
+                    unreachable!()
+                };
+                PartialEq::eq(
+                    inner_value.as_ref().as_any().downcast_ref::<T>().unwrap(),
+                    other,
+                )
+            }
+            _ => false,
         }
     }
 }
@@ -154,6 +208,21 @@ impl<'a, T: BoxedValue> FromValue<&'a Value> for Option<&'a T> {
                 Some(<&T>::from_value(mid_type))
             }
             _ => panic!("Value is not a boxable"),
+        }
+    }
+}
+
+impl<T> PartialEq<Option<T>> for Value
+where
+    Value: PartialEq<T>,
+{
+    fn eq(&self, other: &Option<T>) -> bool {
+        match self {
+            Value::Option(None) => other.is_none(),
+            Value::Option(Some(mid_value)) => {
+                other.is_some() && PartialEq::eq(&**mid_value, other.as_ref().unwrap())
+            }
+            _ => false,
         }
     }
 }
