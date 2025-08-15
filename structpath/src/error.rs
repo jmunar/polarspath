@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum StructPathError {
     #[error("Invalid path: {0}")]
     InvalidPath(String),

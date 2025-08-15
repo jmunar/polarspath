@@ -35,11 +35,6 @@ impl ToTokens for FieldType {
 }
 
 #[derive(Debug)]
-pub struct FieldsInfo {
-    pub fields: Vec<FieldInfo>,
-}
-
-#[derive(Debug)]
 pub struct FieldInfo {
     pub name: String,
     pub r#type: FieldType,

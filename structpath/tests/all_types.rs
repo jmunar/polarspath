@@ -1,4 +1,4 @@
-use structpath::{FieldType, FromValue, StructPath};
+use structpath::{FieldType, FromValue, StructPath, StructPathError};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SampleEnum {
@@ -159,284 +159,31 @@ pub fn build_sample_struct_with_null_optionals() -> SampleStruct {
 }
 
 #[test]
-fn test_get_type_by_field() -> Result<(), Box<dyn std::error::Error>> {
-    let v = SampleStruct::get_type("f_string_scalar_required")?;
-    assert_eq!(v, FieldType::String);
-    let v = SampleStruct::get_type("f_integer_scalar_required")?;
-    assert_eq!(v, FieldType::Integer);
-    let v = SampleStruct::get_type("f_float_scalar_required")?;
-    assert_eq!(v, FieldType::Float);
-    let v = SampleStruct::get_type("f_boolean_scalar_required")?;
-    assert_eq!(v, FieldType::Boolean);
-    let v = SampleStruct::get_type("f_struct_scalar_required")?;
-    assert_eq!(v, FieldType::StructPath("SampleSubstruct".to_string()));
-    let v = SampleStruct::get_type("f_enum_scalar_required")?;
-    assert_eq!(v, FieldType::Unknown);
-
-    let v = SampleStruct::get_type("f_string_scalar_optional")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::String)));
-    let v = SampleStruct::get_type("f_integer_scalar_optional")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::Integer)));
-    let v = SampleStruct::get_type("f_float_scalar_optional")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::Float)));
-    let v = SampleStruct::get_type("f_boolean_scalar_optional")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::Boolean)));
-    let v = SampleStruct::get_type("f_struct_scalar_optional")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::StructPath(
-            "SampleSubstruct".to_string()
-        )))
-    );
-    let v = SampleStruct::get_type("f_enum_scalar_optional")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::Unknown)));
-
-    let v = SampleStruct::get_type("f_string_vector_required_elements_required")?;
-    assert_eq!(v, FieldType::Vec(Box::new(FieldType::String)));
-    let v = SampleStruct::get_type("f_integer_vector_required_elements_required")?;
-    assert_eq!(v, FieldType::Vec(Box::new(FieldType::Integer)));
-    let v = SampleStruct::get_type("f_float_vector_required_elements_required")?;
-    assert_eq!(v, FieldType::Vec(Box::new(FieldType::Float)));
-    let v = SampleStruct::get_type("f_boolean_vector_required_elements_required")?;
-    assert_eq!(v, FieldType::Vec(Box::new(FieldType::Boolean)));
-    let v = SampleStruct::get_type("f_struct_vector_required_elements_required")?;
-    assert_eq!(
-        v,
-        FieldType::Vec(Box::new(FieldType::StructPath(
-            "SampleSubstruct".to_string()
-        )))
-    );
-    let v = SampleStruct::get_type("f_enum_vector_required_elements_required")?;
-    assert_eq!(v, FieldType::Vec(Box::new(FieldType::Unknown)));
-
-    let v = SampleStruct::get_type("f_string_vector_optional_elements_required")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::String))))
-    );
-    let v = SampleStruct::get_type("f_integer_vector_optional_elements_required")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Integer))))
-    );
-    let v = SampleStruct::get_type("f_float_vector_optional_elements_required")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Float))))
-    );
-    let v = SampleStruct::get_type("f_boolean_vector_optional_elements_required")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Boolean))))
-    );
-    let v = SampleStruct::get_type("f_struct_vector_optional_elements_required")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::StructPath(
-            "SampleSubstruct".to_string()
-        )))))
-    );
-    let v = SampleStruct::get_type("f_enum_vector_optional_elements_required")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Unknown))))
-    );
-
-    let v = SampleStruct::get_type("f_string_vector_required_elements_optional")?;
-    assert_eq!(
-        v,
-        FieldType::Vec(Box::new(FieldType::Option(Box::new(FieldType::String))))
-    );
-    let v = SampleStruct::get_type("f_integer_vector_required_elements_optional")?;
-    assert_eq!(
-        v,
-        FieldType::Vec(Box::new(FieldType::Option(Box::new(FieldType::Integer))))
-    );
-    let v = SampleStruct::get_type("f_float_vector_required_elements_optional")?;
-    assert_eq!(
-        v,
-        FieldType::Vec(Box::new(FieldType::Option(Box::new(FieldType::Float))))
-    );
-    let v = SampleStruct::get_type("f_boolean_vector_required_elements_optional")?;
-    assert_eq!(
-        v,
-        FieldType::Vec(Box::new(FieldType::Option(Box::new(FieldType::Boolean))))
-    );
-    let v = SampleStruct::get_type("f_struct_vector_required_elements_optional")?;
-    assert_eq!(
-        v,
-        FieldType::Vec(Box::new(FieldType::Option(Box::new(
-            FieldType::StructPath("SampleSubstruct".to_string())
-        ))))
-    );
-    let v = SampleStruct::get_type("f_enum_vector_required_elements_optional")?;
-    assert_eq!(
-        v,
-        FieldType::Vec(Box::new(FieldType::Option(Box::new(FieldType::Unknown))))
-    );
-
-    let v = SampleStruct::get_type("f_string_vector_optional_elements_optional")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Option(
-            Box::new(FieldType::String)
-        )))))
-    );
-    let v = SampleStruct::get_type("f_integer_vector_optional_elements_optional")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Option(
-            Box::new(FieldType::Integer)
-        )))))
-    );
-    let v = SampleStruct::get_type("f_float_vector_optional_elements_optional")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Option(
-            Box::new(FieldType::Float)
-        )))))
-    );
-    let v = SampleStruct::get_type("f_boolean_vector_optional_elements_optional")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Option(
-            Box::new(FieldType::Boolean)
-        )))))
-    );
-    let v = SampleStruct::get_type("f_struct_vector_optional_elements_optional")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Option(
-            Box::new(FieldType::StructPath("SampleSubstruct".to_string()))
-        )))))
-    );
-    let v = SampleStruct::get_type("f_enum_vector_optional_elements_optional")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Option(
-            Box::new(FieldType::Unknown)
-        )))))
-    );
-
-    Ok(())
-}
-
-#[test]
-fn test_get_type_by_index() -> Result<(), Box<dyn std::error::Error>> {
-    let v = SampleStruct::get_type("f_string_vector_required_elements_required[0]")?;
-    assert_eq!(v, FieldType::String);
-    let v = SampleStruct::get_type("f_integer_vector_required_elements_required[0]")?;
-    assert_eq!(v, FieldType::Integer);
-    let v = SampleStruct::get_type("f_float_vector_required_elements_required[0]")?;
-    assert_eq!(v, FieldType::Float);
-    let v = SampleStruct::get_type("f_boolean_vector_required_elements_required[0]")?;
-    assert_eq!(v, FieldType::Boolean);
-    let v = SampleStruct::get_type("f_struct_vector_required_elements_required[0]")?;
-    assert_eq!(v, FieldType::StructPath("SampleSubstruct".to_string()));
-    let v = SampleStruct::get_type("f_enum_vector_required_elements_required[0]")?;
-    assert_eq!(v, FieldType::Unknown);
-
-    let v = SampleStruct::get_type("f_string_vector_optional_elements_required[0]")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::String)));
-    let v = SampleStruct::get_type("f_integer_vector_optional_elements_required[0]")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::Integer)));
-    let v = SampleStruct::get_type("f_float_vector_optional_elements_required[0]")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::Float)));
-    let v = SampleStruct::get_type("f_boolean_vector_optional_elements_required[0]")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::Boolean)));
-    let v = SampleStruct::get_type("f_struct_vector_optional_elements_required[0]")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::StructPath(
-            "SampleSubstruct".to_string()
-        )))
-    );
-    let v = SampleStruct::get_type("f_enum_vector_optional_elements_required[0]")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::Unknown)));
-
-    let v = SampleStruct::get_type("f_string_vector_required_elements_optional[0]")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::String)));
-    let v = SampleStruct::get_type("f_integer_vector_required_elements_optional[0]")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::Integer)));
-    let v = SampleStruct::get_type("f_float_vector_required_elements_optional[0]")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::Float)));
-    let v = SampleStruct::get_type("f_boolean_vector_required_elements_optional[0]")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::Boolean)));
-    let v = SampleStruct::get_type("f_struct_vector_required_elements_optional[0]")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::StructPath(
-            "SampleSubstruct".to_string()
-        )))
-    );
-    let v = SampleStruct::get_type("f_enum_vector_required_elements_optional[0]")?;
-    assert_eq!(v, FieldType::Option(Box::new(FieldType::Unknown)));
-
-    let v = SampleStruct::get_type("f_string_vector_optional_elements_optional[0]")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Option(Box::new(FieldType::String))))
-    );
-    let v = SampleStruct::get_type("f_integer_vector_optional_elements_optional[0]")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Option(Box::new(FieldType::Integer))))
-    );
-    let v = SampleStruct::get_type("f_float_vector_optional_elements_optional[0]")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Option(Box::new(FieldType::Float))))
-    );
-    let v = SampleStruct::get_type("f_boolean_vector_optional_elements_optional[0]")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Option(Box::new(FieldType::Boolean))))
-    );
-    let v = SampleStruct::get_type("f_struct_vector_optional_elements_optional[0]")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Option(Box::new(
-            FieldType::StructPath("SampleSubstruct".to_string())
-        ))))
-    );
-    let v = SampleStruct::get_type("f_enum_vector_optional_elements_optional[0]")?;
-    assert_eq!(
-        v,
-        FieldType::Option(Box::new(FieldType::Option(Box::new(FieldType::Unknown))))
-    );
-
-    Ok(())
-}
-
-#[test]
-fn test_nested_get_type() -> Result<(), Box<dyn std::error::Error>> {
-    let v = SampleStruct::get_type("f_struct_scalar_required.subf_string")?;
-    assert_eq!(v, FieldType::String);
-    let v = SampleStruct::get_type("f_struct_scalar_optional.subf_string")?;
-    assert_eq!(v, FieldType::String);
-    let v = SampleStruct::get_type("f_struct_vector_required_elements_required[0].subf_string")?;
-    assert_eq!(v, FieldType::String);
-    let v = SampleStruct::get_type("f_struct_vector_optional_elements_required[0].subf_string")?;
-    assert_eq!(v, FieldType::String);
-    let v = SampleStruct::get_type("f_struct_vector_required_elements_optional[0].subf_string")?;
-    assert_eq!(v, FieldType::String);
-    let v = SampleStruct::get_type("f_struct_vector_optional_elements_optional[0].subf_string")?;
-    assert_eq!(v, FieldType::String);
-
-    Ok(())
-}
-
-#[test]
-fn test_get_value_by_field_scalar() -> Result<(), Box<dyn std::error::Error>> {
+fn test_field_is_required_struct() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct();
+
+    let t = SampleStruct::get_type("f_string_scalar_required")?;
+    assert_eq!(t, FieldType::String);
     let v = sample_struct.get_value("f_string_scalar_required")?;
     assert_eq!(v, "hello");
+
+    let t = SampleStruct::get_type("f_integer_scalar_required")?;
+    assert_eq!(t, FieldType::Integer);
     let v = sample_struct.get_value("f_integer_scalar_required")?;
     assert_eq!(v, 123);
+
+    let t = SampleStruct::get_type("f_float_scalar_required")?;
+    assert_eq!(t, FieldType::Float);
     let v = sample_struct.get_value("f_float_scalar_required")?;
     assert_eq!(v, 1.23);
+
+    let t = SampleStruct::get_type("f_boolean_scalar_required")?;
+    assert_eq!(t, FieldType::Boolean);
     let v = sample_struct.get_value("f_boolean_scalar_required")?;
     assert_eq!(bool::from_value(v), true);
+
+    let t = SampleStruct::get_type("f_struct_scalar_required")?;
+    assert_eq!(t, FieldType::StructPath("SampleSubstruct".to_string()));
     let v = sample_struct.get_value("f_struct_scalar_required")?;
     assert_eq!(
         v,
@@ -444,6 +191,9 @@ fn test_get_value_by_field_scalar() -> Result<(), Box<dyn std::error::Error>> {
             subf_string: "sub1".to_string()
         }
     );
+
+    let t = SampleStruct::get_type("f_enum_scalar_required")?;
+    assert_eq!(t, FieldType::Unknown);
     let v = sample_struct.get_value("f_enum_scalar_required")?;
     assert_eq!(v, &SampleEnum::A);
 
@@ -451,17 +201,36 @@ fn test_get_value_by_field_scalar() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
-fn test_get_value_by_field_scalar_optional() -> Result<(), Box<dyn std::error::Error>> {
+fn test_field_is_some_struct() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct();
 
+    let t = SampleStruct::get_type("f_string_scalar_optional")?;
+    assert_eq!(t, FieldType::Option(Box::new(FieldType::String)));
     let v = sample_struct.get_value("f_string_scalar_optional")?;
     assert_eq!(v, Some("world"));
+
+    let t = SampleStruct::get_type("f_integer_scalar_optional")?;
+    assert_eq!(t, FieldType::Option(Box::new(FieldType::Integer)));
     let v = sample_struct.get_value("f_integer_scalar_optional")?;
     assert_eq!(v, Some(456));
+
+    let t = SampleStruct::get_type("f_float_scalar_optional")?;
+    assert_eq!(t, FieldType::Option(Box::new(FieldType::Float)));
     let v = sample_struct.get_value("f_float_scalar_optional")?;
     assert_eq!(v, Some(4.56));
+
+    let t = SampleStruct::get_type("f_boolean_scalar_optional")?;
+    assert_eq!(t, FieldType::Option(Box::new(FieldType::Boolean)));
     let v = sample_struct.get_value("f_boolean_scalar_optional")?;
     assert_eq!(v, Some(false));
+
+    let t = SampleStruct::get_type("f_struct_scalar_optional")?;
+    assert_eq!(
+        t,
+        FieldType::Option(Box::new(FieldType::StructPath(
+            "SampleSubstruct".to_string()
+        )))
+    );
     let v = sample_struct.get_value("f_struct_scalar_optional")?;
     assert_eq!(
         v,
@@ -469,6 +238,9 @@ fn test_get_value_by_field_scalar_optional() -> Result<(), Box<dyn std::error::E
             subf_string: "sub2".to_string()
         })
     );
+
+    let t = SampleStruct::get_type("f_enum_scalar_optional")?;
+    assert_eq!(t, FieldType::Option(Box::new(FieldType::Unknown)));
     let v = sample_struct.get_value("f_enum_scalar_optional")?;
     assert_eq!(v, Some(&SampleEnum::B));
 
@@ -476,7 +248,7 @@ fn test_get_value_by_field_scalar_optional() -> Result<(), Box<dyn std::error::E
 }
 
 #[test]
-fn test_get_value_by_field_scalar_optional_none() -> Result<(), Box<dyn std::error::Error>> {
+fn test_field_is_none_struct() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct_with_null_optionals();
 
     let v = sample_struct.get_value("f_string_scalar_optional")?;
@@ -496,18 +268,36 @@ fn test_get_value_by_field_scalar_optional_none() -> Result<(), Box<dyn std::err
 }
 
 #[test]
-fn test_get_value_by_field_required_array_required_items() -> Result<(), Box<dyn std::error::Error>>
-{
+fn test_field_is_required_array_with_required_items() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct();
 
+    let t = SampleStruct::get_type("f_string_vector_required_elements_required")?;
+    assert_eq!(t, FieldType::Vec(Box::new(FieldType::String)));
     let v = sample_struct.get_value("f_string_vector_required_elements_required")?;
     assert_eq!(v, &vec!["hello".to_string(), "world".to_string()]);
+
+    let t = SampleStruct::get_type("f_integer_vector_required_elements_required")?;
+    assert_eq!(t, FieldType::Vec(Box::new(FieldType::Integer)));
     let v = sample_struct.get_value("f_integer_vector_required_elements_required")?;
     assert_eq!(v, &vec![123_i64, 456_i64]);
+
+    let t = SampleStruct::get_type("f_float_vector_required_elements_required")?;
+    assert_eq!(t, FieldType::Vec(Box::new(FieldType::Float)));
     let v = sample_struct.get_value("f_float_vector_required_elements_required")?;
     assert_eq!(v, &vec![1.23, 4.56]);
+
+    let t = SampleStruct::get_type("f_boolean_vector_required_elements_required")?;
+    assert_eq!(t, FieldType::Vec(Box::new(FieldType::Boolean)));
     let v = sample_struct.get_value("f_boolean_vector_required_elements_required")?;
     assert_eq!(v, &vec![true, false]);
+
+    let t = SampleStruct::get_type("f_struct_vector_required_elements_required")?;
+    assert_eq!(
+        t,
+        FieldType::Vec(Box::new(FieldType::StructPath(
+            "SampleSubstruct".to_string()
+        )))
+    );
     let v = sample_struct.get_value("f_struct_vector_required_elements_required")?;
     assert_eq!(
         v,
@@ -515,6 +305,9 @@ fn test_get_value_by_field_required_array_required_items() -> Result<(), Box<dyn
             subf_string: "sub3".to_string()
         }],
     );
+
+    let t = SampleStruct::get_type("f_enum_vector_required_elements_required")?;
+    assert_eq!(t, FieldType::Vec(Box::new(FieldType::Unknown)));
     let v = sample_struct.get_value("f_enum_vector_required_elements_required")?;
     assert_eq!(v, &vec![SampleEnum::A, SampleEnum::B]);
 
@@ -522,24 +315,60 @@ fn test_get_value_by_field_required_array_required_items() -> Result<(), Box<dyn
 }
 
 #[test]
-fn test_get_value_by_field_optional_array_required_items() -> Result<(), Box<dyn std::error::Error>>
-{
+fn test_field_is_some_array_with_required_items() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct();
 
+    let t = SampleStruct::get_type("f_string_vector_optional_elements_required")?;
+    assert_eq!(
+        t,
+        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::String))))
+    );
     let v = sample_struct.get_value("f_string_vector_optional_elements_required")?;
     assert_eq!(v, Some(&vec!["hello".to_string(), "world".to_string()]));
+
+    let t = SampleStruct::get_type("f_integer_vector_optional_elements_required")?;
+    assert_eq!(
+        t,
+        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Integer))))
+    );
     let v = sample_struct.get_value("f_integer_vector_optional_elements_required")?;
     assert_eq!(v, Some(&vec![123_i64, 456_i64]));
+
+    let t = SampleStruct::get_type("f_float_vector_optional_elements_required")?;
+    assert_eq!(
+        t,
+        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Float))))
+    );
     let v = sample_struct.get_value("f_float_vector_optional_elements_required")?;
     assert_eq!(v, Some(&vec![1.23, 4.56]));
+
+    let t = SampleStruct::get_type("f_boolean_vector_optional_elements_required")?;
+    assert_eq!(
+        t,
+        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Boolean))))
+    );
     let v = sample_struct.get_value("f_boolean_vector_optional_elements_required")?;
     assert_eq!(v, Some(&vec![true, false]));
+
+    let t = SampleStruct::get_type("f_struct_vector_optional_elements_required")?;
+    assert_eq!(
+        t,
+        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::StructPath(
+            "SampleSubstruct".to_string()
+        )))))
+    );
     let v = sample_struct.get_value("f_struct_vector_optional_elements_required")?;
     assert_eq!(
         v,
         Some(&vec![SampleSubstruct {
             subf_string: "sub4".to_string(),
         }])
+    );
+
+    let t = SampleStruct::get_type("f_enum_vector_optional_elements_required")?;
+    assert_eq!(
+        t,
+        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Unknown))))
     );
     let v = sample_struct.get_value("f_enum_vector_optional_elements_required")?;
     assert_eq!(v, Some(&vec![SampleEnum::A, SampleEnum::B]));
@@ -548,8 +377,7 @@ fn test_get_value_by_field_optional_array_required_items() -> Result<(), Box<dyn
 }
 
 #[test]
-fn test_get_value_by_field_optional_array_is_none_required_items(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn test_field_is_none_array_with_required_items() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct_with_null_optionals();
 
     let v = sample_struct.get_value("f_string_vector_optional_elements_required")?;
@@ -569,18 +397,48 @@ fn test_get_value_by_field_optional_array_is_none_required_items(
 }
 
 #[test]
-fn test_get_value_by_field_required_array_optional_items() -> Result<(), Box<dyn std::error::Error>>
-{
+fn test_field_is_required_array_with_optional_items() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct();
 
+    let t = SampleStruct::get_type("f_string_vector_required_elements_optional")?;
+    assert_eq!(
+        t,
+        FieldType::Vec(Box::new(FieldType::Option(Box::new(FieldType::String))))
+    );
     let v = sample_struct.get_value("f_string_vector_required_elements_optional")?;
     assert_eq!(v, &vec![Some("hello".to_string()), None]);
+
+    let t = SampleStruct::get_type("f_integer_vector_required_elements_optional")?;
+    assert_eq!(
+        t,
+        FieldType::Vec(Box::new(FieldType::Option(Box::new(FieldType::Integer))))
+    );
     let v = sample_struct.get_value("f_integer_vector_required_elements_optional")?;
     assert_eq!(v, &vec![Some(123_i64), None]);
+
+    let t = SampleStruct::get_type("f_float_vector_required_elements_optional")?;
+    assert_eq!(
+        t,
+        FieldType::Vec(Box::new(FieldType::Option(Box::new(FieldType::Float))))
+    );
     let v = sample_struct.get_value("f_float_vector_required_elements_optional")?;
     assert_eq!(v, &vec![Some(1.23), None]);
+
+    let t = SampleStruct::get_type("f_boolean_vector_required_elements_optional")?;
+    assert_eq!(
+        t,
+        FieldType::Vec(Box::new(FieldType::Option(Box::new(FieldType::Boolean))))
+    );
     let v = sample_struct.get_value("f_boolean_vector_required_elements_optional")?;
     assert_eq!(v, &vec![Some(true), None]);
+
+    let t = SampleStruct::get_type("f_struct_vector_required_elements_optional")?;
+    assert_eq!(
+        t,
+        FieldType::Vec(Box::new(FieldType::Option(Box::new(
+            FieldType::StructPath("SampleSubstruct".to_string())
+        ))))
+    );
     let v = sample_struct.get_value("f_struct_vector_required_elements_optional")?;
     assert_eq!(
         v,
@@ -591,6 +449,12 @@ fn test_get_value_by_field_required_array_optional_items() -> Result<(), Box<dyn
             None
         ]
     );
+
+    let t = SampleStruct::get_type("f_enum_vector_required_elements_optional")?;
+    assert_eq!(
+        t,
+        FieldType::Vec(Box::new(FieldType::Option(Box::new(FieldType::Unknown))))
+    );
     let v = sample_struct.get_value("f_enum_vector_required_elements_optional")?;
     assert_eq!(v, &vec![Some(SampleEnum::A), None]);
 
@@ -598,18 +462,56 @@ fn test_get_value_by_field_required_array_optional_items() -> Result<(), Box<dyn
 }
 
 #[test]
-fn test_get_value_by_field_optional_array_optional_items() -> Result<(), Box<dyn std::error::Error>>
-{
+fn test_field_is_some_array_with_optional_items() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct();
 
+    let t = SampleStruct::get_type("f_string_vector_optional_elements_optional")?;
+    assert_eq!(
+        t,
+        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Option(
+            Box::new(FieldType::String)
+        )))))
+    );
     let v = sample_struct.get_value("f_string_vector_optional_elements_optional")?;
     assert_eq!(v, Some(&vec![Some("hello".to_string()), None]));
+
+    let t = SampleStruct::get_type("f_integer_vector_optional_elements_optional")?;
+    assert_eq!(
+        t,
+        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Option(
+            Box::new(FieldType::Integer)
+        )))))
+    );
     let v = sample_struct.get_value("f_integer_vector_optional_elements_optional")?;
     assert_eq!(v, Some(&vec![Some(123_i64), None]));
+
+    let t = SampleStruct::get_type("f_float_vector_optional_elements_optional")?;
+    assert_eq!(
+        t,
+        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Option(
+            Box::new(FieldType::Float)
+        )))))
+    );
     let v = sample_struct.get_value("f_float_vector_optional_elements_optional")?;
     assert_eq!(v, Some(&vec![Some(1.23), None]));
+
+    let t = SampleStruct::get_type("f_boolean_vector_optional_elements_optional")?;
+    assert_eq!(
+        t,
+        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Option(
+            Box::new(FieldType::Boolean)
+        )))))
+    );
     let v = sample_struct.get_value("f_boolean_vector_optional_elements_optional")?;
     assert_eq!(v, Some(&vec![Some(true), None]));
+
+    let t = SampleStruct::get_type("f_struct_vector_optional_elements_optional")?;
+    assert_eq!(
+        t,
+        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Option(
+            Box::new(FieldType::StructPath("SampleSubstruct".to_string()))
+        )))))
+    );
     let v = sample_struct.get_value("f_struct_vector_optional_elements_optional")?;
     assert_eq!(
         v,
@@ -620,6 +522,14 @@ fn test_get_value_by_field_optional_array_optional_items() -> Result<(), Box<dyn
             None
         ])
     );
+
+    let t = SampleStruct::get_type("f_enum_vector_optional_elements_optional")?;
+    assert_eq!(
+        t,
+        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Option(
+            Box::new(FieldType::Unknown)
+        )))))
+    );
     let v = sample_struct.get_value("f_enum_vector_optional_elements_optional")?;
     assert_eq!(v, Some(&vec![Some(SampleEnum::A), None]));
 
@@ -627,8 +537,7 @@ fn test_get_value_by_field_optional_array_optional_items() -> Result<(), Box<dyn
 }
 
 #[test]
-fn test_get_value_by_field_optional_array_is_none_optional_items(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn test_field_is_none_array_with_optional_items() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct_with_null_optionals();
 
     let v = sample_struct.get_value("f_string_vector_optional_elements_optional")?;
@@ -648,18 +557,56 @@ fn test_get_value_by_field_optional_array_is_none_optional_items(
 }
 
 #[test]
-fn test_get_value_by_index_required_array_required_items() -> Result<(), Box<dyn std::error::Error>>
+fn test_array_index_out_of_bounds() -> Result<(), Box<dyn std::error::Error>> {
+    let sample_struct = build_sample_struct();
+
+    let v = sample_struct.get_value("f_string_vector_required_elements_required[2]");
+    assert_eq!(v.unwrap_err(), StructPathError::IndexOutOfBounds(2));
+    let v = sample_struct.get_value_safe("f_string_vector_required_elements_required[2]")?;
+    assert_eq!(v, None::<&str>);
+    let v = sample_struct.get_value("f_string_vector_optional_elements_required[2]");
+    assert_eq!(v.unwrap_err(), StructPathError::IndexOutOfBounds(2));
+    let v = sample_struct.get_value_safe("f_string_vector_optional_elements_required[2]")?;
+    assert_eq!(v, None::<&str>);
+    let v = sample_struct.get_value("f_string_vector_required_elements_optional[2]");
+    assert_eq!(v.unwrap_err(), StructPathError::IndexOutOfBounds(2));
+    let v = sample_struct.get_value_safe("f_string_vector_required_elements_optional[2]")?;
+    assert_eq!(v, None::<&str>);
+    let v = sample_struct.get_value("f_string_vector_optional_elements_optional[2]");
+    assert_eq!(v.unwrap_err(), StructPathError::IndexOutOfBounds(2));
+    let v = sample_struct.get_value_safe("f_string_vector_optional_elements_optional[2]")?;
+    assert_eq!(v, None::<&str>);
+
+    Ok(())
+}
+
+#[test]
+fn test_array_index_is_required_array_with_required_items() -> Result<(), Box<dyn std::error::Error>>
 {
     let sample_struct = build_sample_struct();
 
+    let t = SampleStruct::get_type("f_string_vector_required_elements_required[0]")?;
+    assert_eq!(t, FieldType::String);
     let v = sample_struct.get_value("f_string_vector_required_elements_required[0]")?;
     assert_eq!(v, "hello");
+
+    let t = SampleStruct::get_type("f_integer_vector_required_elements_required[0]")?;
+    assert_eq!(t, FieldType::Integer);
     let v = sample_struct.get_value("f_integer_vector_required_elements_required[0]")?;
     assert_eq!(v, 123_i64);
+
+    let t = SampleStruct::get_type("f_float_vector_required_elements_required[0]")?;
+    assert_eq!(t, FieldType::Float);
     let v = sample_struct.get_value("f_float_vector_required_elements_required[0]")?;
     assert_eq!(v, 1.23);
+
+    let t = SampleStruct::get_type("f_boolean_vector_required_elements_required[0]")?;
+    assert_eq!(t, FieldType::Boolean);
     let v = sample_struct.get_value("f_boolean_vector_required_elements_required[0]")?;
     assert_eq!(v, true);
+
+    let t = SampleStruct::get_type("f_struct_vector_required_elements_required[0]")?;
+    assert_eq!(t, FieldType::StructPath("SampleSubstruct".to_string()));
     let v = sample_struct.get_value("f_struct_vector_required_elements_required[0]")?;
     assert_eq!(
         v,
@@ -667,6 +614,9 @@ fn test_get_value_by_index_required_array_required_items() -> Result<(), Box<dyn
             subf_string: "sub3".to_string(),
         }
     );
+
+    let t = SampleStruct::get_type("f_enum_vector_required_elements_required[0]")?;
+    assert_eq!(t, FieldType::Unknown);
     let v = sample_struct.get_value("f_enum_vector_required_elements_required[0]")?;
     assert_eq!(v, &SampleEnum::A);
 
@@ -674,18 +624,32 @@ fn test_get_value_by_index_required_array_required_items() -> Result<(), Box<dyn
 }
 
 #[test]
-fn test_get_value_by_index_optional_array_required_items() -> Result<(), Box<dyn std::error::Error>>
+fn test_array_index_is_optional_array_with_required_items() -> Result<(), Box<dyn std::error::Error>>
 {
     let sample_struct = build_sample_struct();
 
+    let t = SampleStruct::get_type("f_string_vector_optional_elements_required[0]")?;
+    assert_eq!(t, FieldType::String);
     let v = sample_struct.get_value("f_string_vector_optional_elements_required[0]")?;
     assert_eq!(v, "hello");
+
+    let t = SampleStruct::get_type("f_integer_vector_optional_elements_required[0]")?;
+    assert_eq!(t, FieldType::Integer);
     let v = sample_struct.get_value("f_integer_vector_optional_elements_required[0]")?;
     assert_eq!(v, 123_i64);
+
+    let t = SampleStruct::get_type("f_float_vector_optional_elements_required[0]")?;
+    assert_eq!(t, FieldType::Float);
     let v = sample_struct.get_value("f_float_vector_optional_elements_required[0]")?;
     assert_eq!(v, 1.23);
+
+    let t = SampleStruct::get_type("f_boolean_vector_optional_elements_required[0]")?;
+    assert_eq!(t, FieldType::Boolean);
     let v = sample_struct.get_value("f_boolean_vector_optional_elements_required[0]")?;
     assert_eq!(v, true);
+
+    let t = SampleStruct::get_type("f_struct_vector_optional_elements_required[0]")?;
+    assert_eq!(t, FieldType::StructPath("SampleSubstruct".to_string()));
     let v = sample_struct.get_value("f_struct_vector_optional_elements_required[0]")?;
     assert_eq!(
         v,
@@ -693,6 +657,9 @@ fn test_get_value_by_index_optional_array_required_items() -> Result<(), Box<dyn
             subf_string: "sub4".to_string(),
         }
     );
+
+    let t = SampleStruct::get_type("f_enum_vector_optional_elements_required[0]")?;
+    assert_eq!(t, FieldType::Unknown);
     let v = sample_struct.get_value("f_enum_vector_optional_elements_required[0]")?;
     assert_eq!(v, &SampleEnum::A);
 
@@ -700,47 +667,66 @@ fn test_get_value_by_index_optional_array_required_items() -> Result<(), Box<dyn
 }
 
 #[test]
-fn test_get_value_by_index_optional_array_is_none_required_items(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn test_array_index_optional_array_is_none_required_items() -> Result<(), Box<dyn std::error::Error>>
+{
     let sample_struct = build_sample_struct_with_null_optionals();
 
-    let v = sample_struct.get_value("f_string_vector_optional_elements_required[0]")?;
-    assert_eq!(v, None::<&str>);
-    let v = sample_struct.get_value("f_integer_vector_optional_elements_required[0]")?;
-    assert_eq!(v, None::<&i64>);
-    let v = sample_struct.get_value("f_float_vector_optional_elements_required[0]")?;
-    assert_eq!(v, None::<&f64>);
-    let v = sample_struct.get_value("f_boolean_vector_optional_elements_required[0]")?;
-    assert_eq!(v, None::<&bool>);
-    let v = sample_struct.get_value("f_struct_vector_optional_elements_required[0]")?;
-    assert_eq!(v, None::<&SampleSubstruct>);
-    let v = sample_struct.get_value("f_enum_vector_optional_elements_required[0]")?;
-    assert_eq!(v, None::<&SampleEnum>);
+    let v = sample_struct.get_value("f_string_vector_optional_elements_required[0]");
+    assert_eq!(v.unwrap_err(), StructPathError::NullValue);
+
+    let v = sample_struct.get_value("f_integer_vector_optional_elements_required[0]");
+    assert_eq!(v.unwrap_err(), StructPathError::NullValue);
+    let v = sample_struct.get_value("f_float_vector_optional_elements_required[0]");
+    assert_eq!(v.unwrap_err(), StructPathError::NullValue);
+    let v = sample_struct.get_value("f_boolean_vector_optional_elements_required[0]");
+    assert_eq!(v.unwrap_err(), StructPathError::NullValue);
+    let v = sample_struct.get_value("f_struct_vector_optional_elements_required[0]");
+    assert_eq!(v.unwrap_err(), StructPathError::NullValue);
+    let v = sample_struct.get_value("f_enum_vector_optional_elements_required[0]");
+    assert_eq!(v.unwrap_err(), StructPathError::NullValue);
 
     Ok(())
 }
 
 #[test]
-fn test_get_value_by_index_required_array_optional_items() -> Result<(), Box<dyn std::error::Error>>
-{
+fn test_array_index_required_array_optional_items() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct();
 
+    let t = SampleStruct::get_type("f_string_vector_required_elements_optional[0]")?;
+    assert_eq!(t, FieldType::Option(Box::new(FieldType::String)));
     let v = sample_struct.get_value("f_string_vector_required_elements_optional[0]")?;
     assert_eq!(v, Some("hello"));
     let v = sample_struct.get_value("f_string_vector_required_elements_optional[1]")?;
     assert_eq!(v, None::<&str>);
+
+    let t = SampleStruct::get_type("f_integer_vector_required_elements_optional[0]")?;
+    assert_eq!(t, FieldType::Option(Box::new(FieldType::Integer)));
     let v = sample_struct.get_value("f_integer_vector_required_elements_optional[0]")?;
     assert_eq!(v, Some(123_i64));
     let v = sample_struct.get_value("f_integer_vector_required_elements_optional[1]")?;
     assert_eq!(v, None::<&i64>);
+
+    let t = SampleStruct::get_type("f_float_vector_required_elements_optional[0]")?;
+    assert_eq!(t, FieldType::Option(Box::new(FieldType::Float)));
     let v = sample_struct.get_value("f_float_vector_required_elements_optional[0]")?;
     assert_eq!(v, Some(1.23));
     let v = sample_struct.get_value("f_float_vector_required_elements_optional[1]")?;
     assert_eq!(v, None::<&f64>);
+
+    let t = SampleStruct::get_type("f_boolean_vector_required_elements_optional[0]")?;
+    assert_eq!(t, FieldType::Option(Box::new(FieldType::Boolean)));
     let v = sample_struct.get_value("f_boolean_vector_required_elements_optional[0]")?;
     assert_eq!(v, Some(true));
     let v = sample_struct.get_value("f_boolean_vector_required_elements_optional[1]")?;
     assert_eq!(v, None::<&bool>);
+
+    let t = SampleStruct::get_type("f_struct_vector_required_elements_optional[0]")?;
+    assert_eq!(
+        t,
+        FieldType::Option(Box::new(FieldType::StructPath(
+            "SampleSubstruct".to_string()
+        )))
+    );
     let v = sample_struct.get_value("f_struct_vector_required_elements_optional[0]")?;
     assert_eq!(
         v,
@@ -750,6 +736,9 @@ fn test_get_value_by_index_required_array_optional_items() -> Result<(), Box<dyn
     );
     let v = sample_struct.get_value("f_struct_vector_required_elements_optional[1]")?;
     assert_eq!(v, None::<&SampleSubstruct>);
+
+    let t = SampleStruct::get_type("f_enum_vector_required_elements_optional[0]")?;
+    assert_eq!(t, FieldType::Option(Box::new(FieldType::Unknown)));
     let v = sample_struct.get_value("f_enum_vector_required_elements_optional[0]")?;
     assert_eq!(v, Some(&SampleEnum::A));
     let v = sample_struct.get_value("f_enum_vector_required_elements_optional[1]")?;
@@ -763,22 +752,41 @@ fn test_get_value_by_index_optional_array_optional_items() -> Result<(), Box<dyn
 {
     let sample_struct = build_sample_struct();
 
+    let t = SampleStruct::get_type("f_string_vector_optional_elements_optional[0]")?;
+    assert_eq!(t, FieldType::Option(Box::new(FieldType::String)));
     let v = sample_struct.get_value("f_string_vector_optional_elements_optional[0]")?;
     assert_eq!(String::from_value(v), "hello");
     let v = sample_struct.get_value("f_string_vector_optional_elements_optional[1]")?;
     assert_eq!(v.as_option(), None);
+
+    let t = SampleStruct::get_type("f_integer_vector_optional_elements_optional[0]")?;
+    assert_eq!(t, FieldType::Option(Box::new(FieldType::Integer)));
     let v = sample_struct.get_value("f_integer_vector_optional_elements_optional[0]")?;
     assert_eq!(i64::from_value(v), 123);
     let v = sample_struct.get_value("f_integer_vector_optional_elements_optional[1]")?;
     assert_eq!(v.as_option(), None);
+
+    let t = SampleStruct::get_type("f_float_vector_optional_elements_optional[0]")?;
+    assert_eq!(t, FieldType::Option(Box::new(FieldType::Float)));
     let v = sample_struct.get_value("f_float_vector_optional_elements_optional[0]")?;
     assert_eq!(f64::from_value(v), 1.23);
     let v = sample_struct.get_value("f_float_vector_optional_elements_optional[1]")?;
     assert_eq!(v.as_option(), None);
+
+    let t = SampleStruct::get_type("f_boolean_vector_optional_elements_optional[0]")?;
+    assert_eq!(t, FieldType::Option(Box::new(FieldType::Boolean)));
     let v = sample_struct.get_value("f_boolean_vector_optional_elements_optional[0]")?;
     assert_eq!(bool::from_value(v), true);
     let v = sample_struct.get_value("f_boolean_vector_optional_elements_optional[1]")?;
     assert_eq!(v.as_option(), None);
+
+    let t = SampleStruct::get_type("f_struct_vector_optional_elements_optional[0]")?;
+    assert_eq!(
+        t,
+        FieldType::Option(Box::new(FieldType::StructPath(
+            "SampleSubstruct".to_string()
+        )))
+    );
     let v = sample_struct.get_value("f_struct_vector_optional_elements_optional[0]")?;
     assert_eq!(
         <&SampleSubstruct>::from_value(&v),
@@ -788,6 +796,9 @@ fn test_get_value_by_index_optional_array_optional_items() -> Result<(), Box<dyn
     );
     let v = sample_struct.get_value("f_struct_vector_optional_elements_optional[1]")?;
     assert_eq!(v.as_option(), None);
+
+    let t = SampleStruct::get_type("f_enum_vector_optional_elements_optional[0]")?;
+    assert_eq!(t, FieldType::Option(Box::new(FieldType::Unknown)));
     let v = sample_struct.get_value("f_enum_vector_optional_elements_optional[0]")?;
     assert_eq!(<&SampleEnum>::from_value(&v), &SampleEnum::A);
     let v = sample_struct.get_value("f_enum_vector_optional_elements_optional[1]")?;
@@ -801,18 +812,18 @@ fn test_get_value_by_index_optional_array_is_none_optional_items(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct_with_null_optionals();
 
-    let v = sample_struct.get_value("f_string_vector_optional_elements_optional[0]")?;
-    assert_eq!(v.as_option(), None);
-    let v = sample_struct.get_value("f_integer_vector_optional_elements_optional[0]")?;
-    assert_eq!(v.as_option(), None);
-    let v = sample_struct.get_value("f_float_vector_optional_elements_optional[0]")?;
-    assert_eq!(v.as_option(), None);
-    let v = sample_struct.get_value("f_boolean_vector_optional_elements_optional[0]")?;
-    assert_eq!(v.as_option(), None);
-    let v = sample_struct.get_value("f_struct_vector_optional_elements_optional[0]")?;
-    assert_eq!(v.as_option(), None);
-    let v = sample_struct.get_value("f_enum_vector_optional_elements_optional[0]")?;
-    assert_eq!(v.as_option(), None);
+    let v = sample_struct.get_value("f_string_vector_optional_elements_optional[0]");
+    assert_eq!(v.unwrap_err(), StructPathError::NullValue);
+    let v = sample_struct.get_value("f_integer_vector_optional_elements_optional[0]");
+    assert_eq!(v.unwrap_err(), StructPathError::NullValue);
+    let v = sample_struct.get_value("f_float_vector_optional_elements_optional[0]");
+    assert_eq!(v.unwrap_err(), StructPathError::NullValue);
+    let v = sample_struct.get_value("f_boolean_vector_optional_elements_optional[0]");
+    assert_eq!(v.unwrap_err(), StructPathError::NullValue);
+    let v = sample_struct.get_value("f_struct_vector_optional_elements_optional[0]");
+    assert_eq!(v.unwrap_err(), StructPathError::NullValue);
+    let v = sample_struct.get_value("f_enum_vector_optional_elements_optional[0]");
+    assert_eq!(v.unwrap_err(), StructPathError::NullValue);
 
     Ok(())
 }
@@ -821,16 +832,33 @@ fn test_get_value_by_index_optional_array_is_none_optional_items(
 fn test_nested_get_value() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct();
 
+    let t = SampleStruct::get_type("f_struct_scalar_required.subf_string")?;
+    assert_eq!(t, FieldType::String);
     let v = sample_struct.get_value("f_struct_scalar_required.subf_string")?;
     assert_eq!(String::from_value(v), "sub1");
+
+    let t = SampleStruct::get_type("f_struct_scalar_optional.subf_string")?;
+    assert_eq!(t, FieldType::String);
     let v = sample_struct.get_value("f_struct_scalar_optional.subf_string")?;
     assert_eq!(String::from_value(v), "sub2");
+
+    let t = SampleStruct::get_type("f_struct_vector_required_elements_required[0].subf_string")?;
+    assert_eq!(t, FieldType::String);
     let v = sample_struct.get_value("f_struct_vector_required_elements_required[0].subf_string")?;
     assert_eq!(String::from_value(v), "sub3");
+
+    let t = SampleStruct::get_type("f_struct_vector_optional_elements_required[0].subf_string")?;
+    assert_eq!(t, FieldType::String);
     let v = sample_struct.get_value("f_struct_vector_optional_elements_required[0].subf_string")?;
     assert_eq!(String::from_value(v), "sub4");
+
+    let t = SampleStruct::get_type("f_struct_vector_required_elements_optional[0].subf_string")?;
+    assert_eq!(t, FieldType::String);
     let v = sample_struct.get_value("f_struct_vector_required_elements_optional[0].subf_string")?;
     assert_eq!(String::from_value(v), "sub5");
+
+    let t = SampleStruct::get_type("f_struct_vector_optional_elements_optional[0].subf_string")?;
+    assert_eq!(t, FieldType::String);
     let v = sample_struct.get_value("f_struct_vector_optional_elements_optional[0].subf_string")?;
     assert_eq!(String::from_value(v), "sub6");
 
@@ -841,12 +869,13 @@ fn test_nested_get_value() -> Result<(), Box<dyn std::error::Error>> {
 fn test_nested_get_value_optional_array_is_none() -> Result<(), Box<dyn std::error::Error>> {
     let sample_struct = build_sample_struct_with_null_optionals();
 
-    let v = sample_struct.get_value("f_struct_scalar_optional.subf_string")?;
-    assert_eq!(v.as_option(), None);
-    let v = sample_struct.get_value("f_struct_vector_optional_elements_required[0].subf_string")?;
-    assert_eq!(v.as_option(), None);
-    let v = sample_struct.get_value("f_struct_vector_optional_elements_optional[0].subf_string")?;
-    assert_eq!(v.as_option(), None);
+    let v = sample_struct.get_value("f_struct_scalar_optional.subf_string");
+    assert_eq!(v.unwrap_err(), StructPathError::NullValue);
+
+    let v = sample_struct.get_value("f_struct_vector_optional_elements_required[0].subf_string");
+    assert_eq!(v.unwrap_err(), StructPathError::NullValue);
+    let v = sample_struct.get_value("f_struct_vector_optional_elements_optional[0].subf_string");
+    assert_eq!(v.unwrap_err(), StructPathError::NullValue);
 
     Ok(())
 }

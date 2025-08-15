@@ -6,6 +6,7 @@ use structpath_types::{FieldInfo, FieldType};
 
 fn expr_type_nested_field(field: &FieldInfo) -> Option<TokenStream> {
     let field_name = format_ident!("{}", &field.name);
+
     match &field.r#type {
         FieldType::StructPath(inner_type_name) => {
             let inner_type = TokenStream::from_str(inner_type_name).ok()?;
@@ -29,6 +30,7 @@ fn expr_type_nested_field(field: &FieldInfo) -> Option<TokenStream> {
 
 fn expr_value_nested_field(field: &FieldInfo) -> Option<TokenStream> {
     let field_name = format_ident!("{}", &field.name);
+
     match &field.r#type {
         FieldType::StructPath(_) => Some(quote! {
             stringify!(#field_name) => self.#field_name.get_value_by_path(&remaining_path)
@@ -37,7 +39,7 @@ fn expr_value_nested_field(field: &FieldInfo) -> Option<TokenStream> {
             Some(quote! {
                 stringify!(#field_name) => match self.#field_name.as_ref() {
                     Some(s) => s.get_value_by_path(&remaining_path),
-                    None => Ok(::structpath::Value::Option(None))
+                    None => Err(::structpath::StructPathError::NullValue)
                 }
             })
         }
@@ -103,13 +105,25 @@ fn expr_value_nested_array(field: &FieldInfo) -> Option<TokenStream> {
     match &field.r#type {
         FieldType::Vec(inner_type) => match &**inner_type {
             FieldType::StructPath(_) => Some(quote! {
-                stringify!(#field_name) => self.#field_name[index].get_value_by_path(&remaining_path)
+                stringify!(#field_name) => {
+                    if index < self.#field_name.len() {
+                        self.#field_name[index].get_value_by_path(&remaining_path)
+                    } else {
+                        Err(::structpath::StructPathError::IndexOutOfBounds(index))
+                    }
+                }
             }),
             FieldType::Option(inner_type2) if matches!(**inner_type2, FieldType::StructPath(_)) => {
                 Some(quote! {
-                    stringify!(#field_name) => match self.#field_name[index].as_ref() {
-                        Some(s) => s.get_value_by_path(&remaining_path),
-                        None => Ok(::structpath::Value::Option(None))
+                    stringify!(#field_name) => {
+                        if index < self.#field_name.len() {
+                            match self.#field_name[index].as_ref() {
+                                Some(s) => s.get_value_by_path(&remaining_path),
+                                None => Err(::structpath::StructPathError::NullValue)
+                            }
+                        } else {
+                            Err(::structpath::StructPathError::IndexOutOfBounds(index))
+                        }
                     }
                 })
             }
@@ -120,8 +134,14 @@ fn expr_value_nested_array(field: &FieldInfo) -> Option<TokenStream> {
                 match &**inner_type {
                     FieldType::StructPath(_) => Some(quote! {
                         stringify!(#field_name) => match self.#field_name.as_ref() {
-                            Some(vec) => vec[index].get_value_by_path(&remaining_path),
-                            None => Ok(::structpath::Value::Option(None)),
+                            Some(vec) => {
+                                if index < vec.len() {
+                                    vec[index].get_value_by_path(&remaining_path)
+                                } else {
+                                    Err(::structpath::StructPathError::IndexOutOfBounds(index))
+                                }
+                            },
+                            None => Err(::structpath::StructPathError::NullValue),
                         }
                     }),
                     FieldType::Option(inner_type2)
@@ -129,11 +149,17 @@ fn expr_value_nested_array(field: &FieldInfo) -> Option<TokenStream> {
                     {
                         Some(quote! {
                             stringify!(#field_name) => match self.#field_name.as_ref() {
-                                Some(vec) => match vec[index].as_ref() {
-                                    Some(s) => s.get_value_by_path(&remaining_path),
-                                    None => Ok(::structpath::Value::Option(None))
+                                Some(vec) => {
+                                    if index < vec.len() {
+                                        match vec[index].as_ref() {
+                                            Some(s) => s.get_value_by_path(&remaining_path),
+                                            None => Err(::structpath::StructPathError::NullValue)
+                                        }
+                                    } else {
+                                        Err(::structpath::StructPathError::IndexOutOfBounds(index))
+                                    }
                                 },
-                                None => Ok(::structpath::Value::Option(None)),
+                                None => Err(::structpath::StructPathError::NullValue),
                             }
                         })
                     }
@@ -174,7 +200,7 @@ fn expr_type_final_array(field: &FieldInfo) -> Option<TokenStream> {
         }
         FieldType::Option(mid_type) if matches!(**mid_type, FieldType::Vec(_)) => {
             if let FieldType::Vec(ref inner_type) = **mid_type {
-                let elem_type = FieldType::Option(inner_type.clone());
+                let elem_type = inner_type;
                 Some(quote! {
                     stringify!(#field_name) => Ok(#elem_type)
                 })
@@ -192,25 +218,75 @@ fn expr_value_final_array(field: &FieldInfo) -> Option<TokenStream> {
         FieldType::Vec(elem_type) => {
             let field_expr = value_from_field(elem_type, quote! { self.#field_name[index] });
             Some(quote! {
-                stringify!(#field_name) => Ok(#field_expr)
+                stringify!(#field_name) => {
+                    if index < self.#field_name.len() {
+                        Ok(#field_expr)
+                    } else {
+                        Err(::structpath::StructPathError::IndexOutOfBounds(index))
+                    }
+                }
             })
         }
         FieldType::Option(mid_type) if matches!(**mid_type, FieldType::Vec(_)) => {
             if let FieldType::Vec(ref inner_type) = **mid_type {
                 let field_expr = value_from_field(inner_type, quote! { vec[index] });
                 Some(quote! {
-                    stringify!(#field_name) => Ok(
+                    stringify!(#field_name) => {
                         match self.#field_name.as_ref() {
-                            Some(vec) => #field_expr,
-                            None => ::structpath::Value::Option(None),
+                            Some(vec) => {
+                                if index < vec.len() {
+                                    Ok(#field_expr)
+                                } else {
+                                    Err(::structpath::StructPathError::IndexOutOfBounds(index))
+                                }
+                            }
+                            None => Err(::structpath::StructPathError::NullValue),
                         }
-                    )
+                    }
                 })
             } else {
                 None
             }
         }
         _ => None,
+    }
+}
+
+fn trait_function(
+    nested_field: impl Iterator<Item = TokenStream>,
+    nested_array: impl Iterator<Item = TokenStream>,
+    final_field: impl Iterator<Item = TokenStream>,
+    final_array: impl Iterator<Item = TokenStream>,
+) -> TokenStream {
+    quote! {
+        if path.components.len() > 1 {
+            let path_component = path.components[0].clone();
+            let remaining_path = ::structpath::Path {
+                components: path.components[1..].to_vec(),
+            };
+            return match path_component {
+                ::structpath::PathComponent::Field(field) => match field.as_str() {
+                    #(#nested_field,)*
+                    _ => Err(::structpath::StructPathError::FieldNotFound(field)),
+                },
+                ::structpath::PathComponent::ArrayIndex(field, index) => match field.as_str() {
+                    #(#nested_array,)*
+                    _ => Err(::structpath::StructPathError::FieldNotFound(field)),
+                },
+            }                }
+
+        let path_component = path.components[0].clone();
+
+        match path_component {
+            ::structpath::PathComponent::Field(field) => match field.as_str() {
+                #(#final_field,)*
+                _ => Err(::structpath::StructPathError::FieldNotFound(field)),
+            },
+            ::structpath::PathComponent::ArrayIndex(field, index) => match field.as_str() {
+                #(#final_array,)*
+                _ => Err(::structpath::StructPathError::FieldNotFound(field)),
+            },
+        }
     }
 }
 
@@ -241,105 +317,30 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
         _ => return quote! {},
     };
 
-    let fields_info: Vec<TokenStream> =
-        fields.iter().clone().map(|field| quote! {#field}).collect();
+    let get_type_by_path = trait_function(
+        fields.iter().filter_map(expr_type_nested_field),
+        fields.iter().filter_map(expr_type_nested_array),
+        fields.iter().map(expr_type_final_field),
+        fields.iter().filter_map(expr_type_final_array),
+    );
 
-    let types_nested_field = fields.iter().filter_map(expr_type_nested_field);
-    let values_nested_field = fields.iter().filter_map(expr_value_nested_field);
-    let types_nested_array = fields.iter().filter_map(expr_type_nested_array);
-    let values_nested_array = fields.iter().filter_map(expr_value_nested_array);
-    let types_final_field = fields.iter().map(expr_type_final_field);
-    let values_final_field = fields.iter().map(expr_value_final_field);
-    let types_final_array = fields.iter().filter_map(expr_type_final_array);
-    let values_final_array = fields.iter().filter_map(expr_value_final_array);
+    let get_value_by_path = trait_function(
+        fields.iter().filter_map(expr_value_nested_field),
+        fields.iter().filter_map(expr_value_nested_array),
+        fields.iter().map(expr_value_final_field),
+        fields.iter().filter_map(expr_value_final_array),
+    );
 
     quote! {
 
         impl ::structpath::StructPath for #type_name {
 
-            fn get_fields_info() -> ::structpath_types::FieldsInfo {
-                ::structpath_types::FieldsInfo {
-                    fields: vec![#(#fields_info),*],
-                }
-            }
-
             fn get_type_by_path(path: &::structpath::Path) -> Result<::structpath::FieldType, ::structpath::StructPathError> {
-                if path.components.len() > 1 {
-                    let path_component = path.components[0].clone();
-                    let remaining_path = ::structpath::Path {
-                        components: path.components[1..].to_vec(),
-                    };
-                    return match path_component {
-                        ::structpath::PathComponent::Field(field) => match field.as_str() {
-                            #(#types_nested_field,)*
-                            _ => Err(::structpath::StructPathError::FieldNotFound(field)),
-                        },
-                        ::structpath::PathComponent::ArrayIndex(field, index) => match field.as_str() {
-                            #(#types_nested_array,)*
-                            _ => Err(::structpath::StructPathError::FieldNotFound(field)),
-                        },
-                    }                }
-
-                let path_component = path.components[0].clone();
-
-                match path_component {
-                    ::structpath::PathComponent::Field(field) => match field.as_str() {
-                        #(#types_final_field,)*
-                        _ => Err(::structpath::StructPathError::FieldNotFound(field)),
-                    },
-                    ::structpath::PathComponent::ArrayIndex(field, index) => match field.as_str() {
-                        #(#types_final_array,)*
-                        _ => Err(::structpath::StructPathError::FieldNotFound(field)),
-                    },
-                }
-            }
-
-            fn get_type(path: &str) -> Result<::structpath::FieldType, ::structpath::StructPathError> {
-                let path = ::structpath::Path::from_str(path);
-                match path {
-                    Ok(path) => Self::get_type_by_path(&path),
-                    Err(e) => Err(::structpath::StructPathError::InvalidPath(e.to_string())),
-                }
+                #get_type_by_path
             }
 
             fn get_value_by_path(&self, path: &::structpath::Path) -> Result<::structpath::Value, ::structpath::StructPathError> {
-                if path.components.len() > 1 {
-                    let path_component = path.components[0].clone();
-                    let remaining_path = ::structpath::Path {
-                        components: path.components[1..].to_vec(),
-                    };
-                    return match path_component {
-                        ::structpath::PathComponent::Field(field) => match field.as_str() {
-                            #(#values_nested_field,)*
-                            _ => Err(::structpath::StructPathError::FieldNotFound(field)),
-                        },
-                        ::structpath::PathComponent::ArrayIndex(field, index) => match field.as_str() {
-                            #(#values_nested_array,)*
-                            _ => Err(::structpath::StructPathError::FieldNotFound(field)),
-                        },
-                    }
-                }
-
-                let path_component = path.components[0].clone();
-
-                match path_component {
-                    ::structpath::PathComponent::Field(field) => match field.as_str() {
-                        #(#values_final_field,)*
-                        _ => Err(::structpath::StructPathError::FieldNotFound(field)),
-                    },
-                    ::structpath::PathComponent::ArrayIndex(field, index) => match field.as_str() {
-                        #(#values_final_array,)*
-                        _ => Err(::structpath::StructPathError::FieldNotFound(field)),
-                    },
-                }
-            }
-
-            fn get_value(&self, path: &str) -> Result<::structpath::Value, ::structpath::StructPathError> {
-                let path = ::structpath::Path::from_str(path);
-                match path {
-                    Ok(path) => self.get_value_by_path(&path),
-                    Err(e) => Err(::structpath::StructPathError::InvalidPath(e.to_string())),
-                }
+                #get_value_by_path
             }
         }
     }

@@ -89,7 +89,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pet_0 = user.get_value("pets[0]")?;
     assert_eq!(<&Pet>::from_value(&pet_0), &Pet::Dog);
 
-    println!("{:?}", User::get_fields_info());
-
     Ok(())
 }
