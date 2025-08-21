@@ -1,11 +1,8 @@
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use structpath_types::FieldType;
 use syn::PathArguments::AngleBracketed;
-use syn::{
-    AngleBracketedGenericArguments, Attribute, Data, DeriveInput, Expr, Fields, GenericArgument,
-    Lit, Meta, Type,
-};
+use syn::{AngleBracketedGenericArguments, Attribute, Expr, GenericArgument, Lit, Meta, Type};
 
 fn get_angle_bracketed_inner(type_path: &syn::TypePath) -> Option<&Type> {
     type_path.path.segments.last().and_then(|segment| {
@@ -71,7 +68,9 @@ pub fn parse_field_type(field_type: &Type, attrs: &[Attribute]) -> FieldType {
                             parse_field_type(get_angle_bracketed_inner(type_path).unwrap(), attrs);
                         FieldType::Option(Box::new(inner_type))
                     }
-                    _ if is_structpath(attrs) => FieldType::StructPath,
+                    _ if is_structpath(attrs) => {
+                        FieldType::StructPath(type_path.to_token_stream().to_string())
+                    }
                     _ => FieldType::Unknown,
                 }
             }
@@ -81,44 +80,59 @@ pub fn parse_field_type(field_type: &Type, attrs: &[Attribute]) -> FieldType {
     }
 }
 
-pub fn derive_struct_info_impl(input: DeriveInput) -> TokenStream {
-    let type_name = input.ident;
+pub fn value_from_field(field_type: &FieldType, field_value: TokenStream) -> TokenStream {
+    match field_type {
+        FieldType::String => quote! {
+            ::structpath::Value::String(#field_value.clone())
+        },
+        FieldType::Integer => quote! {
+            ::structpath::Value::Integer(#field_value)
+        },
+        FieldType::Float => quote! {
+            ::structpath::Value::Float(#field_value)
+        },
+        FieldType::Boolean => quote! {
+            ::structpath::Value::Boolean(#field_value)
+        },
+        FieldType::StructPath(_) => quote! {
+            ::structpath::Value::Boxed(Box::new(#field_value.clone()))
+        },
+        FieldType::Unknown => quote! {
+            ::structpath::Value::Boxed(Box::new(#field_value.clone()))
+        },
+        FieldType::Vec(_) => quote! {
+            ::structpath::Value::Vec(Box::new(#field_value.clone()))
+        },
+        FieldType::Option(inner) => {
+            let inner_value = value_from_field(inner, quote! { t });
+            match inner.as_ref() {
+                FieldType::String
+                | FieldType::StructPath(_)
+                | FieldType::Unknown
+                | FieldType::Vec(_)
+                | FieldType::Option(_) => quote! {
+                    ::structpath::Value::Option(#field_value.as_ref().map(|t| Box::new(#inner_value)))
+                },
+                _ => quote! {
+                    ::structpath::Value::Option(#field_value.map(|t| Box::new(#inner_value)))
+                },
+            }
+        }
+    }
+}
 
-    let fields: Vec<TokenStream> = match input.data {
-        Data::Struct(data_struct) if matches!(data_struct.fields, Fields::Named(_)) => {
-            if let Fields::Named(fields_named) = data_struct.fields {
-                fields_named
-                    .named
-                    .iter()
-                    .map(|field| {
-                        let field_name = field.ident.clone().unwrap();
-                        let field_type = parse_field_type(&field.ty, &field.attrs);
-                        quote! {
-                            ::structpath_types::FieldInfo {
-                                name: stringify!(#field_name).to_string(),
-                                r#type: #field_type,
-                            }
-                        }
-                    })
-                    .collect()
-            } else {
-                unreachable!()
-            }
-        }
-        _ => {
-            return quote! {
-                compile_error!("StructInfo can only be derived for structs with named fields");
-            }
-        }
-    };
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    quote! {
-        impl ::structpath::StructInfo for #type_name {
-            fn get_fields_info() -> ::structpath_types::FieldsInfo {
-                ::structpath_types::FieldsInfo {
-                    fields: vec![#(#fields),*],
-                }
-            }
-        }
+    #[test]
+    fn test_value_from_field() {
+        let field_type = FieldType::String;
+        let field_value = quote! { test };
+        let value = value_from_field(&field_type, field_value);
+        assert_eq!(
+            value.to_string(),
+            quote! { ::structpath::Value::String(test.clone()) }.to_string()
+        );
     }
 }

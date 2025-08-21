@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     "TYPE_BYTES" => panic!("TYPE_BYTES not supported"),
                     "TYPE_UINT32" => panic!("TYPE_UINT32 not supported"),
-                    "TYPE_ENUM" => panic!("TYPE_ENUM not supported"),
+                    "TYPE_ENUM" => continue,
                     "TYPE_SFIXED32" => panic!("TYPE_SFIXED32 not supported"),
                     "TYPE_SFIXED64" => panic!("TYPE_SFIXED64 not supported"),
                     _ => panic!("Unknown field type: {}", field.r#type().as_str_name()),

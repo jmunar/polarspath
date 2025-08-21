@@ -1,13 +1,13 @@
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum FieldType {
     String,
     Integer,
     Float,
     Boolean,
-    StructPath,
+    StructPath(String),
     Option(Box<FieldType>),
     Vec(Box<FieldType>),
     Unknown,
@@ -15,34 +15,42 @@ pub enum FieldType {
 
 impl ToTokens for FieldType {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        match self {
-            FieldType::String => tokens.extend(quote! { ::structpath_types::FieldType::String }),
-            FieldType::Integer => tokens.extend(quote! { ::structpath_types::FieldType::Integer }),
-            FieldType::Float => tokens.extend(quote! { ::structpath_types::FieldType::Float }),
-            FieldType::Boolean => tokens.extend(quote! { ::structpath_types::FieldType::Boolean }),
-            FieldType::StructPath => {
-                tokens.extend(quote! { ::structpath_types::FieldType::StructPath })
+        tokens.extend(match self {
+            FieldType::String => quote! { ::structpath_types::FieldType::String },
+            FieldType::Integer => quote! { ::structpath_types::FieldType::Integer },
+            FieldType::Float => quote! { ::structpath_types::FieldType::Float },
+            FieldType::Boolean => quote! { ::structpath_types::FieldType::Boolean },
+            FieldType::StructPath(inner) => {
+                quote! { ::structpath_types::FieldType::StructPath(#inner.to_string()) }
             }
             FieldType::Option(inner) => {
-                tokens.extend(quote! { ::structpath_types::FieldType::Option(Box::new(#inner)) })
+                quote! { ::structpath_types::FieldType::Option(Box::new(#inner)) }
             }
             FieldType::Vec(inner) => {
-                tokens.extend(quote! { ::structpath_types::FieldType::Vec(Box::new(#inner)) })
+                quote! { ::structpath_types::FieldType::Vec(Box::new(#inner)) }
             }
-            FieldType::Unknown => tokens.extend(quote! { ::structpath_types::FieldType::Unknown }),
-        }
+            FieldType::Unknown => quote! { ::structpath_types::FieldType::Unknown },
+        })
     }
-}
-
-#[derive(Debug)]
-pub struct FieldsInfo {
-    pub fields: Vec<FieldInfo>,
 }
 
 #[derive(Debug)]
 pub struct FieldInfo {
     pub name: String,
     pub r#type: FieldType,
+}
+
+impl ToTokens for FieldInfo {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let self_name = &self.name;
+        let self_type = &self.r#type;
+        tokens.extend(quote! {
+            ::structpath_types::FieldInfo {
+                name: stringify!(#self_name).to_string(),
+                r#type: #self_type,
+            }
+        });
+    }
 }
 
 #[cfg(test)]
@@ -83,12 +91,12 @@ mod tests {
             ":: structpath_types :: FieldType :: Boolean"
         );
 
-        let field_type = FieldType::StructPath;
+        let field_type = FieldType::StructPath("MyStruct".to_string());
         let mut tokens = TokenStream::new();
         field_type.to_tokens(&mut tokens);
         assert_eq!(
             tokens.to_string(),
-            ":: structpath_types :: FieldType :: StructPath"
+            ":: structpath_types :: FieldType :: StructPath (\"MyStruct\" . to_string ())"
         );
 
         let field_type = FieldType::Option(Box::new(FieldType::String));
