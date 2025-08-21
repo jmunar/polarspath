@@ -5,7 +5,7 @@ pub mod sample {
 #[cfg(test)]
 mod tests {
     use super::sample;
-    use structpath::{FieldType, FromValue, StructPath};
+    use structpath::{FieldType, StructPath, StructPathError};
 
     #[test]
     fn test_get_type_user() -> Result<(), Box<dyn std::error::Error>> {
@@ -75,42 +75,44 @@ mod tests {
     fn test_get_value_user() -> Result<(), Box<dyn std::error::Error>> {
         let user = create_test_user();
 
-        let name = user.get_value("name")?;
-        assert_eq!(<&str>::from_value(&name), "John Doe");
+        let name = user.get_value_safe("name")?;
+        assert_eq!(name, "John Doe");
 
-        let age = user.get_value("age")?;
-        assert_eq!(i64::from_value(age), 30);
+        let age = user.get_value_safe("age")?;
+        assert_eq!(age, 30);
 
-        let email = user.get_value("email")?;
-        assert_eq!(String::from_value(email), "john.doe@example.com");
+        let email = user.get_value_safe("email")?;
+        assert_eq!(email, Some("john.doe@example.com"));
 
-        let is_active = user.get_value("is_active")?;
-        assert_eq!(bool::from_value(is_active), true);
+        let is_active = user.get_value_safe("is_active")?;
+        assert_eq!(is_active, true);
 
         // Note that protobuf sub-messages are always optional
-        let favourite_pet = user.get_value("favourite_pet")?;
+        let favourite_pet = user.get_value_safe("favourite_pet")?;
         assert_eq!(
-            <&sample::user::Pet>::from_value(&favourite_pet),
-            &sample::user::Pet {
+            favourite_pet,
+            Some(&sample::user::Pet {
                 name: "Buddy".to_string(),
                 birth_year: 2020,
-            }
+            })
         );
 
-        let favourite_pet_name = user.get_value("favourite_pet.name")?;
-        assert_eq!(String::from_value(favourite_pet_name), "Buddy");
+        let favourite_pet_name_type = sample::User::get_type_safe("favourite_pet.name")?;
+        assert_eq!(
+            favourite_pet_name_type,
+            FieldType::Option(Box::new(FieldType::String))
+        );
+        let favourite_pet_name = user.get_value_safe("favourite_pet.name")?;
+        assert_eq!(favourite_pet_name, Some("Buddy"));
 
         let tags = user.get_value("tags")?;
-        assert_eq!(
-            <&Vec<String>>::from_value(&tags),
-            &vec!["premium".to_string(), "verified".to_string()]
-        );
+        assert_eq!(tags, &vec!["premium".to_string(), "verified".to_string()]);
         let tag0 = user.get_value("tags[0]")?;
-        assert_eq!(String::from_value(tag0), "premium");
+        assert_eq!(tag0, "premium");
 
         let pets = user.get_value("pets")?;
         assert_eq!(
-            <&Vec<sample::user::Pet>>::from_value(&pets),
+            pets,
             &vec![
                 sample::user::Pet {
                     name: "Buddy".to_string(),
@@ -124,16 +126,16 @@ mod tests {
         );
         let pet0 = user.get_value("pets[0]")?;
         assert_eq!(
-            <&sample::user::Pet>::from_value(&pet0),
+            pet0,
             &sample::user::Pet {
                 name: "Buddy".to_string(),
                 birth_year: 2020,
             }
         );
         let pet0_name = user.get_value("pets[0].name")?;
-        assert_eq!(String::from_value(pet0_name), "Buddy");
+        assert_eq!(pet0_name, "Buddy");
         let pet0_birth_year = user.get_value("pets[0].birth_year")?;
-        assert_eq!(i64::from_value(pet0_birth_year), 2020);
+        assert_eq!(pet0_birth_year, 2020);
 
         Ok(())
     }
@@ -143,31 +145,28 @@ mod tests {
         let user = sample::User::default();
 
         let name = user.get_value("name")?;
-        assert_eq!(String::from_value(name), "");
+        assert_eq!(name, "");
 
         let age = user.get_value("age")?;
-        assert_eq!(i64::from_value(age), 0);
+        assert_eq!(age, 0);
 
         let email = user.get_value("email")?;
-        assert_eq!(email.as_option(), None);
+        assert_eq!(email, None::<&str>);
 
         let is_active = user.get_value("is_active")?;
-        assert_eq!(bool::from_value(is_active), false);
+        assert_eq!(is_active, false);
 
         let favourite_pet = user.get_value("favourite_pet")?;
-        assert_eq!(favourite_pet.as_option(), None);
+        assert_eq!(favourite_pet, None::<&sample::user::Pet>);
 
-        let favourite_pet_name = user.get_value("favourite_pet.name")?;
-        assert_eq!(favourite_pet_name.as_option(), None);
+        let favourite_pet_name = user.get_value("favourite_pet.name");
+        assert_eq!(favourite_pet_name.unwrap_err(), StructPathError::NullValue);
 
         let tags = user.get_value("tags")?;
-        assert_eq!(<&Vec<String>>::from_value(&tags), &Vec::<String>::new());
+        assert_eq!(tags, &Vec::<String>::new());
 
         let pets = user.get_value("pets")?;
-        assert_eq!(
-            <&Vec<sample::user::Pet>>::from_value(&pets),
-            &Vec::<sample::user::Pet>::new()
-        );
+        assert_eq!(pets, &Vec::<sample::user::Pet>::new());
 
         Ok(())
     }
@@ -181,21 +180,18 @@ mod tests {
         };
 
         let name = group.get_value("name")?;
-        assert_eq!(String::from_value(name), "My Group");
+        assert_eq!(name, "My Group");
 
         let admin = group.get_value("admin")?;
-        assert_eq!(<&sample::User>::from_value(&admin), &create_test_user());
+        assert_eq!(admin, &create_test_user());
         let admin_name = group.get_value("admin.name")?;
-        assert_eq!(String::from_value(admin_name), "John Doe");
+        assert_eq!(admin_name, "John Doe");
 
         let members = group.get_value("members")?;
-        assert_eq!(
-            <&Vec<sample::User>>::from_value(&members),
-            &vec![create_test_user()]
-        );
+        assert_eq!(members, &vec![create_test_user()]);
 
         let member0_pet0_birth_year = group.get_value("members[0].pets[0].birth_year")?;
-        assert_eq!(i64::from_value(member0_pet0_birth_year), 2020);
+        assert_eq!(member0_pet0_birth_year, 2020);
 
         Ok(())
     }

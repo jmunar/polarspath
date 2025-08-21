@@ -43,6 +43,25 @@ pub enum Value {
     Option(Option<Box<Value>>),
 }
 
+// Create a function for Value printing the type of the value
+fn value_type(value: &Value) -> String {
+    match value {
+        Value::String(_) => "String".to_string(),
+        Value::Integer(_) => "Integer".to_string(),
+        Value::Float(_) => "Float".to_string(),
+        Value::Boolean(_) => "Boolean".to_string(),
+        Value::Boxed(_) => "Boxed".to_string(),
+        Value::Vec(_) => "Vec".to_string(),
+        Value::Option(inner_value) => match inner_value {
+            Some(inner_value) => {
+                let inner_type = value_type(inner_value);
+                format!("Option({})", inner_type)
+            }
+            None => "Option(None)".to_string(),
+        },
+    }
+}
+
 pub trait FromValue<T> {
     fn from_value(value: T) -> Self;
 }
@@ -60,7 +79,7 @@ macro_rules! impl_from_value_and_partial_eq {
                         };
                         inner_value
                     }
-                    _ => panic!($panic_msg),
+                    _ => panic!("Expected {}, got {}", stringify!($type), value_type(&value)),
                 }
             }
         }
@@ -223,16 +242,6 @@ where
                 other.is_some() && PartialEq::eq(&**mid_value, other.as_ref().unwrap())
             }
             _ => false,
-        }
-    }
-}
-
-impl Value {
-    pub fn as_option(self) -> Option<Value> {
-        match self {
-            Value::Option(Some(value)) => Some(*value),
-            Value::Option(None) => None,
-            _ => panic!("Value is not an optional"),
         }
     }
 }

@@ -30,6 +30,7 @@ pub trait StructPath {
         let path = Path::from_str(path);
         match path {
             Ok(path) => match Self::get_type_by_path(&path) {
+                Ok(t) if matches!(t, FieldType::Option(_)) => Ok(t),
                 Ok(t) => Ok(FieldType::Option(Box::new(t))),
                 Err(e) => Err(e),
             },
@@ -49,7 +50,8 @@ pub trait StructPath {
         let path = Path::from_str(path);
         match path {
             Ok(path) => match self.get_value_by_path(&path) {
-                Ok(v) => Ok(v),
+                Ok(v) if matches!(v, Value::Option(_)) => Ok(v),
+                Ok(v) => Ok(Value::Option(Some(Box::new(v)))),
                 Err(StructPathError::IndexOutOfBounds(_)) | Err(StructPathError::NullValue) => {
                     Ok(Value::Option(None))
                 }

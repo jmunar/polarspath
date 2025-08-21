@@ -1,4 +1,4 @@
-use structpath::{FieldType, FromValue, StructPath};
+use structpath::{FieldType, StructPath};
 
 #[derive(Debug, Clone, PartialEq)]
 enum Pet {
@@ -70,24 +70,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(pets_0_type, FieldType::Option(Box::new(FieldType::Unknown)));
 
     let name = user.get_value("name")?;
-    assert_eq!(<&str>::from_value(&name), "John");
-    assert_eq!(String::from_value(name), "John");
+    assert_eq!(name, "John");
+    assert_eq!(name, "John".to_string());
     let age = user.get_value("age")?;
-    assert_eq!(i64::from_value(age), 32);
+    assert_eq!(age, 32);
     let parent_favorite = user.get_value("parent_favorite")?;
     assert_eq!(
-        <&Parent>::from_value(&parent_favorite),
+        parent_favorite,
         &Parent {
             name: "Mary".to_string(),
             age: 67,
         }
     );
     let parent_favorite_name = user.get_value("parent_favorite.name")?;
-    assert_eq!(String::from_value(parent_favorite_name), "Mary");
+    assert_eq!(parent_favorite_name, "Mary");
     let parent_0_name = user.get_value("parents[0].name")?;
-    assert_eq!(String::from_value(parent_0_name), "Joseph");
+    assert_eq!(parent_0_name, "Joseph");
     let pet_0 = user.get_value("pets[0]")?;
-    assert_eq!(<&Pet>::from_value(&pet_0), &Pet::Dog);
+    assert_eq!(pet_0, &Pet::Dog);
 
     Ok(())
 }
