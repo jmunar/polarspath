@@ -112,7 +112,7 @@ impl<T: FromValue<Value>> FromValue<Value> for Option<T> {
         match value {
             Value::Option(None) => None,
             Value::Option(Some(inner_type)) => Some(<T>::from_value(*inner_type)),
-            _ => panic!("Value is not an optional"),
+            _ => Some(<T>::from_value(value)),
         }
     }
 }

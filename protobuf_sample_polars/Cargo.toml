@@ -5,7 +5,7 @@ edition = "2021"
 
 [lib]
 name = "protobuf_sample_polars"
-crate-type = ["cdylib"]
+crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 polars-arrow = { version = "*", default-features = false }
@@ -17,3 +17,4 @@ pyo3-polars = { version = "*", features = ["derive"]}
 protobuf_sample = { path = "../protobuf_sample" }
 serde = { version = "*", features = ["derive"] }
 structpath = { version = "*", path = "../structpath", features = ["derive"] }
+structpath_types = { path = "../structpath_types" }

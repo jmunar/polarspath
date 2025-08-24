@@ -1,14 +1,16 @@
 use polars_core::prelude::{
-    polars_err, BinaryType, BooleanChunked, BooleanType, ChunkedArray, CompatLevel, DataType, Field, Float64Type,
-    Int64Type, PolarsError, PolarsNumericType, PolarsResult, Series, StringChunked, StringType,
+    polars_err, AnyValue, BinaryType, BooleanType, ChunkedArray, CompatLevel, DataType, Field,
+    Float64Type, Int64Type, ListType, PolarsError, PolarsResult, Series, StringType,
 };
+
 use polars_plan::dsl::FieldsMapper;
 use prost::Message;
 use protobuf_sample::sample;
 use pyo3_polars::derive::polars_expr;
 use pyo3_polars::export::polars_core::prelude::IntoSeries;
 use serde::Deserialize;
-use structpath::{FieldType, FromValue, StructPath};
+use std::iter::FromIterator;
+use structpath::{FieldType, FromValue, StructPath, Value};
 
 #[derive(Deserialize)]
 pub struct ExtractKwargs {
@@ -30,130 +32,160 @@ fn match_type(path_type: FieldType) -> DataType {
     }
 }
 
-fn extract_output(input_fields: &[Field], kwargs: ExtractKwargs) -> PolarsResult<Field> {
+fn extract_output<T>(input_fields: &[Field], kwargs: ExtractKwargs) -> PolarsResult<Field>
+where
+    T: StructPath + Message + Default,
+{
     let path = kwargs.path.as_str();
-    let path_type = sample::User::get_type_safe(path)
+    let path_type = T::get_type_safe(path)
         .map_err(|e| PolarsError::StructFieldNotFound(e.to_string().into()))?;
     let data_type = match_type(path_type);
     FieldsMapper::new(input_fields).with_dtype(data_type)
 }
 
-fn user_extract_typed<TP>(
+/// Trait to map types to their corresponding ChunkedArray types
+trait ToChunkedArrayType {
+    type ChunkedArrayType;
+}
+
+impl ToChunkedArrayType for String {
+    type ChunkedArrayType = ChunkedArray<StringType>;
+}
+
+impl ToChunkedArrayType for i64 {
+    type ChunkedArrayType = ChunkedArray<Int64Type>;
+}
+
+impl ToChunkedArrayType for f64 {
+    type ChunkedArrayType = ChunkedArray<Float64Type>;
+}
+
+impl ToChunkedArrayType for bool {
+    type ChunkedArrayType = ChunkedArray<BooleanType>;
+}
+
+impl<T: ToChunkedArrayType> ToChunkedArrayType for Vec<T> {
+    type ChunkedArrayType = ChunkedArray<ListType>;
+}
+
+/// Trait for message types that can extract fields to different types
+trait ExtractFromChunkedArray: StructPath + Message + Default {
+    fn extract_from_chunked_array<R>(
+        ca: &ChunkedArray<BinaryType>,
+        path: &str,
+    ) -> PolarsResult<Series>
+    where
+        R: ToChunkedArrayType + FromValue<Value>,
+        R::ChunkedArrayType: FromIterator<Option<R>> + IntoSeries;
+}
+
+// Generic helper function for Vec<R> extraction where R is any supported inner type
+fn extract_vec_from_chunked_array<T, R>(
     ca: &ChunkedArray<BinaryType>,
     path: &str,
-    option: bool,
-) -> Result<ChunkedArray<TP>, PolarsError>
+) -> PolarsResult<Series>
 where
-    TP: PolarsNumericType,
-    TP::OwnedPhysical: FromValue<structpath::Value>,
-    Option<TP::OwnedPhysical>: FromValue<structpath::Value>,
+    T: StructPath + Message + Default,
+    R: ToChunkedArrayType + FromValue<Value> + Clone + Send + Sync + 'static,
+    R::ChunkedArrayType: FromIterator<Option<R>> + IntoSeries,
 {
-    let chunk_out: Result<ChunkedArray<TP>, PolarsError> = ca
+    // Combine both iterations into a single pass and create Series directly
+    let any_values = ca
         .into_iter()
-        .map(|opt_bytes| {
-            match opt_bytes {
-                Some(bytes) => {
+        .map(|opt_bytes| match opt_bytes {
+            Some(bytes) => {
+                let message = T::decode(bytes)
+                    .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
+                let value = message
+                    .get_value_safe(path)
+                    .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
+                let result = <&Vec<R>>::from_value(&value);
 
-                    let user = sample::User::decode(bytes)
-                        .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
-                    let value = user.get_value_safe(path)
-                        .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
-                    
-                    if option {
-                        Ok(Option::<TP::OwnedPhysical>::from_value(value))
-                    } else {
-                        Ok(Some(TP::OwnedPhysical::from_value(value)))
-                    }
-                }
-                None => Ok(None)
+                // Create ChunkedArray directly from Vec<R>
+                let inner_ca: R::ChunkedArrayType = result.iter().cloned().map(Some).collect();
+                // Convert ChunkedArray to Series only for AnyValue::List
+                Ok(AnyValue::List(inner_ca.into_series()))
             }
+            None => Ok(AnyValue::Null),
         })
-        .collect();
+        .collect::<PolarsResult<Vec<AnyValue>>>()?;
 
-    chunk_out
+    // Create final Series directly from AnyValue vector
+    let result = Series::from_any_values("".into(), &any_values, true)?;
+    Ok(result)
 }
 
-fn user_extract_string(
+// Generic implementation for all message types
+impl<T> ExtractFromChunkedArray for T
+where
+    T: StructPath + Message + Default,
+{
+    fn extract_from_chunked_array<R>(
+        ca: &ChunkedArray<BinaryType>,
+        path: &str,
+    ) -> PolarsResult<Series>
+    where
+        R: ToChunkedArrayType + FromValue<Value>,
+        R::ChunkedArrayType: FromIterator<Option<R>> + IntoSeries,
+    {
+        let chunked_array: R::ChunkedArrayType = ca
+            .into_iter()
+            .map(|opt_bytes| match opt_bytes {
+                Some(bytes) => {
+                    let message = T::decode(bytes)
+                        .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
+                    let value = message
+                        .get_value_safe(path)
+                        .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
+                    Ok(Option::<R>::from_value(value))
+                }
+                None => Ok(None),
+            })
+            .collect::<PolarsResult<R::ChunkedArrayType>>()?;
+
+        Ok(chunked_array.into_series())
+    }
+}
+
+fn extract_impl_inner<T>(
     ca: &ChunkedArray<BinaryType>,
+    path_type: FieldType,
     path: &str,
-    option: bool,
-) -> Result<ChunkedArray<StringType>, PolarsError> {
-    let values: Result<Vec<Option<String>>, PolarsError> = ca
-        .into_iter()
-        .map(|opt_bytes| {
-            match opt_bytes {
-                Some(bytes) => {
-                    let user = sample::User::decode(bytes)
-                        .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
-                    let value = user.get_value_safe(path)
-                        .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
-
-                    if option {
-                        Ok(Option::<String>::from_value(value))
-                    } else {
-                        Ok(Some(String::from_value(value)))
-                    }
-                }
-                None => Ok(None)
-            }
-        })
-        .collect();
-    
-    values.map(|v| v.into_iter().collect::<StringChunked>())
+) -> PolarsResult<Series>
+where
+    T: StructPath + Message + Default,
+{
+    match path_type {
+        FieldType::String => T::extract_from_chunked_array::<String>(ca, path),
+        FieldType::Integer => T::extract_from_chunked_array::<i64>(ca, path),
+        FieldType::Float => T::extract_from_chunked_array::<f64>(ca, path),
+        FieldType::Boolean => T::extract_from_chunked_array::<bool>(ca, path),
+        FieldType::Vec(inner_type) => match *inner_type {
+            FieldType::String => extract_vec_from_chunked_array::<T, String>(ca, path),
+            FieldType::Integer => extract_vec_from_chunked_array::<T, i64>(ca, path),
+            FieldType::Float => extract_vec_from_chunked_array::<T, f64>(ca, path),
+            FieldType::Boolean => extract_vec_from_chunked_array::<T, bool>(ca, path),
+            _ => panic!("Unsupported vector inner type: {:?}", inner_type),
+        },
+        FieldType::Option(inner_type) => extract_impl_inner::<T>(ca, *inner_type, path),
+        _ => panic!("Unsupported type: {:?}", path_type),
+    }
 }
 
-fn user_extract_bool(
-    ca: &ChunkedArray<BinaryType>,
-    path: &str,
-    option: bool,
-) -> Result<ChunkedArray<BooleanType>, PolarsError> {
-    let values: Result<Vec<Option<bool>>, PolarsError> = ca
-        .into_iter()
-        .map(|opt_bytes| {
-            match opt_bytes {
-                Some(bytes) => {
-                    let user = sample::User::decode(bytes)
-                        .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
-                    let value = user.get_value_safe(path)
-                        .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
-                    
-                    if option {
-                        Ok(Option::<bool>::from_value(value))
-                    } else {
-                        Ok(Some(bool::from_value(value)))
-                    }
-                }
-                None => Ok(None)
-            }
-        })
-        .collect();
-    
-    values.map(|v| v.into_iter().collect::<BooleanChunked>())
+pub fn extract_impl<T>(ca: &ChunkedArray<BinaryType>, path: &str) -> PolarsResult<Series>
+where
+    T: StructPath + Message + Default,
+{
+    extract_impl_inner::<T>(ca, T::get_type_safe(path).unwrap(), path)
 }
 
-#[polars_expr(output_type_func_with_kwargs=extract_output)]
+fn user_extract_output(input_fields: &[Field], kwargs: ExtractKwargs) -> PolarsResult<Field> {
+    extract_output::<sample::User>(input_fields, kwargs)
+}
+
+#[polars_expr(output_type_func_with_kwargs=user_extract_output)]
 fn user_extract(inputs: &[Series], kwargs: ExtractKwargs) -> PolarsResult<Series> {
     let ca: &ChunkedArray<BinaryType> = inputs[0].binary()?;
     let path = kwargs.path.as_str();
-    let path_type = sample::User::get_type_safe(path).unwrap();
-
-    match path_type {
-        FieldType::String => user_extract_string(ca, path, false).map(|c| c.into_series()),
-        FieldType::Option(inner_type) if matches!(*inner_type, FieldType::String) => {
-            user_extract_string(ca, path, true).map(|c| c.into_series())
-        }
-        FieldType::Integer => user_extract_typed::<Int64Type>(ca, path, false).map(|c| c.into_series()),
-        FieldType::Option(inner_type) if matches!(*inner_type, FieldType::Integer) => {
-            user_extract_typed::<Int64Type>(ca, path, true).map(|c| c.into_series())
-        }
-        FieldType::Float => user_extract_typed::<Float64Type>(ca, path, false).map(|c| c.into_series()),
-        FieldType::Option(inner_type) if matches!(*inner_type, FieldType::Float) => {
-            user_extract_typed::<Float64Type>(ca, path, true).map(|c| c.into_series())
-        }
-        FieldType::Boolean => user_extract_bool(ca, path, false).map(|c| c.into_series()),
-        FieldType::Option(inner_type) if matches!(*inner_type, FieldType::Boolean) => {
-            user_extract_bool(ca, path, true).map(|c| c.into_series())
-        }
-        _ => panic!("Unsupported type: {:?}", path_type),
-    }
+    extract_impl::<sample::User>(ca, path)
 }
