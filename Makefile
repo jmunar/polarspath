@@ -1,6 +1,6 @@
 .PHONY: all clean test build format check update-deps
 
-CARGOS := structpath_types structpath_derive structpath protobuf_sample
+CARGOS := structpath_types structpath_derive structpath protobuf_sample protobuf_sample_polars
 
 all: build
 

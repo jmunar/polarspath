@@ -2113,6 +2113,7 @@ dependencies = [
  "pyo3-polars",
  "serde",
  "structpath",
+ "structpath_types",
 ]
 
 [[package]]
