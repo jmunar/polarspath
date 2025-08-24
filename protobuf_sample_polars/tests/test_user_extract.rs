@@ -1,5 +1,4 @@
 use polars_core::prelude::{BinaryType, ChunkedArray, StringType};
-
 use prost::Message;
 use protobuf_sample_polars::extract_impl;
 
