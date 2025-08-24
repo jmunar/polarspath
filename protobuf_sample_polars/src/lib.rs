@@ -112,6 +112,7 @@ where
 
     // Create final Series directly from AnyValue vector
     let result = Series::from_any_values("".into(), &any_values, true)?;
+
     Ok(result)
 }
 

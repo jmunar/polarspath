@@ -10,7 +10,7 @@ install-uv:
 build-rust:
 	@for cargo in $(CARGOS); do \
 		echo "Building Rust $$cargo..."; \
-		cd $$cargo && cargo build && cd ..; \
+		cd $$cargo && cargo build --release && cd ..; \
 	done
 
 build-python:
