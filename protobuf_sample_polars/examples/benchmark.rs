@@ -207,7 +207,28 @@ fn benchmark_f_integer_optional(samples: &ChunkedArray<BinaryType>) {
         (t1 - t0).as_secs_f64()
     );
 
+    // Optimized version using AnyValue to avoid intermediate allocations
+    let t0 = std::time::Instant::now();
+    let any_values = samples
+        .into_iter()
+        .map(|bytes| {
+            let message = SampleMessage::decode(bytes.unwrap()).unwrap();
+            match message.f_integer_optional {
+                Some(value) => AnyValue::Int64(value),
+                None => AnyValue::Null,
+            }
+        })
+        .collect::<Vec<AnyValue>>();
+
+    let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
+    let t1 = std::time::Instant::now();
+    println!(
+        "    Time taken (any value):  {:>8.4} s",
+        (t1 - t0).as_secs_f64()
+    );
+
     assert_eq!(result_path, result_direct);
+    assert_eq!(result_path, result_optimized);
 }
 
 fn benchmark_f_string_optional(samples: &ChunkedArray<BinaryType>) {
@@ -235,7 +256,33 @@ fn benchmark_f_string_optional(samples: &ChunkedArray<BinaryType>) {
         (t1 - t0).as_secs_f64()
     );
 
+    // Optimized version using AnyValue to avoid intermediate allocations
+    let t0 = std::time::Instant::now();
+    let string_values: Vec<Option<String>> = samples
+        .into_iter()
+        .map(|bytes| {
+            let message = SampleMessage::decode(bytes.unwrap()).unwrap();
+            message.f_string_optional
+        })
+        .collect();
+
+    let any_values: Vec<AnyValue> = string_values
+        .iter()
+        .map(|opt_str| match opt_str {
+            Some(value) => AnyValue::String(value),
+            None => AnyValue::Null,
+        })
+        .collect();
+
+    let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
+    let t1 = std::time::Instant::now();
+    println!(
+        "    Time taken (any value):  {:>8.4} s",
+        (t1 - t0).as_secs_f64()
+    );
+
     assert_eq!(result_path, result_direct);
+    assert_eq!(result_path, result_optimized);
 }
 
 fn benchmark_f_integer_repeated(samples: &ChunkedArray<BinaryType>) {

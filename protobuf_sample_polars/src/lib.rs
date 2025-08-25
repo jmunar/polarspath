@@ -43,29 +43,78 @@ where
     FieldsMapper::new(input_fields).with_dtype(data_type)
 }
 
-/// Trait to map types to their corresponding ChunkedArray types
+/// Trait to map types to their corresponding ChunkedArray types and convert Value to AnyValue
 trait ToChunkedArrayType {
     type ChunkedArrayType;
+
+    /// Convert a Value to AnyValue for this type
+    fn to_any_value(value: Value) -> PolarsResult<AnyValue<'static>>;
 }
 
 impl ToChunkedArrayType for String {
     type ChunkedArrayType = ChunkedArray<StringType>;
+
+    fn to_any_value(value: Value) -> PolarsResult<AnyValue<'static>> {
+        match &value {
+            Value::Option(None) => Ok(AnyValue::Null),
+            _ => {
+                let string_val = String::from_value(value);
+                Ok(AnyValue::StringOwned(string_val.into()))
+            }
+        }
+    }
 }
 
 impl ToChunkedArrayType for i64 {
     type ChunkedArrayType = ChunkedArray<Int64Type>;
+
+    fn to_any_value(value: Value) -> PolarsResult<AnyValue<'static>> {
+        match &value {
+            Value::Option(None) => Ok(AnyValue::Null),
+            _ => Ok(AnyValue::Int64(i64::from_value(value))),
+        }
+    }
 }
 
 impl ToChunkedArrayType for f64 {
     type ChunkedArrayType = ChunkedArray<Float64Type>;
+
+    fn to_any_value(value: Value) -> PolarsResult<AnyValue<'static>> {
+        match &value {
+            Value::Option(None) => Ok(AnyValue::Null),
+            _ => Ok(AnyValue::Float64(f64::from_value(value))),
+        }
+    }
 }
 
 impl ToChunkedArrayType for bool {
     type ChunkedArrayType = ChunkedArray<BooleanType>;
+
+    fn to_any_value(value: Value) -> PolarsResult<AnyValue<'static>> {
+        match &value {
+            Value::Option(None) => Ok(AnyValue::Null),
+            _ => Ok(AnyValue::Boolean(bool::from_value(value))),
+        }
+    }
 }
 
-impl<T: ToChunkedArrayType> ToChunkedArrayType for Vec<T> {
+impl<T: ToChunkedArrayType> ToChunkedArrayType for Vec<T>
+where
+    T: Clone + Send + Sync + 'static,
+    T::ChunkedArrayType: FromIterator<Option<T>> + IntoSeries,
+{
     type ChunkedArrayType = ChunkedArray<ListType>;
+
+    fn to_any_value(value: Value) -> PolarsResult<AnyValue<'static>> {
+        match &value {
+            Value::Option(None) => Ok(AnyValue::Null),
+            _ => {
+                let vec_data = <&Vec<T>>::from_value(&value);
+                let inner_ca: T::ChunkedArrayType = vec_data.iter().cloned().map(Some).collect();
+                Ok(AnyValue::List(inner_ca.into_series()))
+            }
+        }
+    }
 }
 
 /// Trait for message types that can extract fields to different types
@@ -75,45 +124,7 @@ trait ExtractFromChunkedArray: StructPath + Message + Default {
         path: &str,
     ) -> PolarsResult<Series>
     where
-        R: ToChunkedArrayType + FromValue<Value>,
-        R::ChunkedArrayType: FromIterator<Option<R>> + IntoSeries;
-}
-
-// Generic helper function for Vec<R> extraction where R is any supported inner type
-fn extract_vec_from_chunked_array<T, R>(
-    ca: &ChunkedArray<BinaryType>,
-    path: &str,
-) -> PolarsResult<Series>
-where
-    T: StructPath + Message + Default,
-    R: ToChunkedArrayType + FromValue<Value> + Clone + Send + Sync + 'static,
-    R::ChunkedArrayType: FromIterator<Option<R>> + IntoSeries,
-{
-    // Combine both iterations into a single pass and create Series directly
-    let any_values = ca
-        .into_iter()
-        .map(|opt_bytes| match opt_bytes {
-            Some(bytes) => {
-                let message = T::decode(bytes)
-                    .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
-                let value = message
-                    .get_value_safe(path)
-                    .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
-                let result = <&Vec<R>>::from_value(&value);
-
-                // Create ChunkedArray directly from Vec<R>
-                let inner_ca: R::ChunkedArrayType = result.iter().cloned().map(Some).collect();
-                // Convert ChunkedArray to Series only for AnyValue::List
-                Ok(AnyValue::List(inner_ca.into_series()))
-            }
-            None => Ok(AnyValue::Null),
-        })
-        .collect::<PolarsResult<Vec<AnyValue>>>()?;
-
-    // Create final Series directly from AnyValue vector
-    let result = Series::from_any_values("".into(), &any_values, true)?;
-
-    Ok(result)
+        R: ToChunkedArrayType;
 }
 
 // Generic implementation for all message types
@@ -126,10 +137,9 @@ where
         path: &str,
     ) -> PolarsResult<Series>
     where
-        R: ToChunkedArrayType + FromValue<Value>,
-        R::ChunkedArrayType: FromIterator<Option<R>> + IntoSeries,
+        R: ToChunkedArrayType,
     {
-        let chunked_array: R::ChunkedArrayType = ca
+        let any_values = ca
             .into_iter()
             .map(|opt_bytes| match opt_bytes {
                 Some(bytes) => {
@@ -138,13 +148,13 @@ where
                     let value = message
                         .get_value_safe(path)
                         .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
-                    Ok(Option::<R>::from_value(value))
+                    R::to_any_value(value)
                 }
-                None => Ok(None),
+                None => Ok(AnyValue::Null),
             })
-            .collect::<PolarsResult<R::ChunkedArrayType>>()?;
+            .collect::<PolarsResult<Vec<AnyValue>>>()?;
 
-        Ok(chunked_array.into_series())
+        Series::from_any_values("".into(), &any_values, true)
     }
 }
 
@@ -162,10 +172,10 @@ where
         FieldType::Float => T::extract_from_chunked_array::<f64>(ca, path),
         FieldType::Boolean => T::extract_from_chunked_array::<bool>(ca, path),
         FieldType::Vec(inner_type) => match *inner_type {
-            FieldType::String => extract_vec_from_chunked_array::<T, String>(ca, path),
-            FieldType::Integer => extract_vec_from_chunked_array::<T, i64>(ca, path),
-            FieldType::Float => extract_vec_from_chunked_array::<T, f64>(ca, path),
-            FieldType::Boolean => extract_vec_from_chunked_array::<T, bool>(ca, path),
+            FieldType::String => T::extract_from_chunked_array::<Vec<String>>(ca, path),
+            FieldType::Integer => T::extract_from_chunked_array::<Vec<i64>>(ca, path),
+            FieldType::Float => T::extract_from_chunked_array::<Vec<f64>>(ca, path),
+            FieldType::Boolean => T::extract_from_chunked_array::<Vec<bool>>(ca, path),
             _ => panic!("Unsupported vector inner type: {:?}", inner_type),
         },
         FieldType::Option(inner_type) => extract_impl_inner::<T>(ca, *inner_type, path),
