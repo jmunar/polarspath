@@ -1,22 +1,22 @@
 use crate::utils::{parse_field_type, value_from_field};
-use core::str::FromStr;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
+use std::str::FromStr;
 use structpath_types::{FieldInfo, FieldType};
 
 fn expr_type_nested_field(field: &FieldInfo) -> Option<TokenStream> {
     let field_name = format_ident!("{}", &field.name);
 
     match &field.r#type {
-        FieldType::StructPath(inner_type_name) => {
-            let inner_type = TokenStream::from_str(inner_type_name).ok()?;
+        FieldType::StructPathUnknown(inner_type_name) => {
+            let inner_type = TokenStream::from_str(inner_type_name).ok().unwrap();
             Some(quote! {
                 stringify!(#field_name) => #inner_type::get_type_by_path(&remaining_path)
             })
         }
-        FieldType::Option(mid_type) if matches!(**mid_type, FieldType::StructPath(_)) => {
-            if let FieldType::StructPath(inner_type_name) = &**mid_type {
-                let inner_type = TokenStream::from_str(inner_type_name).ok()?;
+        FieldType::Option(mid_type) if matches!(**mid_type, FieldType::StructPathUnknown(_)) => {
+            if let FieldType::StructPathUnknown(inner_type_name) = &**mid_type {
+                let inner_type = TokenStream::from_str(inner_type_name).ok().unwrap();
                 Some(quote! {
                     stringify!(#field_name) => #inner_type::get_type_by_path(&remaining_path)
                 })
@@ -32,10 +32,12 @@ fn expr_value_nested_field(field: &FieldInfo) -> Option<TokenStream> {
     let field_name = format_ident!("{}", &field.name);
 
     match &field.r#type {
-        FieldType::StructPath(_) => Some(quote! {
+        FieldType::StructPathUnknown(_) => Some(quote! {
             stringify!(#field_name) => self.#field_name.get_value_by_path(&remaining_path)
         }),
-        FieldType::Option(inner_type) if matches!(**inner_type, FieldType::StructPath(_)) => {
+        FieldType::Option(inner_type)
+            if matches!(**inner_type, FieldType::StructPathUnknown(_)) =>
+        {
             Some(quote! {
                 stringify!(#field_name) => match self.#field_name.as_ref() {
                     Some(s) => s.get_value_by_path(&remaining_path),
@@ -51,15 +53,17 @@ fn expr_type_nested_array(field: &FieldInfo) -> Option<TokenStream> {
     let field_name = format_ident!("{}", &field.name);
     match &field.r#type {
         FieldType::Vec(inner_type) => match &**inner_type {
-            FieldType::StructPath(inner_type_name) => {
-                let inner_type = TokenStream::from_str(inner_type_name).ok()?;
+            FieldType::StructPathUnknown(inner_type_name) => {
+                let inner_type = TokenStream::from_str(inner_type_name).ok().unwrap();
                 Some(quote! {
                     stringify!(#field_name) => #inner_type::get_type_by_path(&remaining_path)
                 })
             }
-            FieldType::Option(inner_type2) if matches!(**inner_type2, FieldType::StructPath(_)) => {
-                if let FieldType::StructPath(inner_type_name) = &**inner_type2 {
-                    let inner_type = TokenStream::from_str(inner_type_name).ok()?;
+            FieldType::Option(inner_type2)
+                if matches!(**inner_type2, FieldType::StructPathUnknown(_)) =>
+            {
+                if let FieldType::StructPathUnknown(inner_type_name) = &**inner_type2 {
+                    let inner_type = TokenStream::from_str(inner_type_name).ok().unwrap();
                     Some(quote! {
                         stringify!(#field_name) => #inner_type::get_type_by_path(&remaining_path)
                     })
@@ -72,17 +76,17 @@ fn expr_type_nested_array(field: &FieldInfo) -> Option<TokenStream> {
         FieldType::Option(mid_type) if matches!(**mid_type, FieldType::Vec(_)) => {
             if let FieldType::Vec(ref inner_type) = **mid_type {
                 match &**inner_type {
-                    FieldType::StructPath(inner_type_name) => {
-                        let inner_type = TokenStream::from_str(inner_type_name).ok()?;
+                    FieldType::StructPathUnknown(inner_type_name) => {
+                        let inner_type = TokenStream::from_str(inner_type_name).ok().unwrap();
                         Some(quote! {
                             stringify!(#field_name) => #inner_type::get_type_by_path(&remaining_path)
                         })
                     }
                     FieldType::Option(inner_type2)
-                        if matches!(**inner_type2, FieldType::StructPath(_)) =>
+                        if matches!(**inner_type2, FieldType::StructPathUnknown(_)) =>
                     {
-                        if let FieldType::StructPath(inner_type_name) = &**inner_type2 {
-                            let inner_type = TokenStream::from_str(inner_type_name).ok()?;
+                        if let FieldType::StructPathUnknown(inner_type_name) = &**inner_type2 {
+                            let inner_type = TokenStream::from_str(inner_type_name).ok().unwrap();
                             Some(quote! {
                                 stringify!(#field_name) => #inner_type::get_type_by_path(&remaining_path)
                             })
@@ -104,7 +108,7 @@ fn expr_value_nested_array(field: &FieldInfo) -> Option<TokenStream> {
     let field_name = format_ident!("{}", &field.name);
     match &field.r#type {
         FieldType::Vec(inner_type) => match &**inner_type {
-            FieldType::StructPath(_) => Some(quote! {
+            FieldType::StructPathUnknown(_) => Some(quote! {
                 stringify!(#field_name) => {
                     if index < self.#field_name.len() {
                         self.#field_name[index].get_value_by_path(&remaining_path)
@@ -113,7 +117,9 @@ fn expr_value_nested_array(field: &FieldInfo) -> Option<TokenStream> {
                     }
                 }
             }),
-            FieldType::Option(inner_type2) if matches!(**inner_type2, FieldType::StructPath(_)) => {
+            FieldType::Option(inner_type2)
+                if matches!(**inner_type2, FieldType::StructPathUnknown(_)) =>
+            {
                 Some(quote! {
                     stringify!(#field_name) => {
                         if index < self.#field_name.len() {
@@ -132,7 +138,7 @@ fn expr_value_nested_array(field: &FieldInfo) -> Option<TokenStream> {
         FieldType::Option(mid_type) if matches!(**mid_type, FieldType::Vec(_)) => {
             if let FieldType::Vec(ref inner_type) = **mid_type {
                 match &**inner_type {
-                    FieldType::StructPath(_) => Some(quote! {
+                    FieldType::StructPathUnknown(_) => Some(quote! {
                         stringify!(#field_name) => match self.#field_name.as_ref() {
                             Some(vec) => {
                                 if index < vec.len() {
@@ -145,7 +151,7 @@ fn expr_value_nested_array(field: &FieldInfo) -> Option<TokenStream> {
                         }
                     }),
                     FieldType::Option(inner_type2)
-                        if matches!(**inner_type2, FieldType::StructPath(_)) =>
+                        if matches!(**inner_type2, FieldType::StructPathUnknown(_)) =>
                     {
                         Some(quote! {
                             stringify!(#field_name) => match self.#field_name.as_ref() {
@@ -300,12 +306,9 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                     .named
                     .iter()
                     .map(|field| {
-                        let field_name = field.ident.clone().unwrap();
+                        let field_name = field.ident.as_ref().unwrap().to_string();
                         let field_type = parse_field_type(&field.ty, &field.attrs);
-                        FieldInfo {
-                            name: field_name.to_string(),
-                            r#type: field_type,
-                        }
+                        FieldInfo::new(&field_name, field_type)
                     })
                     .collect()
             } else {
@@ -317,7 +320,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
         _ => return quote! {},
     };
 
-    let get_type_by_path = trait_function(
+    let get_type_by_path: TokenStream = trait_function(
         fields.iter().filter_map(expr_type_nested_field),
         fields.iter().filter_map(expr_type_nested_array),
         fields.iter().map(expr_type_final_field),
@@ -333,7 +336,26 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
 
     quote! {
 
+        impl ::structpath::FromValue<::structpath::Value> for #type_name {
+            fn from_value(value: ::structpath::Value) -> #type_name {
+                match value {
+                    ::structpath::Value::Boxed(inner_value) => {
+                        (*inner_value).as_any().downcast_ref::<#type_name>().unwrap().clone()
+                    }
+                    _ => panic!("Value is not a #type_name"),
+                }
+            }
+        }
+
         impl ::structpath::StructPath for #type_name {
+            fn fields() -> &'static [::structpath_types::FieldInfo] {
+                static FIELDS: ::std::sync::OnceLock<Vec<::structpath_types::FieldInfo>> = ::std::sync::OnceLock::new();
+                FIELDS.get_or_init(|| {
+                    vec![
+                        #(#fields),*
+                    ]
+                }).as_slice()
+            }
 
             fn get_type_by_path(path: &::structpath::Path) -> Result<::structpath::FieldType, ::structpath::StructPathError> {
                 #get_type_by_path

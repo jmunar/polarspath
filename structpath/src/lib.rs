@@ -18,4 +18,4 @@ pub use structpath_derive::StructPath;
 extern crate structpath_types;
 
 #[cfg(feature = "derive")]
-pub use structpath_types::FieldType;
+pub use structpath_types::{FieldInfo, FieldType};

@@ -5,7 +5,7 @@ pub mod sample {
 #[cfg(test)]
 mod tests {
     use super::sample;
-    use structpath::{FieldType, StructPath, StructPathError};
+    use structpath::{FieldInfo, FieldType, StructPath, StructPathError};
 
     #[test]
     fn test_get_type_user() -> Result<(), Box<dyn std::error::Error>> {
@@ -20,7 +20,13 @@ mod tests {
         let type_ = sample::User::get_type("favourite_pet")?;
         assert_eq!(
             type_,
-            FieldType::Option(Box::new(FieldType::StructPath("user :: Pet".to_string())))
+            FieldType::Option(Box::new(FieldType::StructPath(
+                "user :: Pet".to_string(),
+                vec![
+                    FieldInfo::new("name", FieldType::String),
+                    FieldInfo::new("birth_year", FieldType::Integer),
+                ]
+            )))
         );
         let type_ = sample::User::get_type("favourite_pet.name")?;
         assert_eq!(type_, FieldType::String);
@@ -31,10 +37,25 @@ mod tests {
         let type_ = sample::User::get_type("pets")?;
         assert_eq!(
             type_,
-            FieldType::Vec(Box::new(FieldType::StructPath("user :: Pet".to_string())))
+            FieldType::Vec(Box::new(FieldType::StructPath(
+                "user :: Pet".to_string(),
+                vec![
+                    FieldInfo::new("name", FieldType::String),
+                    FieldInfo::new("birth_year", FieldType::Integer),
+                ]
+            )))
         );
         let type_ = sample::User::get_type("pets[0]")?;
-        assert_eq!(type_, FieldType::StructPath("user :: Pet".to_string()));
+        assert_eq!(
+            type_,
+            FieldType::StructPath(
+                "user :: Pet".to_string(),
+                vec![
+                    FieldInfo::new("name", FieldType::String),
+                    FieldInfo::new("birth_year", FieldType::Integer),
+                ]
+            )
+        );
         let type_ = sample::User::get_type("pets[0].name")?;
         assert_eq!(type_, FieldType::String);
         let type_ = sample::User::get_type("pets[0].birth_year")?;
@@ -76,13 +97,13 @@ mod tests {
         let user = create_test_user();
 
         let name = user.get_value_safe("name")?;
-        assert_eq!(name, "John Doe");
+        assert_eq!(name, "John Doe".to_string());
 
         let age = user.get_value_safe("age")?;
         assert_eq!(age, 30);
 
         let email = user.get_value_safe("email")?;
-        assert_eq!(email, Some("john.doe@example.com"));
+        assert_eq!(email, Some("john.doe@example.com".to_string()));
 
         let is_active = user.get_value_safe("is_active")?;
         assert_eq!(is_active, true);
@@ -103,12 +124,12 @@ mod tests {
             FieldType::Option(Box::new(FieldType::String))
         );
         let favourite_pet_name = user.get_value_safe("favourite_pet.name")?;
-        assert_eq!(favourite_pet_name, Some("Buddy"));
+        assert_eq!(favourite_pet_name, Some("Buddy".to_string()));
 
         let tags = user.get_value("tags")?;
         assert_eq!(tags, &vec!["premium".to_string(), "verified".to_string()]);
         let tag0 = user.get_value("tags[0]")?;
-        assert_eq!(tag0, "premium");
+        assert_eq!(tag0, "premium".to_string());
 
         let pets = user.get_value("pets")?;
         assert_eq!(
@@ -133,7 +154,7 @@ mod tests {
             }
         );
         let pet0_name = user.get_value("pets[0].name")?;
-        assert_eq!(pet0_name, "Buddy");
+        assert_eq!(pet0_name, "Buddy".to_string());
         let pet0_birth_year = user.get_value("pets[0].birth_year")?;
         assert_eq!(pet0_birth_year, 2020);
 
@@ -145,13 +166,13 @@ mod tests {
         let user = sample::User::default();
 
         let name = user.get_value("name")?;
-        assert_eq!(name, "");
+        assert_eq!(name, "".to_string());
 
         let age = user.get_value("age")?;
         assert_eq!(age, 0);
 
         let email = user.get_value("email")?;
-        assert_eq!(email, None::<&str>);
+        assert_eq!(email, None::<String>);
 
         let is_active = user.get_value("is_active")?;
         assert_eq!(is_active, false);
@@ -180,12 +201,12 @@ mod tests {
         };
 
         let name = group.get_value("name")?;
-        assert_eq!(name, "My Group");
+        assert_eq!(name, "My Group".to_string());
 
         let admin = group.get_value("admin")?;
         assert_eq!(admin, &create_test_user());
         let admin_name = group.get_value("admin.name")?;
-        assert_eq!(admin_name, "John Doe");
+        assert_eq!(admin_name, "John Doe".to_string());
 
         let members = group.get_value("members")?;
         assert_eq!(members, &vec![create_test_user()]);

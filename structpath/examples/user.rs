@@ -1,4 +1,4 @@
-use structpath::{FieldType, StructPath};
+use structpath::{FieldInfo, FieldType, StructPath};
 
 #[derive(Debug, Clone, PartialEq)]
 enum Pet {
@@ -43,34 +43,49 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         pets: Some(vec![Pet::Dog]),
     };
 
+    let parent_type = FieldType::StructPath(
+        "Parent".to_string(),
+        vec![
+            FieldInfo::new("name", FieldType::String),
+            FieldInfo::new("age", FieldType::Integer),
+        ],
+    );
+
+    assert_eq!(
+        User::fields(),
+        vec![
+            FieldInfo::new("name", FieldType::String),
+            FieldInfo::new("age", FieldType::Integer),
+            FieldInfo::new("parent_favorite", parent_type.clone()),
+            FieldInfo::new("parents", FieldType::Vec(Box::new(parent_type.clone()))),
+            FieldInfo::new(
+                "pets",
+                FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Unknown))))
+            ),
+        ]
+    );
+
     let name_type = User::get_type("name")?;
     assert_eq!(name_type, FieldType::String);
     let age_type = User::get_type("age")?;
     assert_eq!(age_type, FieldType::Integer);
     let parent_favorite_type = User::get_type("parent_favorite")?;
-    assert_eq!(
-        parent_favorite_type,
-        FieldType::StructPath("Parent".to_string())
-    );
+    assert_eq!(parent_favorite_type, parent_type.clone());
     let parent_favorite_name_type = User::get_type("parent_favorite.name")?;
     assert_eq!(parent_favorite_name_type, FieldType::String);
     let parents_type = User::get_type("parents")?;
-    assert_eq!(
-        parents_type,
-        FieldType::Vec(Box::new(FieldType::StructPath("Parent".to_string())))
-    );
+    assert_eq!(parents_type, FieldType::Vec(Box::new(parent_type.clone())));
     let parent_0_type = User::get_type("parents[0]")?;
-    assert_eq!(parent_0_type, FieldType::StructPath("Parent".to_string()));
+    assert_eq!(parent_0_type, parent_type.clone());
     let pets_type = User::get_type("pets")?;
     assert_eq!(
         pets_type,
         FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Unknown))))
     );
     let pets_0_type = User::get_type("pets[0]")?;
-    assert_eq!(pets_0_type, FieldType::Option(Box::new(FieldType::Unknown)));
+    assert_eq!(pets_0_type, FieldType::Unknown);
 
     let name = user.get_value("name")?;
-    assert_eq!(name, "John");
     assert_eq!(name, "John".to_string());
     let age = user.get_value("age")?;
     assert_eq!(age, 32);
@@ -83,9 +98,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     );
     let parent_favorite_name = user.get_value("parent_favorite.name")?;
-    assert_eq!(parent_favorite_name, "Mary");
+    assert_eq!(parent_favorite_name, "Mary".to_string());
     let parent_0_name = user.get_value("parents[0].name")?;
-    assert_eq!(parent_0_name, "Joseph");
+    assert_eq!(parent_0_name, "Joseph".to_string());
     let pet_0 = user.get_value("pets[0]")?;
     assert_eq!(pet_0, &Pet::Dog);
 
