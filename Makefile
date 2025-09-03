@@ -2,15 +2,15 @@
 
 CARGOS := structpath_types structpath_derive structpath protobuf_sample protobuf_sample_polars
 
-all: build
+all: format check test build
 
 install-uv:
 	@curl -LsSf https://astral.sh/uv/install.sh | sh
 
 build-rust:
-	@for cargo in $(CARGOS); do \
+	@set -e; for cargo in $(CARGOS); do \
 		echo "Building Rust $$cargo..."; \
-		cd $$cargo && cargo build --release && cd ..; \
+		(cd $$cargo && cargo build --release) || exit 1; \
 	done
 
 build-python:
@@ -26,9 +26,9 @@ build-python:
 build: build-rust build-python
 
 format-rust:
-	@for cargo in $(CARGOS); do \
+	@set -e; for cargo in $(CARGOS); do \
 		echo "Format fix in Rust $$cargo..."; \
-		cd $$cargo && cargo fmt && cd ..; \
+		(cd $$cargo && cargo fmt) || exit 1; \
 	done
 
 format-python:
@@ -38,9 +38,9 @@ format-python:
 format: format-rust format-python
 
 check-rust:
-	@for cargo in $(CARGOS); do \
+	@set -e; for cargo in $(CARGOS); do \
 		echo "Format check in Rust $$cargo..."; \
-		cd $$cargo && cargo clippy -- -D warnings && cd ..; \
+		(cd $$cargo && cargo clippy -- -D warnings) || exit 1; \
 	done
 
 check-python:
@@ -50,29 +50,27 @@ check-python:
 check: check-rust check-python
 
 update-deps:
-	@for cargo in $(CARGOS); do \
+	@set -e; for cargo in $(CARGOS); do \
 		echo "Updating dependencies for Rust $$cargo..."; \
-		cd $$cargo && cargo update && cd ..; \
+		(cd $$cargo && cargo update) || exit 1; \
 	done
 
 test-rust:
-	@for cargo in $(CARGOS); do \
+	@set -e; for cargo in $(CARGOS); do \
 		echo "Running tests for Rust $$cargo..."; \
-		cd $$cargo && cargo test && cd ..; \
+		(cd $$cargo && cargo test) || exit 1; \
 		if [ "$$cargo" = "structpath" ]; then \
 			echo "Running tests for Rust $$cargo with derive feature..."; \
-			cd $$cargo; \
-			cargo test --features derive; \
-			cd ..; \
+			(cd $$cargo && cargo test --features derive) || exit 1; \
 		fi \
 	done
 
 test: test-rust
 
 clean-rust:
-	@for cargo in $(CARGOS); do \
+	@set -e; for cargo in $(CARGOS); do \
 		echo "Cleaning Rust $$cargo..."; \
-		cd $$cargo && cargo clean && cd ..; \
+		(cd $$cargo && cargo clean) || exit 1; \
 		rm -rf $$cargo/target; \
 	done
 

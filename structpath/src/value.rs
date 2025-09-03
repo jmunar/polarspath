@@ -2,6 +2,7 @@
 pub trait BoxedValue: Send + Sync + 'static {
     fn as_any(&self) -> &dyn std::any::Any;
     fn clone_box(&self) -> Box<dyn BoxedValue>;
+    fn into_any(self: Box<Self>) -> Box<dyn std::any::Any>;
 }
 
 impl<T: Clone + Send + Sync + 'static> BoxedValue for T {
@@ -11,6 +12,10 @@ impl<T: Clone + Send + Sync + 'static> BoxedValue for T {
 
     fn clone_box(&self) -> Box<dyn BoxedValue> {
         Box::new(self.clone())
+    }
+
+    fn into_any(self: Box<Self>) -> Box<dyn std::any::Any> {
+        self
     }
 }
 
@@ -67,8 +72,8 @@ pub trait FromValue<T> {
 }
 
 // Macro to generate FromValue implementations for primitive types
-macro_rules! impl_from_value_and_partial_eq {
-    ($type:ty, $variant:path, $panic_msg:expr) => {
+macro_rules! impl_from_value {
+    ($type:ty, $variant:path) => {
         impl FromValue<Value> for $type {
             fn from_value(value: Value) -> $type {
                 match value {
@@ -83,7 +88,35 @@ macro_rules! impl_from_value_and_partial_eq {
                 }
             }
         }
+    };
+}
 
+impl_from_value!(i64, Value::Integer);
+impl_from_value!(f64, Value::Float);
+impl_from_value!(bool, Value::Boolean);
+impl_from_value!(String, Value::String);
+
+impl<T: FromValue<Value>> FromValue<Value> for Option<T> {
+    fn from_value(value: Value) -> Option<T> {
+        match value {
+            Value::Option(None) => None,
+            Value::Option(Some(inner_type)) => Some(<T>::from_value(*inner_type)),
+            _ => Some(<T>::from_value(value)),
+        }
+    }
+}
+
+impl<T: FromValue<Value> + Clone + 'static> FromValue<Value> for Vec<T> {
+    fn from_value(value: Value) -> Vec<T> {
+        match value {
+            Value::Vec(inner_value) => *inner_value.into_any().downcast::<Vec<T>>().unwrap(),
+            _ => panic!("Expected Vec, got {}", value_type(&value)),
+        }
+    }
+}
+
+macro_rules! impl_partial_eq_with_value {
+    ($type:ty, $variant:path) => {
         impl PartialEq<$type> for Value {
             fn eq(&self, other: &$type) -> bool {
                 match self {
@@ -101,91 +134,10 @@ macro_rules! impl_from_value_and_partial_eq {
     };
 }
 
-// Use the macro to generate implementations
-impl_from_value_and_partial_eq!(i64, Value::Integer, "Value is not an integer");
-impl_from_value_and_partial_eq!(f64, Value::Float, "Value is not a float");
-impl_from_value_and_partial_eq!(bool, Value::Boolean, "Value is not a boolean");
-impl_from_value_and_partial_eq!(String, Value::String, "Value is not a string");
-
-impl<T: FromValue<Value>> FromValue<Value> for Option<T> {
-    fn from_value(value: Value) -> Option<T> {
-        match value {
-            Value::Option(None) => None,
-            Value::Option(Some(inner_type)) => Some(<T>::from_value(*inner_type)),
-            _ => Some(<T>::from_value(value)),
-        }
-    }
-}
-
-impl<'a> FromValue<&'a Value> for &'a str {
-    fn from_value(value: &'a Value) -> &'a str {
-        match value {
-            Value::String(inner_value) => inner_value,
-            Value::Option(Some(mid_value)) if matches!(**mid_value, Value::String(_)) => {
-                let Value::String(ref inner_value) = **mid_value else {
-                    unreachable!()
-                };
-                inner_value
-            }
-            _ => panic!("Value is not a string"),
-        }
-    }
-}
-
-impl PartialEq<&str> for Value {
-    fn eq(&self, other: &&str) -> bool {
-        match self {
-            Value::String(inner_value) => PartialEq::eq(inner_value, other),
-            Value::Option(Some(mid_value)) if matches!(**mid_value, Value::String(_)) => {
-                let Value::String(ref inner_value) = **mid_value else {
-                    unreachable!()
-                };
-                PartialEq::eq(inner_value, other)
-            }
-            _ => false,
-        }
-    }
-}
-
-impl<'a> FromValue<&'a Value> for Option<&'a str> {
-    fn from_value(value: &'a Value) -> Option<&'a str> {
-        match value {
-            Value::Option(None) => None,
-            Value::Option(Some(mid_type)) if matches!(**mid_type, Value::String(_)) => {
-                let Value::String(ref inner_type) = **mid_type else {
-                    unreachable!()
-                };
-                Some(inner_type.as_str())
-            }
-            _ => {
-                panic!("Value is not a string")
-            }
-        }
-    }
-}
-
-impl<'a, T: BoxedValue> FromValue<&'a Value> for &'a T {
-    fn from_value(value: &'a Value) -> &'a T {
-        match value {
-            Value::Boxed(inner_value) | Value::Vec(inner_value) => {
-                inner_value.as_ref().as_any().downcast_ref::<T>().unwrap()
-            }
-            Value::Option(Some(mid_value)) if matches!(**mid_value, Value::Boxed(_)) => {
-                let Value::Boxed(ref inner_value) = **mid_value else {
-                    unreachable!()
-                };
-                inner_value.as_ref().as_any().downcast_ref::<T>().unwrap()
-            }
-            Value::Option(Some(mid_value)) if matches!(**mid_value, Value::Vec(_)) => {
-                let Value::Vec(ref inner_value) = **mid_value else {
-                    unreachable!()
-                };
-                inner_value.as_ref().as_any().downcast_ref::<T>().unwrap()
-            }
-            _ => panic!("Value is not a boxable"),
-        }
-    }
-}
+impl_partial_eq_with_value!(i64, Value::Integer);
+impl_partial_eq_with_value!(f64, Value::Float);
+impl_partial_eq_with_value!(bool, Value::Boolean);
+impl_partial_eq_with_value!(String, Value::String);
 
 impl<T: BoxedValue + PartialEq<T>> PartialEq<&T> for Value {
     fn eq(&self, other: &&T) -> bool {
@@ -213,20 +165,6 @@ impl<T: BoxedValue + PartialEq<T>> PartialEq<&T> for Value {
                 )
             }
             _ => false,
-        }
-    }
-}
-
-impl<'a, T: BoxedValue> FromValue<&'a Value> for Option<&'a T> {
-    fn from_value(value: &'a Value) -> Option<&'a T> {
-        match value {
-            Value::Option(None) => None,
-            Value::Option(Some(ref mid_type))
-                if matches!(**mid_type, Value::Boxed(_) | Value::Vec(_)) =>
-            {
-                Some(<&T>::from_value(mid_type))
-            }
-            _ => panic!("Value is not a boxable"),
         }
     }
 }

@@ -1,5 +1,6 @@
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{format_ident, quote, ToTokens};
+use std::str::FromStr;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum FieldType {
@@ -7,7 +8,8 @@ pub enum FieldType {
     Integer,
     Float,
     Boolean,
-    StructPath(String),
+    StructPathUnknown(String),
+    StructPath(String, Vec<FieldInfo>),
     Option(Box<FieldType>),
     Vec(Box<FieldType>),
     Unknown,
@@ -20,8 +22,24 @@ impl ToTokens for FieldType {
             FieldType::Integer => quote! { ::structpath_types::FieldType::Integer },
             FieldType::Float => quote! { ::structpath_types::FieldType::Float },
             FieldType::Boolean => quote! { ::structpath_types::FieldType::Boolean },
-            FieldType::StructPath(inner) => {
-                quote! { ::structpath_types::FieldType::StructPath(#inner.to_string()) }
+            FieldType::StructPathUnknown(struct_name) => {
+                let struct_type = TokenStream::from_str(struct_name).ok().unwrap();
+                quote! {
+                    ::structpath_types::FieldType::StructPath(
+                        #struct_name.to_string(),
+                        #struct_type::fields().to_vec()
+                    )
+                }
+            }
+            FieldType::StructPath(struct_name, fields) => {
+                quote! {
+                    ::structpath_types::FieldType::StructPath(
+                        #struct_name.to_string(),
+                        vec![
+                            #(#fields),*
+                        ]
+                    )
+                }
             }
             FieldType::Option(inner) => {
                 quote! { ::structpath_types::FieldType::Option(Box::new(#inner)) }
@@ -34,15 +52,24 @@ impl ToTokens for FieldType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FieldInfo {
     pub name: String,
     pub r#type: FieldType,
 }
 
+impl FieldInfo {
+    pub fn new(name: &str, r#type: FieldType) -> Self {
+        Self {
+            name: name.to_string(),
+            r#type,
+        }
+    }
+}
+
 impl ToTokens for FieldInfo {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let self_name = &self.name;
+        let self_name = format_ident!("{}", &self.name);
         let self_type = &self.r#type;
         tokens.extend(quote! {
             ::structpath_types::FieldInfo {
@@ -91,12 +118,26 @@ mod tests {
             ":: structpath_types :: FieldType :: Boolean"
         );
 
-        let field_type = FieldType::StructPath("MyStruct".to_string());
+        let field_type = FieldType::StructPathUnknown("MyStruct".to_string());
         let mut tokens = TokenStream::new();
         field_type.to_tokens(&mut tokens);
         assert_eq!(
             tokens.to_string(),
-            ":: structpath_types :: FieldType :: StructPath (\"MyStruct\" . to_string ())"
+            ":: structpath_types :: FieldType :: StructPath (\"MyStruct\" . to_string () , MyStruct :: fields () . to_vec ())"
+        );
+
+        let field_type = FieldType::StructPath(
+            "MyStruct".to_string(),
+            vec![FieldInfo {
+                name: "f_string".to_string(),
+                r#type: FieldType::String,
+            }],
+        );
+        let mut tokens = TokenStream::new();
+        field_type.to_tokens(&mut tokens);
+        assert_eq!(
+            tokens.to_string(),
+            ":: structpath_types :: FieldType :: StructPath (\"MyStruct\" . to_string () , vec ! [:: structpath_types :: FieldInfo { name : stringify ! (f_string) . to_string () , r#type : :: structpath_types :: FieldType :: String , }])"
         );
 
         let field_type = FieldType::Option(Box::new(FieldType::String));

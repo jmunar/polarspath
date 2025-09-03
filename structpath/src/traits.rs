@@ -1,5 +1,5 @@
 use crate::{error::StructPathError, path::Path, value::Value};
-use structpath_types::FieldType;
+use structpath_types::{FieldInfo, FieldType};
 
 /// This trait is used to define the methods that are available on a Rust struct
 /// with nested fields being accessible using a path.
@@ -18,6 +18,9 @@ use structpath_types::FieldType;
 /// , whereas save methods only throw an error in the first case
 ///
 pub trait StructPath {
+    // Deep fields (i.e., including StructPath)
+    fn fields() -> &'static [FieldInfo];
+
     fn get_type_by_path(path: &Path) -> Result<FieldType, StructPathError>;
     fn get_type(path: &str) -> Result<FieldType, StructPathError> {
         let path = Path::from_str(path);

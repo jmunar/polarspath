@@ -1,120 +1,23 @@
+mod any;
+mod field;
+
+use any::ToAnyValue;
+use field::field_type_to_data_type;
+
 use polars_core::prelude::{
-    polars_err, AnyValue, BinaryType, BooleanType, ChunkedArray, CompatLevel, DataType, Field,
-    Float64Type, Int64Type, ListType, PolarsError, PolarsResult, Series, StringType,
+    polars_err, AnyValue, BinaryType, ChunkedArray, CompatLevel, Field, PolarsError, PolarsResult,
+    Series,
 };
 
-use polars_plan::dsl::FieldsMapper;
 use prost::Message;
 use protobuf_sample::sample;
-use pyo3_polars::derive::polars_expr;
-use pyo3_polars::export::polars_core::prelude::IntoSeries;
+use pyo3_polars::{derive::polars_expr, export::polars_plan::dsl::FieldsMapper};
 use serde::Deserialize;
-use std::iter::FromIterator;
-use structpath::{FieldType, FromValue, StructPath, Value};
+use structpath::{FieldType, StructPath};
 
 #[derive(Deserialize)]
 pub struct ExtractKwargs {
     path: String,
-}
-
-fn match_type(path_type: FieldType) -> DataType {
-    match path_type {
-        FieldType::String => DataType::String,
-        FieldType::Integer => DataType::Int64,
-        FieldType::Float => DataType::Float64,
-        FieldType::Boolean => DataType::Boolean,
-        FieldType::Option(inner_type) => match_type(*inner_type),
-        FieldType::Vec(inner_type) => {
-            let inner_data_type = match_type(*inner_type);
-            DataType::List(Box::new(inner_data_type))
-        }
-        _ => panic!("Unsupported type: {:?}", path_type),
-    }
-}
-
-fn extract_output<T>(input_fields: &[Field], kwargs: ExtractKwargs) -> PolarsResult<Field>
-where
-    T: StructPath + Message + Default,
-{
-    let path = kwargs.path.as_str();
-    let path_type = T::get_type_safe(path)
-        .map_err(|e| PolarsError::StructFieldNotFound(e.to_string().into()))?;
-    let data_type = match_type(path_type);
-    FieldsMapper::new(input_fields).with_dtype(data_type)
-}
-
-/// Trait to map types to their corresponding ChunkedArray types and convert Value to AnyValue
-trait ToChunkedArrayType {
-    type ChunkedArrayType;
-
-    /// Convert a Value to AnyValue for this type
-    fn to_any_value(value: Value) -> PolarsResult<AnyValue<'static>>;
-}
-
-impl ToChunkedArrayType for String {
-    type ChunkedArrayType = ChunkedArray<StringType>;
-
-    fn to_any_value(value: Value) -> PolarsResult<AnyValue<'static>> {
-        match &value {
-            Value::Option(None) => Ok(AnyValue::Null),
-            _ => {
-                let string_val = String::from_value(value);
-                Ok(AnyValue::StringOwned(string_val.into()))
-            }
-        }
-    }
-}
-
-impl ToChunkedArrayType for i64 {
-    type ChunkedArrayType = ChunkedArray<Int64Type>;
-
-    fn to_any_value(value: Value) -> PolarsResult<AnyValue<'static>> {
-        match &value {
-            Value::Option(None) => Ok(AnyValue::Null),
-            _ => Ok(AnyValue::Int64(i64::from_value(value))),
-        }
-    }
-}
-
-impl ToChunkedArrayType for f64 {
-    type ChunkedArrayType = ChunkedArray<Float64Type>;
-
-    fn to_any_value(value: Value) -> PolarsResult<AnyValue<'static>> {
-        match &value {
-            Value::Option(None) => Ok(AnyValue::Null),
-            _ => Ok(AnyValue::Float64(f64::from_value(value))),
-        }
-    }
-}
-
-impl ToChunkedArrayType for bool {
-    type ChunkedArrayType = ChunkedArray<BooleanType>;
-
-    fn to_any_value(value: Value) -> PolarsResult<AnyValue<'static>> {
-        match &value {
-            Value::Option(None) => Ok(AnyValue::Null),
-            _ => Ok(AnyValue::Boolean(bool::from_value(value))),
-        }
-    }
-}
-
-impl<T: ToChunkedArrayType> ToChunkedArrayType for Vec<T>
-where
-    T: Clone + Send + Sync + 'static,
-    T::ChunkedArrayType: FromIterator<Option<T>> + IntoSeries,
-{
-    type ChunkedArrayType = ChunkedArray<ListType>;
-
-    fn to_any_value(value: Value) -> PolarsResult<AnyValue<'static>> {
-        match &value {
-            Value::Option(None) => Ok(AnyValue::Null),
-            _ => {
-                let vec_data = <&Vec<T>>::from_value(&value);
-                let inner_ca: T::ChunkedArrayType = vec_data.iter().cloned().map(Some).collect();
-                Ok(AnyValue::List(inner_ca.into_series()))
-            }
-        }
-    }
 }
 
 /// Trait for message types that can extract fields to different types
@@ -124,7 +27,7 @@ trait ExtractFromChunkedArray: StructPath + Message + Default {
         path: &str,
     ) -> PolarsResult<Series>
     where
-        R: ToChunkedArrayType;
+        R: ToAnyValue;
 }
 
 // Generic implementation for all message types
@@ -137,7 +40,7 @@ where
         path: &str,
     ) -> PolarsResult<Series>
     where
-        R: ToChunkedArrayType,
+        R: ToAnyValue,
     {
         let any_values = ca
             .into_iter()
@@ -156,6 +59,17 @@ where
 
         Series::from_any_values("".into(), &any_values, true)
     }
+}
+
+fn extract_output<T>(input_fields: &[Field], kwargs: ExtractKwargs) -> PolarsResult<Field>
+where
+    T: StructPath + Message + Default,
+{
+    let path = kwargs.path.as_str();
+    let path_type = T::get_type_safe(path)
+        .map_err(|e| PolarsError::StructFieldNotFound(e.to_string().into()))?;
+    let data_type = field_type_to_data_type(path_type);
+    FieldsMapper::new(input_fields).with_dtype(data_type)
 }
 
 fn extract_impl_inner<T>(

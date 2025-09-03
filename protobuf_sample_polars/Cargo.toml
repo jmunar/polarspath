@@ -9,7 +9,7 @@ crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 polars-arrow = { version = "*", default-features = false }
-polars-core = { version = "*", features = ["dtype-array"], default-features = false }
+polars-core = { version = "*", features = ["dtype-array", "dtype-struct"], default-features = false }
 prost = { version = "*" }
 protobuf = { version = "*" }
 pyo3 = { version = "*", features = ["extension-module", "abi3-py38"] }
