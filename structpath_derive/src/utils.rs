@@ -1,6 +1,5 @@
-use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
-use structpath_types::FieldType;
+use quote::ToTokens;
+use structpath_types::DataTypeOpt;
 use syn::PathArguments::AngleBracketed;
 use syn::{AngleBracketedGenericArguments, Attribute, Expr, GenericArgument, Lit, Meta, Type};
 
@@ -47,81 +46,47 @@ fn is_structpath(attrs: &[Attribute]) -> bool {
     false
 }
 
-pub fn parse_field_type(field_type: &Type, attrs: &[Attribute]) -> FieldType {
+pub fn parse_data_type(field_type: &Type, attrs: &[Attribute]) -> DataTypeOpt {
     match field_type {
         syn::Type::Path(type_path) => match type_path.path.segments.last() {
             Some(segment) => {
                 let segment_name = segment.ident.to_string();
 
                 match segment_name.as_str() {
-                    "String" => FieldType::String,
-                    "i64" => FieldType::Integer,
-                    "f64" => FieldType::Float,
-                    "bool" => FieldType::Boolean,
+                    "String" => DataTypeOpt::String,
+                    "i32" => DataTypeOpt::Int32,
+                    "i64" => DataTypeOpt::Int64,
+                    "f64" => DataTypeOpt::Float64,
+                    "bool" => DataTypeOpt::Boolean,
                     "Vec" => {
                         let inner_type =
-                            parse_field_type(get_angle_bracketed_inner(type_path).unwrap(), attrs);
-                        FieldType::Vec(Box::new(inner_type))
+                            parse_data_type(get_angle_bracketed_inner(type_path).unwrap(), attrs);
+                        DataTypeOpt::List(Box::new(inner_type))
                     }
                     "Option" => {
                         let inner_type =
-                            parse_field_type(get_angle_bracketed_inner(type_path).unwrap(), attrs);
-                        FieldType::Option(Box::new(inner_type))
+                            parse_data_type(get_angle_bracketed_inner(type_path).unwrap(), attrs);
+                        DataTypeOpt::Option(Box::new(inner_type))
                     }
                     _ if is_structpath(attrs) => {
-                        FieldType::StructPathUnknown(type_path.to_token_stream().to_string())
+                        let type_name = type_path.to_token_stream().to_string();
+                        DataTypeOpt::StructFuture(Box::leak(type_name.into_boxed_str()))
                     }
-                    _ => FieldType::Unknown,
+                    _ => {
+                        let type_name = type_path.to_token_stream().to_string();
+                        DataTypeOpt::Object(Box::leak(type_name.into_boxed_str()))
+                    }
                 }
             }
-            None => FieldType::Unknown,
+            None => panic!(
+                "Unsupported type: {:?}",
+                type_path.to_token_stream().to_string()
+            ),
         },
-        _ => FieldType::Unknown,
-    }
-}
-
-pub fn value_from_field(field_type: &FieldType, field_value: TokenStream) -> TokenStream {
-    match field_type {
-        FieldType::String => quote! {
-            ::structpath::Value::String(#field_value.clone())
-        },
-        FieldType::Integer => quote! {
-            ::structpath::Value::Integer(#field_value)
-        },
-        FieldType::Float => quote! {
-            ::structpath::Value::Float(#field_value)
-        },
-        FieldType::Boolean => quote! {
-            ::structpath::Value::Boolean(#field_value)
-        },
-        FieldType::StructPathUnknown(_) => quote! {
-            ::structpath::Value::Boxed(Box::new(#field_value.clone()))
-        },
-        FieldType::StructPath(_, _) => quote! {
-            ::structpath::Value::Boxed(Box::new(#field_value.clone()))
-        },
-        FieldType::Unknown => quote! {
-            ::structpath::Value::Boxed(Box::new(#field_value.clone()))
-        },
-        FieldType::Vec(_) => quote! {
-            ::structpath::Value::Vec(Box::new(#field_value.clone()))
-        },
-        FieldType::Option(inner) => {
-            let inner_value = value_from_field(inner, quote! { t });
-            match inner.as_ref() {
-                FieldType::String
-                | FieldType::StructPath(_, _)
-                | FieldType::StructPathUnknown(_)
-                | FieldType::Unknown
-                | FieldType::Vec(_)
-                | FieldType::Option(_) => quote! {
-                    ::structpath::Value::Option(#field_value.as_ref().map(|t| Box::new(#inner_value)))
-                },
-                _ => quote! {
-                    ::structpath::Value::Option(#field_value.map(|t| Box::new(#inner_value)))
-                },
-            }
-        }
+        _ => panic!(
+            "Unsupported type: {:?}",
+            field_type.to_token_stream().to_string()
+        ),
     }
 }
 
@@ -130,13 +95,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_value_from_field() {
-        let field_type = FieldType::String;
-        let field_value = quote! { test };
-        let value = value_from_field(&field_type, field_value);
-        assert_eq!(
-            value.to_string(),
-            quote! { ::structpath::Value::String(test.clone()) }.to_string()
-        );
+    fn test_parse_data_type() {
+        let field_type: syn::Type = syn::parse_str("String").unwrap();
+        let attrs = vec![];
+        let data_type = parse_data_type(&field_type, &attrs);
+        assert_eq!(data_type, DataTypeOpt::String);
     }
 }

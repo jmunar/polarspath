@@ -38,6 +38,7 @@
 macro_rules! data_type_opt {
     // Base case: simple types without parameters
     (String) => { $crate::DataTypeOpt::String };
+    (Int32) => { $crate::DataTypeOpt::Int32 };
     (Int64) => { $crate::DataTypeOpt::Int64 };
     (Float64) => { $crate::DataTypeOpt::Float64 };
     (Boolean) => { $crate::DataTypeOpt::Boolean };
@@ -49,10 +50,10 @@ macro_rules! data_type_opt {
 
     // Recursive cases for wrapping types
     (Option, $($rest:tt)*) => {
-        $crate::DataTypeOpt::Option(Box::new(data_type_opt!($($rest)*)))
+        $crate::DataTypeOpt::Option(Box::new($crate::data_type_opt!($($rest)*)))
     };
     (List, $($rest:tt)*) => {
-        $crate::DataTypeOpt::List(Box::new(data_type_opt!($($rest)*)))
+        $crate::DataTypeOpt::List(Box::new($crate::data_type_opt!($($rest)*)))
     };
 }
 
@@ -88,7 +89,7 @@ macro_rules! data_type_opt {
 #[macro_export]
 macro_rules! field_type_opt {
     ($field_name:expr, $($type_spec:tt)*) => {
-        ($field_name.into(), data_type_opt!($($type_spec)*))
+        ($field_name.into(), $crate::data_type_opt!($($type_spec)*))
     };
 }
 
@@ -99,6 +100,7 @@ mod tests {
     #[test]
     fn test_data_type_opt_macro_simple_types() {
         assert_eq!(data_type_opt!(String), DataTypeOpt::String);
+        assert_eq!(data_type_opt!(Int32), DataTypeOpt::Int32);
         assert_eq!(data_type_opt!(Int64), DataTypeOpt::Int64);
         assert_eq!(data_type_opt!(Float64), DataTypeOpt::Float64);
         assert_eq!(data_type_opt!(Boolean), DataTypeOpt::Boolean);
@@ -200,13 +202,16 @@ mod tests {
         let result1: (String, DataTypeOpt) = field_type_opt!("name", String);
         assert_eq!(result1, ("name".into(), DataTypeOpt::String));
 
-        let result2: (String, DataTypeOpt) = field_type_opt!("age", Int64);
-        assert_eq!(result2, ("age".into(), DataTypeOpt::Int64));
+        let result2: (String, DataTypeOpt) = field_type_opt!("age", Int32);
+        assert_eq!(result2, ("age".into(), DataTypeOpt::Int32));
+
+        let result3: (String, DataTypeOpt) = field_type_opt!("big_age", Int64);
+        assert_eq!(result3, ("big_age".into(), DataTypeOpt::Int64));
 
         // Test optional types
-        let result3: (String, DataTypeOpt) = field_type_opt!("optional_name", Option, String);
+        let result4: (String, DataTypeOpt) = field_type_opt!("optional_name", Option, String);
         assert_eq!(
-            result3,
+            result4,
             (
                 "optional_name".into(),
                 DataTypeOpt::Option(Box::new(DataTypeOpt::String))
@@ -214,9 +219,9 @@ mod tests {
         );
 
         // Test list types
-        let result4: (String, DataTypeOpt) = field_type_opt!("tags", List, String);
+        let result5: (String, DataTypeOpt) = field_type_opt!("tags", List, String);
         assert_eq!(
-            result4,
+            result5,
             (
                 "tags".into(),
                 DataTypeOpt::List(Box::new(DataTypeOpt::String))
@@ -224,14 +229,14 @@ mod tests {
         );
 
         // Test complex nested types
-        let result5: (String, DataTypeOpt) =
-            field_type_opt!("complex", Option, List, Option, Int64);
+        let result6: (String, DataTypeOpt) =
+            field_type_opt!("complex", Option, List, Option, Int32);
         assert_eq!(
-            result5,
+            result6,
             (
                 "complex".into(),
                 DataTypeOpt::Option(Box::new(DataTypeOpt::List(Box::new(DataTypeOpt::Option(
-                    Box::new(DataTypeOpt::Int64)
+                    Box::new(DataTypeOpt::Int32)
                 )))))
             )
         );
@@ -239,13 +244,13 @@ mod tests {
         // Test with struct
         use indexmap::IndexMap;
         let fields = IndexMap::from([("subfield".into(), DataTypeOpt::String)]);
-        let result6: (String, DataTypeOpt) = field_type_opt!("nested", Struct(fields.clone()));
-        assert_eq!(result6, ("nested".into(), DataTypeOpt::Struct(fields)));
+        let result7: (String, DataTypeOpt) = field_type_opt!("nested", Struct(fields.clone()));
+        assert_eq!(result7, ("nested".into(), DataTypeOpt::Struct(fields)));
 
         // Test with object types
-        let result7: (String, DataTypeOpt) = field_type_opt!("enum_field", Object("MyEnum"));
+        let result8: (String, DataTypeOpt) = field_type_opt!("enum_field", Object("MyEnum"));
         assert_eq!(
-            result7,
+            result8,
             ("enum_field".into(), DataTypeOpt::Object("MyEnum"))
         );
     }

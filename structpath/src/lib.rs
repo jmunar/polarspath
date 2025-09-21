@@ -1,21 +1,10 @@
-mod error;
-mod path;
-mod traits;
-mod value;
-
-pub use error::StructPathError;
-pub use path::{Path, PathComponent};
-pub use traits::StructPath;
-pub use value::{FromValue, Value};
-
 #[cfg(feature = "derive")]
 extern crate structpath_derive;
 
 #[cfg(feature = "derive")]
 pub use structpath_derive::StructPath;
 
-#[cfg(feature = "derive")]
 extern crate structpath_types;
-
-#[cfg(feature = "derive")]
-pub use structpath_types::{FieldInfo, FieldType};
+pub use structpath_types::{
+    DataTypeOpt, DataTypeOptError, IntoAnyValueWith, Path, PathComponent, StructPath,
+};

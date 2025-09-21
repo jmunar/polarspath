@@ -9,6 +9,8 @@ license = "MIT OR Apache-2.0"
 proc-macro = true
 
 [dependencies]
+indexmap = "2.0"
+polars-core = { version = "*", features = ["dtype-array", "dtype-struct", "object"], default-features = false }
 proc-macro2 = "1.0"
 quote = "1.0"
 structpath_types = { path = "../structpath_types" }

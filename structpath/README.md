@@ -45,6 +45,7 @@ Find the full example, and some others, in the `examples` folder.
 
 Currently, `get_value()` can only access objects being:
 - `String`
+- `i32`
 - `i64`
 - `f64`
 - `bool`

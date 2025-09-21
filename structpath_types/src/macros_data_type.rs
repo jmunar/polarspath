@@ -27,6 +27,7 @@
 macro_rules! data_type {
     // Base case: simple types without parameters
     (String) => { ::polars_core::prelude::DataType::String };
+    (Int32) => { ::polars_core::prelude::DataType::Int32 };
     (Int64) => { ::polars_core::prelude::DataType::Int64 };
     (Float64) => { ::polars_core::prelude::DataType::Float64 };
     (Boolean) => { ::polars_core::prelude::DataType::Boolean };
@@ -80,6 +81,7 @@ mod tests {
         use polars_core::prelude::DataType;
 
         assert_eq!(data_type!(String), DataType::String);
+        assert_eq!(data_type!(Int32), DataType::Int32);
         assert_eq!(data_type!(Int64), DataType::Int64);
         assert_eq!(data_type!(Float64), DataType::Float64);
         assert_eq!(data_type!(Boolean), DataType::Boolean);
@@ -92,6 +94,10 @@ mod tests {
         assert_eq!(
             data_type!(List, String),
             DataType::List(Box::new(DataType::String))
+        );
+        assert_eq!(
+            data_type!(List, Int32),
+            DataType::List(Box::new(DataType::Int32))
         );
         assert_eq!(
             data_type!(List, Int64),
@@ -141,16 +147,22 @@ mod tests {
             ::polars_core::prelude::Field::new("name".into(), DataType::String)
         );
 
-        let result2 = field_type!("age", Int64);
+        let result2 = field_type!("age", Int32);
         assert_eq!(
             result2,
-            ::polars_core::prelude::Field::new("age".into(), DataType::Int64)
+            ::polars_core::prelude::Field::new("age".into(), DataType::Int32)
+        );
+
+        let result3 = field_type!("big_age", Int64);
+        assert_eq!(
+            result3,
+            ::polars_core::prelude::Field::new("big_age".into(), DataType::Int64)
         );
 
         // Test list types
-        let result3 = field_type!("tags", List, String);
+        let result4 = field_type!("tags", List, String);
         assert_eq!(
-            result3,
+            result4,
             ::polars_core::prelude::Field::new(
                 "tags".into(),
                 DataType::List(Box::new(DataType::String))
@@ -158,12 +170,12 @@ mod tests {
         );
 
         // Test complex nested types
-        let result4 = field_type!("nested_lists", List, List, Int64);
+        let result5 = field_type!("nested_lists", List, List, Int32);
         assert_eq!(
-            result4,
+            result5,
             ::polars_core::prelude::Field::new(
                 "nested_lists".into(),
-                DataType::List(Box::new(DataType::List(Box::new(DataType::Int64))))
+                DataType::List(Box::new(DataType::List(Box::new(DataType::Int32))))
             )
         );
 
@@ -172,9 +184,9 @@ mod tests {
             "subfield".into(),
             DataType::String,
         )];
-        let result5 = field_type!("nested", Struct(fields.clone()));
+        let result6 = field_type!("nested", Struct(fields.clone()));
         assert_eq!(
-            result5,
+            result6,
             ::polars_core::prelude::Field::new("nested".into(), DataType::Struct(fields))
         );
     }

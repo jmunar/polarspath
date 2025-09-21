@@ -23,6 +23,17 @@ impl IntoAnyValueWith<String> for DataTypeOpt {
     }
 }
 
+impl IntoAnyValueWith<i32> for DataTypeOpt {
+    type ChunkDataType = ::polars_core::prelude::Int32Type;
+
+    fn to_any_value(&self, value: &i32) -> AnyValue {
+        match self {
+            DataTypeOpt::Int32 => AnyValue::Int32(*value),
+            _ => panic!("Unsupported DataTypeOpt for i32: {:?}", self),
+        }
+    }
+}
+
 impl IntoAnyValueWith<i64> for DataTypeOpt {
     type ChunkDataType = ::polars_core::prelude::Int64Type;
 
@@ -84,7 +95,7 @@ where
         match self {
             DataTypeOpt::List(inner_type) => {
                 let any_values: Vec<AnyValue> = value
-                    .into_iter()
+                    .iter()
                     .map(|item| (**inner_type).to_any_value(item))
                     .collect();
                 let any_values = any_values;
@@ -110,5 +121,85 @@ where
             },
             _ => panic!("Unsupported DataTypeOpt for Option<T>: {:?}", self),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data_type_opt;
+
+    #[test]
+    fn test_to_any_value_string() {
+        let data_type_opt = data_type_opt!(String);
+        let value = "test".to_string();
+        let any_value = data_type_opt.to_any_value(&value);
+        assert_eq!(any_value, AnyValue::StringOwned(value.into()));
+    }
+
+    #[test]
+    fn test_to_any_value_i32() {
+        let data_type_opt = data_type_opt!(Int32);
+        let value = 1;
+        let any_value = data_type_opt.to_any_value(&value);
+        assert_eq!(any_value, AnyValue::Int32(value));
+    }
+
+    #[test]
+    fn test_to_any_value_i64() {
+        let data_type_opt = data_type_opt!(Int64);
+        let value = 1;
+        let any_value = data_type_opt.to_any_value(&value);
+        assert_eq!(any_value, AnyValue::Int64(value));
+    }
+
+    #[test]
+    fn test_to_any_value_f64() {
+        let data_type_opt = data_type_opt!(Float64);
+        let value = 1.0;
+        let any_value = data_type_opt.to_any_value(&value);
+        assert_eq!(any_value, AnyValue::Float64(value));
+    }
+
+    #[test]
+    fn test_to_any_value_bool() {
+        let data_type_opt = data_type_opt!(Boolean);
+        let value = true;
+        let any_value = data_type_opt.to_any_value(&value);
+        assert_eq!(any_value, AnyValue::Boolean(value));
+    }
+
+    #[test]
+    fn test_to_any_value_list_scalar() {
+        let data_type_opt = data_type_opt!(List, String);
+        let value = vec!["test".to_string()];
+        let any_value = data_type_opt.to_any_value(&value);
+        assert_eq!(any_value, AnyValue::List(Series::from_iter(value)));
+    }
+
+    #[test]
+    fn test_to_any_value_option_scalar() {
+        let data_type_opt = data_type_opt!(Option, String);
+
+        let value = Some("test".to_string());
+        let any_value = data_type_opt.to_any_value(&value);
+        assert_eq!(any_value, AnyValue::StringOwned(value.unwrap().into()));
+
+        let value: Option<String> = None;
+        let any_value = data_type_opt.to_any_value(&value);
+        assert_eq!(any_value, AnyValue::Null);
+    }
+
+    #[test]
+    fn test_to_any_value_option_list() {
+        let data_type_opt = data_type_opt!(Option, List, String);
+
+        let value = Some(vec!["test".to_string()]);
+        let any_value = data_type_opt.to_any_value(&value);
+        assert_eq!(any_value, AnyValue::List(Series::from_iter(value.unwrap())));
+
+        let value: Option<Vec<String>> = None;
+        let any_value = data_type_opt.to_any_value(&value);
+        assert_eq!(any_value, AnyValue::Null);
     }
 }

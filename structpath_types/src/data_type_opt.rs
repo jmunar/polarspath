@@ -9,7 +9,7 @@ use std::str::FromStr;
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq, Eq)]
-pub enum DataPathOptError {
+pub enum DataTypeOptError {
     #[error("Invalid path: {0}")]
     InvalidPath(String),
 
@@ -36,6 +36,7 @@ pub enum DataPathOptError {
 pub enum DataTypeOpt {
     // Types supported from DataType
     String,
+    Int32,
     Int64,
     Float64,
     Boolean,
@@ -53,6 +54,7 @@ impl DataTypeOpt {
     pub fn to_data_type(&self) -> DataType {
         match self {
             DataTypeOpt::String => DataType::String,
+            DataTypeOpt::Int32 => DataType::Int32,
             DataTypeOpt::Int64 => DataType::Int64,
             DataTypeOpt::Float64 => DataType::Float64,
             DataTypeOpt::Boolean => DataType::Boolean,
@@ -71,7 +73,7 @@ impl DataTypeOpt {
         }
     }
 
-    pub fn field_type(&self, field_name: &str) -> Result<DataTypeOpt, DataPathOptError> {
+    pub fn field_type(&self, field_name: &str) -> Result<DataTypeOpt, DataTypeOptError> {
         match self {
             DataTypeOpt::Option(t) => {
                 let inner_type = t.field_type(field_name)?;
@@ -79,13 +81,13 @@ impl DataTypeOpt {
             }
             DataTypeOpt::Struct(fields) => match fields.get(field_name) {
                 Some(field_type) => Ok(field_type.clone()),
-                None => Err(DataPathOptError::FieldNotFound(field_name.to_string())),
+                None => Err(DataTypeOptError::FieldNotFound(field_name.to_string())),
             },
-            _ => Err(DataPathOptError::NotAStruct),
+            _ => Err(DataTypeOptError::NotAStruct),
         }
     }
 
-    pub fn get_type_by_path(&self, path: &Path) -> Result<DataTypeOpt, DataPathOptError> {
+    pub fn get_type_by_path(&self, path: &Path) -> Result<DataTypeOpt, DataTypeOptError> {
         let path_component = path.components[0].clone();
 
         if path.components.len() > 1 {
@@ -102,7 +104,7 @@ impl DataTypeOpt {
                         DataTypeOpt::Option(t) if matches!(*t, DataTypeOpt::Struct(_)) => t
                             .get_type_by_path(&remaining_path)
                             .map(|type_opt| DataTypeOpt::Option(Box::new(type_opt))),
-                        _ => Err(DataPathOptError::InvalidPath(field)),
+                        _ => Err(DataTypeOptError::InvalidPath(field)),
                     }
                 }
                 PathComponent::ArrayIndex(field, _) => {
@@ -119,7 +121,7 @@ impl DataTypeOpt {
                                 unreachable!()
                             }
                         }
-                        _ => Err(DataPathOptError::InvalidPath(field)),
+                        _ => Err(DataTypeOptError::InvalidPath(field)),
                     }
                 }
             };
@@ -137,17 +139,17 @@ impl DataTypeOpt {
                     DataTypeOpt::Option(t) => t
                         .get_type_by_path(path)
                         .map(|type_opt| DataTypeOpt::Option(Box::new(type_opt))),
-                    _ => Err(DataPathOptError::InvalidPath(field)),
+                    _ => Err(DataTypeOptError::InvalidPath(field)),
                 }
             }
         }
     }
 
-    pub fn get_type(&self, path: &str) -> Result<DataTypeOpt, DataPathOptError> {
+    pub fn get_type(&self, path: &str) -> Result<DataTypeOpt, DataTypeOptError> {
         let path = Path::from_str(path);
         match path {
             Ok(path) => self.get_type_by_path(&path),
-            Err(e) => Err(DataPathOptError::InvalidPath(e.to_string())),
+            Err(e) => Err(DataTypeOptError::InvalidPath(e.to_string())),
         }
     }
 }
@@ -156,6 +158,7 @@ impl ToTokens for DataTypeOpt {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         tokens.extend(match self {
             DataTypeOpt::String => quote! { ::structpath::DataTypeOpt::String },
+            DataTypeOpt::Int32 => quote! { ::structpath::DataTypeOpt::Int32 },
             DataTypeOpt::Int64 => quote! { ::structpath::DataTypeOpt::Int64 },
             DataTypeOpt::Float64 => quote! { ::structpath::DataTypeOpt::Float64 },
             DataTypeOpt::Boolean => quote! { ::structpath::DataTypeOpt::Boolean },
@@ -169,7 +172,7 @@ impl ToTokens for DataTypeOpt {
             DataTypeOpt::StructFuture(inner_type_name) => {
                 let inner_type = TokenStream::from_str(inner_type_name).ok().unwrap();
                 quote! {
-                    #inner_type::data_type_opt()
+                    #inner_type::data_type_opt().clone()
                 }
             }
             DataTypeOpt::Option(inner_type) => {
@@ -211,7 +214,7 @@ mod tests {
         let data_type_opt = DataTypeOpt::String;
         assert_eq!(
             data_type_opt.field_type("field1"),
-            Err(DataPathOptError::NotAStruct)
+            Err(DataTypeOptError::NotAStruct)
         );
     }
 
@@ -221,7 +224,7 @@ mod tests {
             DataTypeOpt::Struct(IndexMap::from([("field1".into(), DataTypeOpt::String)]));
         assert_eq!(
             data_type_opt.field_type("field2"),
-            Err(DataPathOptError::FieldNotFound("field2".to_string()))
+            Err(DataTypeOptError::FieldNotFound("field2".to_string()))
         );
     }
 
