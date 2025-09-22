@@ -5,9 +5,8 @@ pub mod sample {
 #[cfg(test)]
 mod tests {
     use super::sample;
-    use indexmap::IndexMap;
     use polars_core::prelude::{AnyValue, DataType, Field, Series};
-    use structpath::{DataTypeOpt, StructPath};
+    use structpath::{indexmap::IndexMap, DataTypeOpt, StructPath};
 
     fn user_fields_expected() -> Vec<Field> {
         vec![

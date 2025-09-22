@@ -6,5 +6,5 @@ pub use structpath_derive::StructPath;
 
 extern crate structpath_types;
 pub use structpath_types::{
-    DataTypeOpt, DataTypeOptError, IntoAnyValueWith, Path, PathComponent, StructPath,
+    indexmap, DataTypeOpt, DataTypeOptError, IntoAnyValueWith, Path, PathComponent, StructPath,
 };

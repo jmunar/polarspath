@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // pets: Some(vec![Pet::Dog]),
     };
 
-    let parent_type = DataTypeOpt::Struct(::indexmap::IndexMap::from([
+    let parent_type = DataTypeOpt::Struct(::structpath_types::indexmap::IndexMap::from([
         ("name".into(), DataTypeOpt::String),
         ("age".into(), DataTypeOpt::Int64),
     ]));

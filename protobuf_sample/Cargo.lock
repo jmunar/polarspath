@@ -667,12 +667,10 @@ name = "protobuf_sample"
 version = "0.1.0"
 dependencies = [
  "bytes",
- "indexmap",
  "polars-core",
  "prost",
  "prost-build",
  "structpath",
- "structpath_types",
 ]
 
 [[package]]
@@ -965,7 +963,6 @@ checksum = "fe895eb47f22e2ddd4dabc02bce419d2e643c8e3b585c78158b349195bc24d82"
 name = "structpath"
 version = "0.1.0"
 dependencies = [
- "indexmap",
  "polars-core",
  "structpath_derive",
  "structpath_types",
@@ -975,7 +972,6 @@ dependencies = [
 name = "structpath_derive"
 version = "0.1.0"
 dependencies = [
- "indexmap",
  "polars-core",
  "proc-macro2",
  "quote",

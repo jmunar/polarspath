@@ -1,8 +1,7 @@
 use crate::utils::parse_data_type;
-use indexmap::IndexMap;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use structpath_types::DataTypeOpt;
+use structpath_types::{indexmap::IndexMap, DataTypeOpt};
 
 pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
     let type_name = input.ident;
@@ -72,7 +71,13 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                     DataTypeOpt::StructFuture(_) => {
                         Some(
                             quote! {
-                                stringify!(#field_name) => self.#field_name[index].get_value_by_path(&remaining_path)
+                                stringify!(#field_name) => {
+                                    if index < self.#field_name.len() {
+                                        self.#field_name[index].get_value_by_path(&remaining_path)
+                                    } else {
+                                        Ok(::polars_core::prelude::AnyValue::Null)
+                                    }
+                                }
                             }
                         )
                     }
@@ -80,9 +85,15 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                         if let DataTypeOpt::StructFuture(_) = **mid_type2 {
                             Some(
                                 quote! {
-                                    stringify!(#field_name) => match self.#field_name[index] {
-                                        Some(ref struct_value) => struct_value.get_value_by_path(&remaining_path),
-                                        None => Ok(::polars_core::prelude::AnyValue::Null),
+                                    stringify!(#field_name) => {
+                                        if index < self.#field_name.len() {
+                                            match self.#field_name[index] {
+                                                Some(ref struct_value) => struct_value.get_value_by_path(&remaining_path),
+                                                None => Ok(::polars_core::prelude::AnyValue::Null),
+                                            }
+                                        } else {
+                                            Ok(::polars_core::prelude::AnyValue::Null)
+                                        }
                                     }
                                 }
                             )
@@ -100,7 +111,13 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                             Some(
                                 quote! {
                                     stringify!(#field_name) => match self.#field_name {
-                                        Some(ref vec) => vec[index].get_value_by_path(&remaining_path),
+                                        Some(ref vec) => {
+                                            if index < vec.len() {
+                                                vec[index].get_value_by_path(&remaining_path)
+                                            } else {
+                                                Ok(::polars_core::prelude::AnyValue::Null)
+                                            }
+                                        }
                                         None => Ok(::polars_core::prelude::AnyValue::Null),
                                     }
                                 }
@@ -111,10 +128,16 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                                 Some(
                                     quote! {
                                         stringify!(#field_name) => match self.#field_name {
-                                            Some(ref vec) => match vec[index] {
-                                                Some(ref struct_value) => struct_value.get_value_by_path(&remaining_path),
-                                                None => Ok(::polars_core::prelude::AnyValue::Null),
-                                            },
+                                            Some(ref vec) => {
+                                                if index < vec.len() {
+                                                    match vec[index] {
+                                                        Some(ref struct_value) => struct_value.get_value_by_path(&remaining_path),
+                                                        None => Ok(::polars_core::prelude::AnyValue::Null),
+                                                    }
+                                                } else {
+                                                    Ok(::polars_core::prelude::AnyValue::Null)
+                                                }
+                                            }
                                             None => Ok(::polars_core::prelude::AnyValue::Null),
                                         }
                                     }
@@ -145,7 +168,13 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
         match &dtype {
             DataTypeOpt::List(_) => Some(
                 quote! {
-                    stringify!(#field_name) => Ok(::structpath::IntoAnyValueWith::to_any_value(field_inner_type, &self.#field_name[index]))
+                    stringify!(#field_name) => {
+                        if index < self.#field_name.len() {
+                            Ok(::structpath::IntoAnyValueWith::to_any_value(field_inner_type, &self.#field_name[index]))
+                        } else {
+                            Ok(::polars_core::prelude::AnyValue::Null)
+                        }
+                    }
                 }
             ),
             _ => None,
@@ -155,10 +184,10 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
     quote! {
 
         impl ::structpath::StructPath for #type_name {
-            fn fields_opt() -> &'static ::indexmap::IndexMap<String, ::structpath::DataTypeOpt> {
-                static FIELDS_OPT: ::std::sync::OnceLock<::indexmap::IndexMap<String, ::structpath::DataTypeOpt>> = ::std::sync::OnceLock::new();
+            fn fields_opt() -> &'static ::structpath::indexmap::IndexMap<String, ::structpath::DataTypeOpt> {
+                static FIELDS_OPT: ::std::sync::OnceLock<::structpath::indexmap::IndexMap<String, ::structpath::DataTypeOpt>> = ::std::sync::OnceLock::new();
                 FIELDS_OPT.get_or_init(||
-                    ::indexmap::IndexMap::from([
+                    ::structpath::indexmap::IndexMap::from([
                         #(#fields_tokens),*
                     ])
                 )

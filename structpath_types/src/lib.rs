@@ -9,3 +9,5 @@ pub use any_value::IntoAnyValueWith;
 pub use data_type_opt::{DataTypeOpt, DataTypeOptError};
 pub use path::{Path, PathComponent};
 pub use structpath::StructPath;
+
+pub use indexmap;

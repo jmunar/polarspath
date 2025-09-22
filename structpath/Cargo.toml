@@ -6,7 +6,6 @@ description = "A library for dynamically accessing nested Rust structures using 
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-indexmap = "2.0"
 structpath_derive = { optional = true, path = "../structpath_derive" }
 structpath_types = { path = "../structpath_types" }
 polars-core = { version = "*", features = ["dtype-array", "dtype-struct", "object"], default-features = false }
