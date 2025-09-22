@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 structpath_derive = { optional = true, path = "../structpath_derive" }
 structpath_types = { path = "../structpath_types" }
-thiserror = "1.0"
+polars-core = { version = "*", features = ["dtype-array", "dtype-struct", "object"], default-features = false }
 
 [dev-dependencies]
 structpath_derive = { path = "../structpath_derive" }

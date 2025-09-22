@@ -11,7 +11,7 @@ from polars.plugins import register_plugin_function
 LIB = Path(__file__).parent.parent
 
 
-def protobuf_user_extract(expr: IntoExprColumn, path: str) -> pl.Expr:
+def protobuf_user_get_value(expr: IntoExprColumn, path: str) -> pl.Expr:
     """
     Extract a field from a binary protobuf column of type User
     """
@@ -19,6 +19,6 @@ def protobuf_user_extract(expr: IntoExprColumn, path: str) -> pl.Expr:
         args=[expr],
         kwargs={"path": path},
         plugin_path=LIB,
-        function_name="user_extract",
+        function_name="user_get_value",
         is_elementwise=True,
     )

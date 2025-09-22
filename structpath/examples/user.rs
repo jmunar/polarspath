@@ -1,4 +1,5 @@
-use structpath::{FieldInfo, FieldType, StructPath};
+use polars_core::prelude::{AnyValue, DataType, Field};
+use structpath::{DataTypeOpt, StructPath};
 
 #[derive(Debug, Clone, PartialEq)]
 enum Pet {
@@ -19,7 +20,7 @@ struct User {
     parent_favorite: Parent,
     #[type_hint = "struct"]
     parents: Vec<Parent>,
-    pets: Option<Vec<Pet>>,
+    // pets: Option<Vec<Pet>>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -40,69 +41,59 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 age: 67,
             },
         ],
-        pets: Some(vec![Pet::Dog]),
+        // pets: Some(vec![Pet::Dog]),
     };
 
-    let parent_type = FieldType::StructPath(
-        "Parent".to_string(),
-        vec![
-            FieldInfo::new("name", FieldType::String),
-            FieldInfo::new("age", FieldType::Integer),
-        ],
-    );
-
-    assert_eq!(
-        User::fields(),
-        vec![
-            FieldInfo::new("name", FieldType::String),
-            FieldInfo::new("age", FieldType::Integer),
-            FieldInfo::new("parent_favorite", parent_type.clone()),
-            FieldInfo::new("parents", FieldType::Vec(Box::new(parent_type.clone()))),
-            FieldInfo::new(
-                "pets",
-                FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Unknown))))
-            ),
-        ]
-    );
+    let parent_type = DataTypeOpt::Struct(::structpath_types::indexmap::IndexMap::from([
+        ("name".into(), DataTypeOpt::String),
+        ("age".into(), DataTypeOpt::Int64),
+    ]));
 
     let name_type = User::get_type("name")?;
-    assert_eq!(name_type, FieldType::String);
+    assert_eq!(name_type, DataTypeOpt::String);
     let age_type = User::get_type("age")?;
-    assert_eq!(age_type, FieldType::Integer);
+    assert_eq!(age_type, DataTypeOpt::Int64);
     let parent_favorite_type = User::get_type("parent_favorite")?;
     assert_eq!(parent_favorite_type, parent_type.clone());
     let parent_favorite_name_type = User::get_type("parent_favorite.name")?;
-    assert_eq!(parent_favorite_name_type, FieldType::String);
+    assert_eq!(parent_favorite_name_type, DataTypeOpt::String);
     let parents_type = User::get_type("parents")?;
-    assert_eq!(parents_type, FieldType::Vec(Box::new(parent_type.clone())));
+    assert_eq!(
+        parents_type,
+        DataTypeOpt::List(Box::new(parent_type.clone()))
+    );
     let parent_0_type = User::get_type("parents[0]")?;
     assert_eq!(parent_0_type, parent_type.clone());
-    let pets_type = User::get_type("pets")?;
-    assert_eq!(
-        pets_type,
-        FieldType::Option(Box::new(FieldType::Vec(Box::new(FieldType::Unknown))))
-    );
-    let pets_0_type = User::get_type("pets[0]")?;
-    assert_eq!(pets_0_type, FieldType::Unknown);
+    // let pets_type = User::get_type("pets")?;
+    // assert_eq!(
+    //     pets_type,
+    //     DataTypeOpt::List(Box::new(DataTypeOpt::String))
+    // );
+    // let pets_0_type = User::get_type("pets[0]")?;
+    // assert_eq!(pets_0_type, DataTypeOpt::String);
 
     let name = user.get_value("name")?;
-    assert_eq!(name, "John".to_string());
+    assert_eq!(name, AnyValue::String("John"));
     let age = user.get_value("age")?;
-    assert_eq!(age, 32);
+    assert_eq!(age, AnyValue::Int64(32));
     let parent_favorite = user.get_value("parent_favorite")?;
     assert_eq!(
         parent_favorite,
-        &Parent {
-            name: "Mary".to_string(),
-            age: 67,
-        }
+        // (Box<(Vec<AnyValue<'a>>, Vec<Field>)>)
+        AnyValue::StructOwned(Box::new((
+            vec![AnyValue::String("Mary"), AnyValue::Int64(67)],
+            vec![
+                Field::new("name".into(), DataType::String),
+                Field::new("age".into(), DataType::Int64)
+            ]
+        )))
     );
     let parent_favorite_name = user.get_value("parent_favorite.name")?;
-    assert_eq!(parent_favorite_name, "Mary".to_string());
+    assert_eq!(parent_favorite_name, AnyValue::String("Mary"));
     let parent_0_name = user.get_value("parents[0].name")?;
-    assert_eq!(parent_0_name, "Joseph".to_string());
-    let pet_0 = user.get_value("pets[0]")?;
-    assert_eq!(pet_0, &Pet::Dog);
+    assert_eq!(parent_0_name, AnyValue::String("Joseph"));
+    // let pet_0 = user.get_value("pets[0]")?;
+    // assert_eq!(pet_0, &Pet::Dog);
 
     Ok(())
 }

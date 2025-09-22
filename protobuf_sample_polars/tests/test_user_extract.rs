@@ -1,6 +1,6 @@
 use polars_core::prelude::{BinaryType, ChunkedArray, StringType};
 use prost::Message;
-use protobuf_sample_polars::extract_impl;
+use protobuf_sample_polars::get_value;
 
 #[derive(structpath::StructPath, Clone, PartialEq, ::prost::Message)]
 pub struct SimpleString {
@@ -25,7 +25,7 @@ impl SimpleString {
 #[test]
 fn test_simple_string() {
     let samples = SimpleString::gen_seq(10);
-    let result = extract_impl::<SimpleString>(&samples, "name").unwrap();
+    let result = get_value::<SimpleString>(&samples, "name").unwrap();
     let string_series: &ChunkedArray<StringType> = result.str().unwrap();
     for (i, opt_value) in string_series.into_iter().enumerate() {
         let expected = format!("name{}", i);
@@ -56,7 +56,7 @@ impl SimpleStrings {
 #[test]
 fn test_simple_strings() {
     let samples = SimpleStrings::gen_seq(10);
-    let result = extract_impl::<SimpleStrings>(&samples, "names").unwrap();
+    let result = get_value::<SimpleStrings>(&samples, "names").unwrap();
 
     // Test that we can properly access the list elements as expected
     let series_as_any = result.as_any();

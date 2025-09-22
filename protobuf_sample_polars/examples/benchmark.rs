@@ -8,7 +8,7 @@ use polars_core::prelude::{
     IntoSeries, ListType, Series, StringType,
 };
 use prost::Message;
-use protobuf_sample_polars::extract_impl;
+use protobuf_sample_polars::get_value;
 
 #[derive(structpath::StructPath, Clone, PartialEq, Message)]
 struct SampleSubmessage {
@@ -99,7 +99,7 @@ fn benchmark_prost_decode(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_string(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_string");
     let t0 = std::time::Instant::now();
-    let result_path = extract_impl::<SampleMessage>(&samples, "f_string").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_string").unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -127,7 +127,7 @@ fn benchmark_f_string(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_integer(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_integer");
     let t0 = std::time::Instant::now();
-    let result_path = extract_impl::<SampleMessage>(&samples, "f_integer").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_integer").unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -155,7 +155,7 @@ fn benchmark_f_integer(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_double(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_double");
     let t0 = std::time::Instant::now();
-    let result_path = extract_impl::<SampleMessage>(&samples, "f_double").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_double").unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -183,7 +183,7 @@ fn benchmark_f_double(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_boolean(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_boolean");
     let t0 = std::time::Instant::now();
-    let result_path = extract_impl::<SampleMessage>(&samples, "f_boolean").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_boolean").unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -211,7 +211,7 @@ fn benchmark_f_boolean(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_integer_optional(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_integer_optional");
     let t0 = std::time::Instant::now();
-    let result_path = extract_impl::<SampleMessage>(&samples, "f_integer_optional").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_integer_optional").unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -260,7 +260,7 @@ fn benchmark_f_integer_optional(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_string_optional(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_string_optional");
     let t0 = std::time::Instant::now();
-    let result_path = extract_impl::<SampleMessage>(&samples, "f_string_optional").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_string_optional").unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -314,7 +314,7 @@ fn benchmark_f_string_optional(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_integer_repeated(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_integer_repeated");
     let t0 = std::time::Instant::now();
-    let result_path = extract_impl::<SampleMessage>(&samples, "f_integer_repeated").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_integer_repeated").unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -365,7 +365,7 @@ fn benchmark_f_integer_repeated(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_string_repeated(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_string_repeated");
     let t0 = std::time::Instant::now();
-    let result_path = extract_impl::<SampleMessage>(&samples, "f_string_repeated").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_string_repeated").unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -415,13 +415,13 @@ fn benchmark_f_string_repeated(samples: &ChunkedArray<BinaryType>) {
 
 fn benchmark_f_submessage(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_submessage");
-    // let t0 = std::time::Instant::now();
-    // let result_path = extract_impl::<SampleMessage>(&samples, "f_submessage").unwrap();
-    // let t1 = std::time::Instant::now();
-    // println!(
-    //     "    Time taken (structpath): {:>8.4} s",
-    //     (t1 - t0).as_secs_f64()
-    // );
+    let t0 = std::time::Instant::now();
+    let result_path = get_value::<SampleMessage>(&samples, "f_submessage").unwrap();
+    let t1 = std::time::Instant::now();
+    println!(
+        "    Time taken (structpath): {:>8.4} s",
+        (t1 - t0).as_secs_f64()
+    );
 
     // Optimized version using AnyValue to avoid intermediate allocations
     let t0 = std::time::Instant::now();
@@ -451,14 +451,62 @@ fn benchmark_f_submessage(samples: &ChunkedArray<BinaryType>) {
         })
         .collect::<Vec<AnyValue>>();
 
-    let _result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
+    let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (any value):  {:>8.4} s",
         (t1 - t0).as_secs_f64()
     );
 
-    // assert_eq!(result_path, result_optimized);
+    assert_eq!(result_path, result_optimized);
+}
+
+fn benchmark_f_submessage_repeated(samples: &ChunkedArray<BinaryType>) {
+    println!("Extracting f_submessage_repeated");
+    let t0 = std::time::Instant::now();
+    let result_path = get_value::<SampleMessage>(&samples, "f_submessage_repeated").unwrap();
+    let t1 = std::time::Instant::now();
+    println!(
+        "    Time taken (structpath): {:>8.4} s",
+        (t1 - t0).as_secs_f64()
+    );
+
+    let t0 = std::time::Instant::now();
+    let any_values = samples
+        .into_iter()
+        .map(|bytes| {
+            let message = SampleMessage::decode(bytes.unwrap()).unwrap();
+            // Create a list of AnyValue::StructOwned for each submessage
+            let struct_values: Vec<AnyValue> = message
+                .f_submessage_repeated
+                .into_iter()
+                .map(|submessage| {
+                    let field_values = vec![
+                        AnyValue::StringOwned(submessage.f_string.into()),
+                        AnyValue::Int64(submessage.f_integer),
+                    ];
+                    let field_defs = vec![
+                        Field::new("f_string".into(), DataType::String),
+                        Field::new("f_integer".into(), DataType::Int64),
+                    ];
+                    AnyValue::StructOwned(Box::new((field_values, field_defs)))
+                })
+                .collect();
+
+            // Convert the Vec<AnyValue> to a Series and wrap in AnyValue::List
+            let inner_series = Series::from_any_values("".into(), &struct_values, true).unwrap();
+            AnyValue::List(inner_series)
+        })
+        .collect::<Vec<AnyValue>>();
+
+    let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
+    let t1 = std::time::Instant::now();
+    println!(
+        "    Time taken (direct):     {:>8.4} s",
+        (t1 - t0).as_secs_f64()
+    );
+
+    assert_eq!(result_path, result_optimized);
 }
 
 fn main() {
@@ -473,4 +521,5 @@ fn main() {
     benchmark_f_integer_repeated(&samples);
     benchmark_f_string_repeated(&samples);
     benchmark_f_submessage(&samples);
+    benchmark_f_submessage_repeated(&samples);
 }

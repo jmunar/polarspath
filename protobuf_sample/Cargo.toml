@@ -8,8 +8,8 @@ license = "MIT"
 [dependencies]
 prost = { version = "*" }
 bytes = { version = "*" }
+polars-core = { version = "*", features = ["dtype-array", "dtype-struct", "object"], default-features = false }
 structpath = { path = "../structpath", features = ["derive"] }
-structpath_types = { path = "../structpath_types" }
 
 [build-dependencies]
 prost-build = { version = "*" }
