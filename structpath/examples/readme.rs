@@ -1,11 +1,3 @@
-# structpath
-
-A Rust library for dynamically accessing nested structures using path notation.
-For a use case, see the examples path.
-
-## Example
-
-```rust
 use polars_core::prelude::AnyValue;
 use structpath::{StructPath};
 
@@ -37,22 +29,3 @@ fn main() {
     let father_name = user.get_value("parent[0].name").unwrap();
     assert_eq!(father_name, AnyValue::String("Joseph"));
 }
-```
-
-Find the full example, and some others, in the `examples` folder.
-
-## Current status
-
-Currently, `get_value()` can only access objects being:
-- `String`
-- `i32`
-- `i64`
-- `f64`
-- `bool`
-- optionals of the above types
-- vectors of the above types
-- nested objects with implemented `StructPath` trait (`StructPath` macro)
-
-Missing:
-- arbitrary objects (boxing them)
-- add more scalar types
