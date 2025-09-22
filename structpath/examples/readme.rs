@@ -1,6 +1,5 @@
 use polars_core::prelude::AnyValue;
-use structpath::{StructPath};
-
+use structpath::StructPath;
 
 #[derive(StructPath, Debug, Clone)]
 struct Parent {
