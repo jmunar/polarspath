@@ -1,8 +1,8 @@
 mod sample;
-use sample::{SampleStruct, SampleSubstruct};
+use sample::{SampleEnum, SampleStruct, SampleSubstruct};
 
 use polars_core::prelude::{AnyValue, DataType, Field, Series};
-use structpath_types::StructPath;
+use structpath_types::{EnumPath, HasDataTypeOpt, StructPath};
 
 fn sample_struct() -> SampleStruct {
     SampleStruct {
@@ -14,7 +14,7 @@ fn sample_struct() -> SampleStruct {
         req_struct: SampleSubstruct {
             subf_string: "subf_string1".to_string(),
         },
-        req_object: "req_object".to_string(),
+        req_enum: SampleEnum::ITEM,
 
         opt_string: Some("opt_string".to_string()),
         opt_i32: Some(2),
@@ -24,7 +24,7 @@ fn sample_struct() -> SampleStruct {
         opt_struct: Some(SampleSubstruct {
             subf_string: "subf_string2".to_string(),
         }),
-        opt_object: Some("opt_object".to_string()),
+        opt_enum: Some(SampleEnum::ITEM),
 
         req_vec_req_item_string: vec!["req_vec_req_item_string".to_string()],
         req_vec_req_item_i32: vec![3],
@@ -34,7 +34,7 @@ fn sample_struct() -> SampleStruct {
         req_vec_req_item_struct: vec![SampleSubstruct {
             subf_string: "subf_string3".to_string(),
         }],
-        req_vec_req_item_object: vec!["req_vec_req_item_object".to_string()],
+        req_vec_req_item_enum: vec![SampleEnum::ITEM],
 
         opt_vec_req_item_string: Some(vec!["opt_vec_req_item_string".to_string()]),
         opt_vec_req_item_i32: Some(vec![4]),
@@ -44,7 +44,7 @@ fn sample_struct() -> SampleStruct {
         opt_vec_req_item_struct: Some(vec![SampleSubstruct {
             subf_string: "subf_string4".to_string(),
         }]),
-        opt_vec_req_item_object: Some(vec!["opt_vec_req_item_object".to_string()]),
+        opt_vec_req_item_enum: Some(vec![SampleEnum::ITEM]),
 
         req_vec_opt_item_string: vec![Some("req_vec_opt_item_string".to_string())],
         req_vec_opt_item_i32: vec![Some(5)],
@@ -54,7 +54,7 @@ fn sample_struct() -> SampleStruct {
         req_vec_opt_item_struct: vec![Some(SampleSubstruct {
             subf_string: "subf_string5".to_string(),
         })],
-        req_vec_opt_item_object: vec![Some("req_vec_opt_item_object".to_string())],
+        req_vec_opt_item_enum: vec![Some(SampleEnum::ITEM)],
 
         opt_vec_opt_item_string: Some(vec![Some("opt_vec_opt_item_string".to_string())]),
         opt_vec_opt_item_i32: Some(vec![Some(6)]),
@@ -64,7 +64,7 @@ fn sample_struct() -> SampleStruct {
         opt_vec_opt_item_struct: Some(vec![Some(SampleSubstruct {
             subf_string: "subf_string6".to_string(),
         })]),
-        opt_vec_opt_item_object: Some(vec![Some("opt_vec_opt_item_object".to_string())]),
+        opt_vec_opt_item_enum: Some(vec![Some(SampleEnum::ITEM)]),
     }
 }
 
@@ -96,6 +96,10 @@ fn test_field_to_any_value_req_fields() -> Result<(), Box<dyn std::error::Error>
         )))
     );
 
+    let any_value = sample_struct.get_value("req_enum")?;
+    println!("any_value: {:?}", any_value);
+    assert_eq!(any_value, AnyValue::Enum(0, SampleEnum::mapping()));
+
     Ok(())
 }
 
@@ -126,6 +130,9 @@ fn test_field_to_any_value_opt_fields() -> Result<(), Box<dyn std::error::Error>
             Vec::from([Field::new("subf_string".into(), DataType::String)])
         )))
     );
+
+    let any_value = sample_struct.get_value("opt_enum")?;
+    assert_eq!(any_value, AnyValue::Enum(0, SampleEnum::mapping()));
 
     Ok(())
 }
@@ -164,6 +171,20 @@ fn test_field_to_any_value_req_vec_fields_req_items() -> Result<(), Box<dyn std:
                     vec![AnyValue::StringOwned("subf_string3".into())],
                     Vec::from([Field::new("subf_string".into(), DataType::String)])
                 )))],
+                true
+            )
+            .unwrap()
+        )
+    );
+
+    let any_value = sample_struct.get_value("req_vec_req_item_enum")?;
+    assert_eq!(
+        any_value,
+        AnyValue::List(
+            Series::from_any_values_and_dtype(
+                "".into(),
+                &[AnyValue::Enum(0, SampleEnum::mapping())],
+                SampleEnum::data_type(),
                 true
             )
             .unwrap()
@@ -217,6 +238,20 @@ fn test_field_to_any_value_opt_vec_fields_req_items() -> Result<(), Box<dyn std:
         )
     );
 
+    let any_value = sample_struct.get_value("opt_vec_req_item_enum")?;
+    assert_eq!(
+        any_value,
+        AnyValue::List(
+            Series::from_any_values_and_dtype(
+                "".into(),
+                &[AnyValue::Enum(0, SampleEnum::mapping())],
+                SampleEnum::data_type(),
+                true
+            )
+            .unwrap()
+        )
+    );
+
     // Nested
     let any_value = sample_struct.get_value("opt_vec_req_item_struct[0].subf_string")?;
     assert_eq!(any_value, AnyValue::StringOwned("subf_string4".into()));
@@ -264,6 +299,20 @@ fn test_field_to_any_value_req_vec_fields_opt_items() -> Result<(), Box<dyn std:
         )
     );
 
+    let any_value = sample_struct.get_value("req_vec_opt_item_enum")?;
+    assert_eq!(
+        any_value,
+        AnyValue::List(
+            Series::from_any_values_and_dtype(
+                "".into(),
+                &[AnyValue::Enum(0, SampleEnum::mapping())],
+                SampleEnum::data_type(),
+                true
+            )
+            .unwrap()
+        )
+    );
+
     // Nested
     let any_value = sample_struct.get_value("req_vec_opt_item_struct[0].subf_string")?;
     assert_eq!(any_value, AnyValue::StringOwned("subf_string5".into()));
@@ -305,6 +354,20 @@ fn test_field_to_any_value_opt_vec_fields_opt_items() -> Result<(), Box<dyn std:
                     vec![AnyValue::StringOwned("subf_string6".into())],
                     Vec::from([Field::new("subf_string".into(), DataType::String)])
                 )))],
+                true
+            )
+            .unwrap()
+        )
+    );
+
+    let any_value = sample_struct.get_value("opt_vec_opt_item_enum")?;
+    assert_eq!(
+        any_value,
+        AnyValue::List(
+            Series::from_any_values_and_dtype(
+                "".into(),
+                &[AnyValue::Enum(0, SampleEnum::mapping())],
+                SampleEnum::data_type(),
                 true
             )
             .unwrap()

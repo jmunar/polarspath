@@ -98,9 +98,18 @@ where
                     .iter()
                     .map(|item| (**inner_type).to_any_value(item))
                     .collect();
-                let any_values = any_values;
-                let series = Series::from_any_values("".into(), &any_values, true).unwrap();
-                AnyValue::List(series)
+                // Use from_any_values_and_dtype() instead of from_any_values() because
+                // Enum doesn't contain the full data type to create the series.
+                let values = AnyValue::List(
+                    Series::from_any_values_and_dtype(
+                        "".into(),
+                        &any_values,
+                        &inner_type.to_data_type(),
+                        true,
+                    )
+                    .unwrap(),
+                );
+                values
             }
             _ => panic!("Unsupported DataTypeOpt for Vec<T>: {:?}", self),
         }

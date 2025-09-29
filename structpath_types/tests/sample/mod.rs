@@ -1,88 +1,13 @@
 use indexmap::IndexMap;
-use polars_core::prelude::{AnyValue, DataType, Field};
-use std::sync::OnceLock;
+use polars_core::prelude::{AnyValue, CategoricalMapping, DataType, Field};
+use std::sync::{Arc, OnceLock};
 use structpath_types::{
-    field_type, field_type_opt, DataTypeOpt, DataTypeOptError, IntoAnyValueWith, Path,
-    PathComponent, StructPath,
+    field_type, field_type_opt, DataTypeOpt, DataTypeOptError, EnumPath, HasDataTypeOpt,
+    IntoAnyValueWith, Path, PathComponent, StructPath,
 };
 
 pub fn subfields_opt() -> IndexMap<String, DataTypeOpt> {
     IndexMap::from([field_type_opt!("subf_string", String)])
-}
-
-pub fn fields_opt() -> IndexMap<String, DataTypeOpt> {
-    IndexMap::from([
-        // Required scalar fields
-        field_type_opt!("req_string", String),
-        field_type_opt!("req_i32", Int32),
-        field_type_opt!("req_i64", Int64),
-        field_type_opt!("req_f64", Float64),
-        field_type_opt!("req_bool", Boolean),
-        field_type_opt!("req_struct", Struct(subfields_opt())),
-        field_type_opt!("req_object", Object("object")),
-        // Optional scalar fields
-        field_type_opt!("opt_string", Option, String),
-        field_type_opt!("opt_i32", Option, Int32),
-        field_type_opt!("opt_i64", Option, Int64),
-        field_type_opt!("opt_f64", Option, Float64),
-        field_type_opt!("opt_bool", Option, Boolean),
-        field_type_opt!("opt_struct", Option, Struct(subfields_opt())),
-        field_type_opt!("opt_object", Option, Object("object")),
-        // Required vector fields with required items
-        field_type_opt!("req_vec_req_item_string", List, String),
-        field_type_opt!("req_vec_req_item_i32", List, Int32),
-        field_type_opt!("req_vec_req_item_i64", List, Int64),
-        field_type_opt!("req_vec_req_item_f64", List, Float64),
-        field_type_opt!("req_vec_req_item_bool", List, Boolean),
-        field_type_opt!("req_vec_req_item_struct", List, Struct(subfields_opt())),
-        field_type_opt!("req_vec_req_item_object", List, Object("object")),
-        // Optional vector fields with required items
-        field_type_opt!("opt_vec_req_item_string", Option, List, String),
-        field_type_opt!("opt_vec_req_item_i32", Option, List, Int32),
-        field_type_opt!("opt_vec_req_item_i64", Option, List, Int64),
-        field_type_opt!("opt_vec_req_item_f64", Option, List, Float64),
-        field_type_opt!("opt_vec_req_item_bool", Option, List, Boolean),
-        field_type_opt!(
-            "opt_vec_req_item_struct",
-            Option,
-            List,
-            Struct(subfields_opt())
-        ),
-        field_type_opt!("opt_vec_req_item_object", Option, List, Object("object")),
-        // Required vector fields with optional items
-        field_type_opt!("req_vec_opt_item_string", List, Option, String),
-        field_type_opt!("req_vec_opt_item_i32", List, Option, Int32),
-        field_type_opt!("req_vec_opt_item_i64", List, Option, Int64),
-        field_type_opt!("req_vec_opt_item_f64", List, Option, Float64),
-        field_type_opt!("req_vec_opt_item_bool", List, Option, Boolean),
-        field_type_opt!(
-            "req_vec_opt_item_struct",
-            List,
-            Option,
-            Struct(subfields_opt())
-        ),
-        field_type_opt!("req_vec_opt_item_object", List, Option, Object("object")),
-        // Optional vector fields with optional items
-        field_type_opt!("opt_vec_opt_item_string", Option, List, Option, String),
-        field_type_opt!("opt_vec_opt_item_i32", Option, List, Option, Int32),
-        field_type_opt!("opt_vec_opt_item_i64", Option, List, Option, Int64),
-        field_type_opt!("opt_vec_opt_item_f64", Option, List, Option, Float64),
-        field_type_opt!("opt_vec_opt_item_bool", Option, List, Option, Boolean),
-        field_type_opt!(
-            "opt_vec_opt_item_struct",
-            Option,
-            List,
-            Option,
-            Struct(subfields_opt())
-        ),
-        field_type_opt!(
-            "opt_vec_opt_item_object",
-            Option,
-            List,
-            Option,
-            Object("object")
-        ),
-    ])
 }
 
 #[allow(dead_code)]
@@ -90,63 +15,21 @@ pub fn subfields_polars() -> Vec<Field> {
     Vec::from([Field::new("subf_string".into(), DataType::String)])
 }
 
-#[allow(dead_code)]
-pub fn fields_polars() -> Vec<Field> {
-    Vec::from([
-        // Required scalar fields
-        field_type!("req_string", String),
-        field_type!("req_i32", Int32),
-        field_type!("req_i64", Int64),
-        field_type!("req_f64", Float64),
-        field_type!("req_bool", Boolean),
-        field_type!("req_struct", Struct(subfields_polars())),
-        field_type!("req_object", Object("object")),
-        // Optional scalar fields
-        field_type!("opt_string", String),
-        field_type!("opt_i32", Int32),
-        field_type!("opt_i64", Int64),
-        field_type!("opt_f64", Float64),
-        field_type!("opt_bool", Boolean),
-        field_type!("opt_struct", Struct(subfields_polars())),
-        field_type!("opt_object", Object("object")),
-        // Required vector fields with required items
-        field_type!("req_vec_req_item_string", List, String),
-        field_type!("req_vec_req_item_i32", List, Int32),
-        field_type!("req_vec_req_item_i64", List, Int64),
-        field_type!("req_vec_req_item_f64", List, Float64),
-        field_type!("req_vec_req_item_bool", List, Boolean),
-        field_type!("req_vec_req_item_struct", List, Struct(subfields_polars())),
-        field_type!("req_vec_req_item_object", List, Object("object")),
-        // Optional vector fields with required items
-        field_type!("opt_vec_req_item_string", List, String),
-        field_type!("opt_vec_req_item_i32", List, Int32),
-        field_type!("opt_vec_req_item_i64", List, Int64),
-        field_type!("opt_vec_req_item_f64", List, Float64),
-        field_type!("opt_vec_req_item_bool", List, Boolean),
-        field_type!("opt_vec_req_item_struct", List, Struct(subfields_polars())),
-        field_type!("opt_vec_req_item_object", List, Object("object")),
-        // Required vector fields with optional items
-        field_type!("req_vec_opt_item_string", List, String),
-        field_type!("req_vec_opt_item_i32", List, Int32),
-        field_type!("req_vec_opt_item_i64", List, Int64),
-        field_type!("req_vec_opt_item_f64", List, Float64),
-        field_type!("req_vec_opt_item_bool", List, Boolean),
-        field_type!("req_vec_opt_item_struct", List, Struct(subfields_polars())),
-        field_type!("req_vec_opt_item_object", List, Object("object")),
-        // Optional vector fields with optional items
-        field_type!("opt_vec_opt_item_string", List, String),
-        field_type!("opt_vec_opt_item_i32", List, Int32),
-        field_type!("opt_vec_opt_item_i64", List, Int64),
-        field_type!("opt_vec_opt_item_f64", List, Float64),
-        field_type!("opt_vec_opt_item_bool", List, Boolean),
-        field_type!("opt_vec_opt_item_struct", List, Struct(subfields_polars())),
-        field_type!("opt_vec_opt_item_object", List, Object("object")),
-    ])
-}
-
 #[derive(Debug, Clone)]
 pub struct SampleSubstruct {
     pub subf_string: String,
+}
+
+impl HasDataTypeOpt for SampleSubstruct {
+    fn data_type_opt() -> &'static DataTypeOpt {
+        static DATA_TYPE_OPT: OnceLock<DataTypeOpt> = OnceLock::new();
+        DATA_TYPE_OPT.get_or_init(|| DataTypeOpt::Struct(Self::fields_opt().clone()))
+    }
+
+    fn data_type() -> &'static DataType {
+        static DATA_TYPE: OnceLock<DataType> = OnceLock::new();
+        DATA_TYPE.get_or_init(|| Self::data_type_opt().to_data_type())
+    }
 }
 
 impl StructPath for SampleSubstruct {
@@ -167,16 +50,6 @@ impl StructPath for SampleSubstruct {
                     .collect()
             })
             .as_slice()
-    }
-
-    fn data_type_opt() -> &'static DataTypeOpt {
-        static DATA_TYPE_OPT: OnceLock<DataTypeOpt> = OnceLock::new();
-        DATA_TYPE_OPT.get_or_init(|| DataTypeOpt::Struct(Self::fields_opt().clone()))
-    }
-
-    fn data_type() -> &'static DataType {
-        static DATA_TYPE: OnceLock<DataType> = OnceLock::new();
-        DATA_TYPE.get_or_init(|| Self::data_type_opt().to_data_type())
     }
 
     fn get_value_by_path(&self, path: &Path) -> Result<AnyValue, DataTypeOptError> {
@@ -213,6 +86,188 @@ where
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SampleEnum {
+    ITEM = 1,
+}
+
+impl HasDataTypeOpt for SampleEnum {
+    fn data_type_opt() -> &'static DataTypeOpt {
+        static DATA_TYPE_OPT: OnceLock<DataTypeOpt> = OnceLock::new();
+        DATA_TYPE_OPT.get_or_init(|| DataTypeOpt::Enum(IndexMap::from([("ITEM".into(), 1)])))
+    }
+
+    fn data_type() -> &'static DataType {
+        static DATA_TYPE: OnceLock<DataType> = OnceLock::new();
+        DATA_TYPE.get_or_init(|| Self::data_type_opt().to_data_type())
+    }
+}
+
+impl EnumPath for SampleEnum
+where
+    SampleEnum: HasDataTypeOpt,
+{
+    fn mapping() -> &'static Arc<CategoricalMapping> {
+        match Self::data_type() {
+            DataType::Enum(_, mapping) => mapping,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl IntoAnyValueWith<SampleEnum> for DataTypeOpt
+where
+    SampleEnum: EnumPath,
+{
+    type ChunkDataType = ::polars_core::prelude::CategoricalType;
+
+    fn to_any_value(&self, value: &SampleEnum) -> AnyValue {
+        match self {
+            DataTypeOpt::Enum(_) => match value {
+                SampleEnum::ITEM => AnyValue::Enum(0, SampleEnum::mapping()),
+            },
+            _ => panic!("Unsupported DataTypeOpt for SampleEnum: {:?}", self),
+        }
+    }
+}
+
+pub fn fields_opt() -> IndexMap<String, DataTypeOpt> {
+    IndexMap::from([
+        // Required scalar fields
+        field_type_opt!("req_string", String),
+        field_type_opt!("req_i32", Int32),
+        field_type_opt!("req_i64", Int64),
+        field_type_opt!("req_f64", Float64),
+        field_type_opt!("req_bool", Boolean),
+        field_type_opt!("req_struct", Struct([("subf_string", DataTypeOpt::String)])),
+        field_type_opt!("req_enum", Enum([("ITEM", 1)])),
+        // Optional scalar fields
+        field_type_opt!("opt_string", Option, String),
+        field_type_opt!("opt_i32", Option, Int32),
+        field_type_opt!("opt_i64", Option, Int64),
+        field_type_opt!("opt_f64", Option, Float64),
+        field_type_opt!("opt_bool", Option, Boolean),
+        field_type_opt!(
+            "opt_struct",
+            Option,
+            Struct([("subf_string", DataTypeOpt::String)])
+        ),
+        field_type_opt!("opt_enum", Option, Enum([("ITEM", 1)])),
+        // Required vector fields with required items
+        field_type_opt!("req_vec_req_item_string", List, String),
+        field_type_opt!("req_vec_req_item_i32", List, Int32),
+        field_type_opt!("req_vec_req_item_i64", List, Int64),
+        field_type_opt!("req_vec_req_item_f64", List, Float64),
+        field_type_opt!("req_vec_req_item_bool", List, Boolean),
+        field_type_opt!(
+            "req_vec_req_item_struct",
+            List,
+            Struct([("subf_string", DataTypeOpt::String)])
+        ),
+        field_type_opt!("req_vec_req_item_enum", List, Enum([("ITEM", 1)])),
+        // Optional vector fields with required items
+        field_type_opt!("opt_vec_req_item_string", Option, List, String),
+        field_type_opt!("opt_vec_req_item_i32", Option, List, Int32),
+        field_type_opt!("opt_vec_req_item_i64", Option, List, Int64),
+        field_type_opt!("opt_vec_req_item_f64", Option, List, Float64),
+        field_type_opt!("opt_vec_req_item_bool", Option, List, Boolean),
+        field_type_opt!(
+            "opt_vec_req_item_struct",
+            Option,
+            List,
+            Struct([("subf_string", DataTypeOpt::String)])
+        ),
+        field_type_opt!("opt_vec_req_item_enum", Option, List, Enum([("ITEM", 1)])),
+        // Required vector fields with optional items
+        field_type_opt!("req_vec_opt_item_string", List, Option, String),
+        field_type_opt!("req_vec_opt_item_i32", List, Option, Int32),
+        field_type_opt!("req_vec_opt_item_i64", List, Option, Int64),
+        field_type_opt!("req_vec_opt_item_f64", List, Option, Float64),
+        field_type_opt!("req_vec_opt_item_bool", List, Option, Boolean),
+        field_type_opt!(
+            "req_vec_opt_item_struct",
+            List,
+            Option,
+            Struct([("subf_string", DataTypeOpt::String)])
+        ),
+        field_type_opt!("req_vec_opt_item_enum", List, Option, Enum([("ITEM", 1)])),
+        // Optional vector fields with optional items
+        field_type_opt!("opt_vec_opt_item_string", Option, List, Option, String),
+        field_type_opt!("opt_vec_opt_item_i32", Option, List, Option, Int32),
+        field_type_opt!("opt_vec_opt_item_i64", Option, List, Option, Int64),
+        field_type_opt!("opt_vec_opt_item_f64", Option, List, Option, Float64),
+        field_type_opt!("opt_vec_opt_item_bool", Option, List, Option, Boolean),
+        field_type_opt!(
+            "opt_vec_opt_item_struct",
+            Option,
+            List,
+            Option,
+            Struct([("subf_string", DataTypeOpt::String)])
+        ),
+        field_type_opt!(
+            "opt_vec_opt_item_enum",
+            Option,
+            List,
+            Option,
+            Enum([("ITEM", 1)])
+        ),
+    ])
+}
+
+#[allow(dead_code)]
+pub fn fields_polars() -> Vec<Field> {
+    Vec::from([
+        // Required scalar fields
+        field_type!("req_string", String),
+        field_type!("req_i32", Int32),
+        field_type!("req_i64", Int64),
+        field_type!("req_f64", Float64),
+        field_type!("req_bool", Boolean),
+        field_type!("req_struct", Struct(subfields_polars())),
+        field_type!("req_enum", Enum([("ITEM", 1)])),
+        // Optional scalar fields
+        field_type!("opt_string", String),
+        field_type!("opt_i32", Int32),
+        field_type!("opt_i64", Int64),
+        field_type!("opt_f64", Float64),
+        field_type!("opt_bool", Boolean),
+        field_type!("opt_struct", Struct(subfields_polars())),
+        field_type!("opt_enum", Enum([("ITEM", 1)])),
+        // Required vector fields with required items
+        field_type!("req_vec_req_item_string", List, String),
+        field_type!("req_vec_req_item_i32", List, Int32),
+        field_type!("req_vec_req_item_i64", List, Int64),
+        field_type!("req_vec_req_item_f64", List, Float64),
+        field_type!("req_vec_req_item_bool", List, Boolean),
+        field_type!("req_vec_req_item_struct", List, Struct(subfields_polars())),
+        field_type!("req_vec_req_item_enum", List, Enum([("ITEM", 1)])),
+        // Optional vector fields with required items
+        field_type!("opt_vec_req_item_string", List, String),
+        field_type!("opt_vec_req_item_i32", List, Int32),
+        field_type!("opt_vec_req_item_i64", List, Int64),
+        field_type!("opt_vec_req_item_f64", List, Float64),
+        field_type!("opt_vec_req_item_bool", List, Boolean),
+        field_type!("opt_vec_req_item_struct", List, Struct(subfields_polars())),
+        field_type!("opt_vec_req_item_enum", List, Enum([("ITEM", 1)])),
+        // Required vector fields with optional items
+        field_type!("req_vec_opt_item_string", List, String),
+        field_type!("req_vec_opt_item_i32", List, Int32),
+        field_type!("req_vec_opt_item_i64", List, Int64),
+        field_type!("req_vec_opt_item_f64", List, Float64),
+        field_type!("req_vec_opt_item_bool", List, Boolean),
+        field_type!("req_vec_opt_item_struct", List, Struct(subfields_polars())),
+        field_type!("req_vec_opt_item_enum", List, Enum([("ITEM", 1)])),
+        // Optional vector fields with optional items
+        field_type!("opt_vec_opt_item_string", List, String),
+        field_type!("opt_vec_opt_item_i32", List, Int32),
+        field_type!("opt_vec_opt_item_i64", List, Int64),
+        field_type!("opt_vec_opt_item_f64", List, Float64),
+        field_type!("opt_vec_opt_item_bool", List, Boolean),
+        field_type!("opt_vec_opt_item_struct", List, Struct(subfields_polars())),
+        field_type!("opt_vec_opt_item_enum", List, Enum([("ITEM", 1)])),
+    ])
+}
+
 #[derive(Debug, Clone)]
 pub struct SampleStruct {
     pub req_string: String,
@@ -221,7 +276,7 @@ pub struct SampleStruct {
     pub req_f64: f64,
     pub req_bool: bool,
     pub req_struct: SampleSubstruct,
-    pub req_object: String,
+    pub req_enum: SampleEnum,
 
     pub opt_string: Option<String>,
     pub opt_i32: Option<i32>,
@@ -229,7 +284,7 @@ pub struct SampleStruct {
     pub opt_f64: Option<f64>,
     pub opt_bool: Option<bool>,
     pub opt_struct: Option<SampleSubstruct>,
-    pub opt_object: Option<String>,
+    pub opt_enum: Option<SampleEnum>,
 
     pub req_vec_req_item_string: Vec<String>,
     pub req_vec_req_item_i32: Vec<i32>,
@@ -237,7 +292,7 @@ pub struct SampleStruct {
     pub req_vec_req_item_f64: Vec<f64>,
     pub req_vec_req_item_bool: Vec<bool>,
     pub req_vec_req_item_struct: Vec<SampleSubstruct>,
-    pub req_vec_req_item_object: Vec<String>,
+    pub req_vec_req_item_enum: Vec<SampleEnum>,
 
     pub opt_vec_req_item_string: Option<Vec<String>>,
     pub opt_vec_req_item_i32: Option<Vec<i32>>,
@@ -245,7 +300,7 @@ pub struct SampleStruct {
     pub opt_vec_req_item_f64: Option<Vec<f64>>,
     pub opt_vec_req_item_bool: Option<Vec<bool>>,
     pub opt_vec_req_item_struct: Option<Vec<SampleSubstruct>>,
-    pub opt_vec_req_item_object: Option<Vec<String>>,
+    pub opt_vec_req_item_enum: Option<Vec<SampleEnum>>,
 
     pub req_vec_opt_item_string: Vec<Option<String>>,
     pub req_vec_opt_item_i32: Vec<Option<i32>>,
@@ -253,7 +308,7 @@ pub struct SampleStruct {
     pub req_vec_opt_item_f64: Vec<Option<f64>>,
     pub req_vec_opt_item_bool: Vec<Option<bool>>,
     pub req_vec_opt_item_struct: Vec<Option<SampleSubstruct>>,
-    pub req_vec_opt_item_object: Vec<Option<String>>,
+    pub req_vec_opt_item_enum: Vec<Option<SampleEnum>>,
 
     pub opt_vec_opt_item_string: Option<Vec<Option<String>>>,
     pub opt_vec_opt_item_i32: Option<Vec<Option<i32>>>,
@@ -261,7 +316,19 @@ pub struct SampleStruct {
     pub opt_vec_opt_item_f64: Option<Vec<Option<f64>>>,
     pub opt_vec_opt_item_bool: Option<Vec<Option<bool>>>,
     pub opt_vec_opt_item_struct: Option<Vec<Option<SampleSubstruct>>>,
-    pub opt_vec_opt_item_object: Option<Vec<Option<String>>>,
+    pub opt_vec_opt_item_enum: Option<Vec<Option<SampleEnum>>>,
+}
+
+impl HasDataTypeOpt for SampleStruct {
+    fn data_type_opt() -> &'static DataTypeOpt {
+        static DATA_TYPE_OPT: OnceLock<DataTypeOpt> = OnceLock::new();
+        DATA_TYPE_OPT.get_or_init(|| DataTypeOpt::Struct(Self::fields_opt().clone()))
+    }
+
+    fn data_type() -> &'static DataType {
+        static DATA_TYPE: OnceLock<DataType> = OnceLock::new();
+        DATA_TYPE.get_or_init(|| Self::data_type_opt().to_data_type())
+    }
 }
 
 impl StructPath for SampleStruct {
@@ -282,16 +349,6 @@ impl StructPath for SampleStruct {
                     .collect()
             })
             .as_slice()
-    }
-
-    fn data_type_opt() -> &'static DataTypeOpt {
-        static DATA_TYPE_OPT: OnceLock<DataTypeOpt> = OnceLock::new();
-        DATA_TYPE_OPT.get_or_init(|| DataTypeOpt::Struct(Self::fields_opt().clone()))
-    }
-
-    fn data_type() -> &'static DataType {
-        static DATA_TYPE: OnceLock<DataType> = OnceLock::new();
-        DATA_TYPE.get_or_init(|| Self::data_type_opt().to_data_type())
     }
 
     fn get_value_by_path(&self, path: &Path) -> Result<AnyValue, DataTypeOptError> {
@@ -349,14 +406,14 @@ impl StructPath for SampleStruct {
                     "req_f64" => Ok(field_type.to_any_value(&self.req_f64)),
                     "req_bool" => Ok(field_type.to_any_value(&self.req_bool)),
                     "req_struct" => Ok(field_type.to_any_value(&self.req_struct)),
-                    // "req_object" => Ok(field_type.to_any_value(&self.req_object)),
+                    "req_enum" => Ok(field_type.to_any_value(&self.req_enum)),
                     "opt_string" => Ok(field_type.to_any_value(&self.opt_string)),
                     "opt_i32" => Ok(field_type.to_any_value(&self.opt_i32)),
                     "opt_i64" => Ok(field_type.to_any_value(&self.opt_i64)),
                     "opt_f64" => Ok(field_type.to_any_value(&self.opt_f64)),
                     "opt_bool" => Ok(field_type.to_any_value(&self.opt_bool)),
                     "opt_struct" => Ok(field_type.to_any_value(&self.opt_struct)),
-                    // "opt_object" => Ok(field_type.to_any_value(&self.opt_object)),
+                    "opt_enum" => Ok(field_type.to_any_value(&self.opt_enum)),
                     "req_vec_req_item_string" => {
                         Ok(field_type.to_any_value(&self.req_vec_req_item_string))
                     }
@@ -375,7 +432,9 @@ impl StructPath for SampleStruct {
                     "req_vec_req_item_struct" => {
                         Ok(field_type.to_any_value(&self.req_vec_req_item_struct))
                     }
-                    // "req_vec_req_item_object" => Ok(field_type.to_any_value(&self.req_vec_req_item_object)),
+                    "req_vec_req_item_enum" => {
+                        Ok(field_type.to_any_value(&self.req_vec_req_item_enum))
+                    }
                     "opt_vec_req_item_string" => {
                         Ok(field_type.to_any_value(&self.opt_vec_req_item_string))
                     }
@@ -394,7 +453,9 @@ impl StructPath for SampleStruct {
                     "opt_vec_req_item_struct" => {
                         Ok(field_type.to_any_value(&self.opt_vec_req_item_struct))
                     }
-                    // "opt_vec_req_item_object" => Ok(field_type.to_any_value(&self.opt_vec_req_item_object)),
+                    "opt_vec_req_item_enum" => {
+                        Ok(field_type.to_any_value(&self.opt_vec_req_item_enum))
+                    }
                     "req_vec_opt_item_string" => {
                         Ok(field_type.to_any_value(&self.req_vec_opt_item_string))
                     }
@@ -413,7 +474,9 @@ impl StructPath for SampleStruct {
                     "req_vec_opt_item_struct" => {
                         Ok(field_type.to_any_value(&self.req_vec_opt_item_struct))
                     }
-                    // "req_vec_opt_item_object" => Ok(field_type.to_any_value(&self.req_vec_opt_item_object)),
+                    "req_vec_opt_item_enum" => {
+                        Ok(field_type.to_any_value(&self.req_vec_opt_item_enum))
+                    }
                     "opt_vec_opt_item_string" => {
                         Ok(field_type.to_any_value(&self.opt_vec_opt_item_string))
                     }
@@ -432,7 +495,9 @@ impl StructPath for SampleStruct {
                     "opt_vec_opt_item_struct" => {
                         Ok(field_type.to_any_value(&self.opt_vec_opt_item_struct))
                     }
-                    // "opt_vec_opt_item_object" => Ok(field_type.to_any_value(&self.opt_vec_opt_item_object)),
+                    "opt_vec_opt_item_enum" => {
+                        Ok(field_type.to_any_value(&self.opt_vec_opt_item_enum))
+                    }
                     _ => Err(DataTypeOptError::FieldNotFound(name.to_string())),
                 }
             }
@@ -470,8 +535,8 @@ impl StructPath for SampleStruct {
                     "req_vec_req_item_struct" => {
                         Ok(field_inner_type.to_any_value(&self.req_vec_req_item_struct[index]))
                     }
-                    "req_vec_req_item_object" => {
-                        Ok(field_inner_type.to_any_value(&self.req_vec_req_item_object[index]))
+                    "req_vec_req_item_enum" => {
+                        Ok(field_inner_type.to_any_value(&self.req_vec_req_item_enum[index]))
                     }
                     "opt_vec_req_item_string" => match self.opt_vec_req_item_string {
                         Some(ref vec) => Ok(field_inner_type.to_any_value(&vec[index])),
@@ -497,7 +562,7 @@ impl StructPath for SampleStruct {
                         Some(ref vec) => Ok(field_inner_type.to_any_value(&vec[index])),
                         None => Ok(AnyValue::Null),
                     },
-                    "opt_vec_req_item_object" => match self.opt_vec_req_item_object {
+                    "opt_vec_req_item_enum" => match self.opt_vec_req_item_enum {
                         Some(ref vec) => Ok(field_inner_type.to_any_value(&vec[index])),
                         None => Ok(AnyValue::Null),
                     },
@@ -519,8 +584,8 @@ impl StructPath for SampleStruct {
                     "req_vec_opt_item_struct" => {
                         Ok(field_inner_type.to_any_value(&self.req_vec_opt_item_struct[index]))
                     }
-                    "req_vec_opt_item_object" => {
-                        Ok(field_inner_type.to_any_value(&self.req_vec_opt_item_object[index]))
+                    "req_vec_opt_item_enum" => {
+                        Ok(field_inner_type.to_any_value(&self.req_vec_opt_item_enum[index]))
                     }
                     "opt_vec_opt_item_string" => match self.opt_vec_opt_item_string {
                         Some(ref vec) => Ok(field_inner_type.to_any_value(&vec[index])),
@@ -546,7 +611,7 @@ impl StructPath for SampleStruct {
                         Some(ref vec) => Ok(field_inner_type.to_any_value(&vec[index])),
                         None => Ok(AnyValue::Null),
                     },
-                    "opt_vec_opt_item_object" => match self.opt_vec_opt_item_object {
+                    "opt_vec_opt_item_enum" => match self.opt_vec_opt_item_enum {
                         Some(ref vec) => Ok(field_inner_type.to_any_value(&vec[index])),
                         None => Ok(AnyValue::Null),
                     },

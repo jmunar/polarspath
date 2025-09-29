@@ -22,8 +22,8 @@ fn test_get_type_req_fields() -> Result<(), Box<dyn std::error::Error>> {
     let t = data_type_opt.get_type("req_struct")?;
     assert_eq!(t, data_type_opt!(Struct(subfields_opt())));
 
-    let t = data_type_opt.get_type("req_object")?;
-    assert_eq!(t, data_type_opt!(Object("object")));
+    let t = data_type_opt.get_type("req_enum")?;
+    assert_eq!(t, data_type_opt!(Enum([("ITEM", 1)])));
 
     // Nested
     let t = data_type_opt.get_type("req_struct.subf_string")?;
@@ -51,8 +51,8 @@ fn test_get_type_opt_fields() -> Result<(), Box<dyn std::error::Error>> {
     let t = data_type_opt.get_type("opt_struct")?;
     assert_eq!(t, data_type_opt!(Option, Struct(subfields_opt())));
 
-    let t = data_type_opt.get_type("opt_object")?;
-    assert_eq!(t, data_type_opt!(Option, Object("object")));
+    let t = data_type_opt.get_type("opt_enum")?;
+    assert_eq!(t, data_type_opt!(Option, Enum([("ITEM", 1)])));
 
     // Nested
     let t = data_type_opt.get_type("opt_struct.subf_string")?;
@@ -80,8 +80,8 @@ fn test_get_type_req_vec_req_item_fields() -> Result<(), Box<dyn std::error::Err
     let t = data_type_opt.get_type("req_vec_req_item_struct")?;
     assert_eq!(t, data_type_opt!(List, Struct(subfields_opt())));
 
-    let t = data_type_opt.get_type("req_vec_req_item_object")?;
-    assert_eq!(t, data_type_opt!(List, Object("object")));
+    let t = data_type_opt.get_type("req_vec_req_item_enum")?;
+    assert_eq!(t, data_type_opt!(List, Enum([("ITEM", 1)])));
 
     // Nested
     let t = data_type_opt.get_type("req_vec_req_item_struct[0].subf_string")?;
@@ -109,8 +109,8 @@ fn test_get_type_opt_vec_req_item_fields() -> Result<(), Box<dyn std::error::Err
     let t = data_type_opt.get_type("opt_vec_req_item_struct")?;
     assert_eq!(t, data_type_opt!(Option, List, Struct(subfields_opt())));
 
-    let t = data_type_opt.get_type("opt_vec_req_item_object")?;
-    assert_eq!(t, data_type_opt!(Option, List, Object("object")));
+    let t = data_type_opt.get_type("opt_vec_req_item_enum")?;
+    assert_eq!(t, data_type_opt!(Option, List, Enum([("ITEM", 1)])));
 
     // Nested
     let t = data_type_opt.get_type("opt_vec_req_item_struct[0].subf_string")?;
@@ -138,8 +138,8 @@ fn test_get_type_req_vec_opt_item_fields() -> Result<(), Box<dyn std::error::Err
     let t = data_type_opt.get_type("req_vec_opt_item_struct")?;
     assert_eq!(t, data_type_opt!(List, Option, Struct(subfields_opt())));
 
-    let t = data_type_opt.get_type("req_vec_opt_item_object")?;
-    assert_eq!(t, data_type_opt!(List, Option, Object("object")));
+    let t = data_type_opt.get_type("req_vec_opt_item_enum")?;
+    assert_eq!(t, data_type_opt!(List, Option, Enum([("ITEM", 1)])));
 
     // Nested
     let t = data_type_opt.get_type("req_vec_opt_item_struct[0].subf_string")?;
@@ -170,8 +170,8 @@ fn test_get_type_opt_vec_opt_item_fields() -> Result<(), Box<dyn std::error::Err
         data_type_opt!(Option, List, Option, Struct(subfields_opt()))
     );
 
-    let t = data_type_opt.get_type("opt_vec_opt_item_object")?;
-    assert_eq!(t, data_type_opt!(Option, List, Option, Object("object")));
+    let t = data_type_opt.get_type("opt_vec_opt_item_enum")?;
+    assert_eq!(t, data_type_opt!(Option, List, Option, Enum([("ITEM", 1)])));
 
     // Nested
     let t = data_type_opt.get_type("opt_vec_opt_item_struct[0].subf_string")?;

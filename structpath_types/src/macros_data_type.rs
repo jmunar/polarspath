@@ -31,10 +31,13 @@ macro_rules! data_type {
     (Int64) => { ::polars_core::prelude::DataType::Int64 };
     (Float64) => { ::polars_core::prelude::DataType::Float64 };
     (Boolean) => { ::polars_core::prelude::DataType::Boolean };
-    (Object($name:expr)) => { ::polars_core::prelude::DataType::Object($name) };
 
     // Special cases with parameters
     (Struct($fields:expr)) => { ::polars_core::prelude::DataType::Struct($fields) };
+    (Enum($items:expr)) => { ::polars_core::prelude::DataType::Enum(
+        ::polars_core::prelude::FrozenCategories::new($items.into_iter().map(|(k, _v)| k)).unwrap(),
+        std::sync::Arc::new(::polars_core::prelude::CategoricalMapping::new($items.len()))
+    ) };
 
     // Recursive cases for wrapping types (no Option support)
     (List, $($rest:tt)*) => {

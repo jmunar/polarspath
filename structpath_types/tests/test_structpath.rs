@@ -1,6 +1,6 @@
 mod sample;
 use polars_core::prelude::DataType;
-use structpath_types::{data_type_opt, DataTypeOpt, Path, StructPath};
+use structpath_types::{data_type_opt, DataTypeOpt, HasDataTypeOpt, Path, StructPath};
 
 #[test]
 fn test_fields_opt() {

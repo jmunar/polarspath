@@ -2,6 +2,7 @@ use crate::path::{Path, PathComponent};
 
 use indexmap::IndexMap;
 use polars_core::prelude::{DataType, Field};
+use polars_dtype::categorical::{CategoricalMapping, FrozenCategories};
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use std::str::FromStr;
@@ -40,9 +41,9 @@ pub enum DataTypeOpt {
     Int64,
     Float64,
     Boolean,
+    Enum(IndexMap<String, u32>),
     List(Box<DataTypeOpt>),
     Struct(IndexMap<String, DataTypeOpt>),
-    Object(&'static str),
     // We need to add option to be able to extract the value from the
     // structure in a different way than required fields
     Option(Box<DataTypeOpt>),
@@ -58,6 +59,15 @@ impl DataTypeOpt {
             DataTypeOpt::Int64 => DataType::Int64,
             DataTypeOpt::Float64 => DataType::Float64,
             DataTypeOpt::Boolean => DataType::Boolean,
+            DataTypeOpt::Enum(enum_values) => {
+                let categories =
+                    FrozenCategories::new(enum_values.keys().map(|s| s.as_str())).unwrap();
+                let mapping = CategoricalMapping::new(enum_values.len());
+                enum_values.keys().for_each(|s| {
+                    let _ = mapping.insert_cat(s).unwrap();
+                });
+                DataType::Enum(categories, std::sync::Arc::new(mapping))
+            }
             DataTypeOpt::List(inner_type) => DataType::List(Box::new(inner_type.to_data_type())),
             DataTypeOpt::Struct(fields) => DataType::Struct(
                 fields
@@ -67,7 +77,6 @@ impl DataTypeOpt {
                     })
                     .collect(),
             ),
-            DataTypeOpt::Object(objname) => DataType::Object(objname),
             DataTypeOpt::Option(inner_type) => inner_type.to_data_type(),
             DataTypeOpt::StructFuture(_) => panic!("StructFuture shouldn't be used at runtime"),
         }
@@ -162,12 +171,18 @@ impl ToTokens for DataTypeOpt {
             DataTypeOpt::Int64 => quote! { ::structpath::DataTypeOpt::Int64 },
             DataTypeOpt::Float64 => quote! { ::structpath::DataTypeOpt::Float64 },
             DataTypeOpt::Boolean => quote! { ::structpath::DataTypeOpt::Boolean },
+            DataTypeOpt::Enum(enum_values) => {
+                // Convert inner_type to tokens
+                let enum_values = enum_values
+                    .iter()
+                    .map(|(name, value)| {
+                        quote! { (#name.into(), #value) }
+                    })
+                    .collect::<Vec<_>>();
+                quote! { ::structpath::DataTypeOpt::Enum(IndexMap::from([#(#enum_values),*])) }
+            }
             DataTypeOpt::List(inner_type) => {
                 quote! { ::structpath::DataTypeOpt::List(Box::new(#inner_type)) }
-            }
-            DataTypeOpt::Object(_) => {
-                // let inner_type = TokenStream::from_str(inner_type_name).ok().unwrap();
-                quote! { ::structpath::DataTypeOpt::String }
             }
             DataTypeOpt::StructFuture(inner_type_name) => {
                 let inner_type = TokenStream::from_str(inner_type_name).ok().unwrap();
@@ -183,6 +198,16 @@ impl ToTokens for DataTypeOpt {
     }
 }
 
+pub trait HasDataTypeOpt {
+    /// Returns the DataTypeOpt representation of the type.
+    /// Must be implemented with per-type static storage to avoid sharing cached values across types.
+    fn data_type_opt() -> &'static DataTypeOpt;
+
+    /// Returns the polars DataType representation of this struct.
+    /// Must be implemented with per-type static storage to avoid sharing cached values across types.
+    fn data_type() -> &'static DataType;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -192,6 +217,18 @@ mod tests {
         let data_type_opt =
             DataTypeOpt::Struct(IndexMap::from([("field1".into(), DataTypeOpt::String)]));
         assert_eq!(data_type_opt.field_type("field1"), Ok(DataTypeOpt::String));
+    }
+
+    #[test]
+    fn data_type_opt_field_type_ok_with_enum() {
+        let data_type_opt = DataTypeOpt::Struct(IndexMap::from([(
+            "enum1".into(),
+            DataTypeOpt::Enum(IndexMap::from([("ITEM1".into(), 1)])),
+        )]));
+        assert_eq!(
+            data_type_opt.field_type("enum1"),
+            Ok(DataTypeOpt::Enum(IndexMap::from([("ITEM1".into(), 1)])))
+        );
     }
 
     #[test]

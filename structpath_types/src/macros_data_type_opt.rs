@@ -22,17 +22,16 @@
 /// assert_eq!(t3, DataTypeOpt::List(Box::new(DataTypeOpt::String)));
 ///
 /// // Struct types
-/// let fields = IndexMap::from([("field1".into(), DataTypeOpt::String)]);
-/// let t4 = data_type_opt!(Struct(fields));
+/// let t4 = data_type_opt!(Struct([("field1", DataTypeOpt::String)]));
 /// assert_eq!(t4, DataTypeOpt::Struct(IndexMap::from([("field1".into(), DataTypeOpt::String)])));
 ///
 /// // Complex nested types
 /// let t5 = data_type_opt!(Option, List, Option, String);
 /// assert_eq!(t5, DataTypeOpt::Option(Box::new(DataTypeOpt::List(Box::new(DataTypeOpt::Option(Box::new(DataTypeOpt::String)))))));
 ///
-/// // Object types with string literals
-/// let t6 = data_type_opt!(Object("SampleEnum"));
-/// assert_eq!(t6, DataTypeOpt::Object("SampleEnum"));
+/// // Enums of string literals
+/// let t6 = data_type_opt!(Enum([("SampleEnum", 0)]));
+/// assert_eq!(t6, DataTypeOpt::Enum(IndexMap::from([("SampleEnum".into(), 0)])));
 /// ```
 #[macro_export]
 macro_rules! data_type_opt {
@@ -44,9 +43,13 @@ macro_rules! data_type_opt {
     (Boolean) => { $crate::DataTypeOpt::Boolean };
 
     // Special cases with parameters
-    (Object($name:expr)) => { $crate::DataTypeOpt::Object($name) };
     (StructFuture($name:expr)) => { $crate::DataTypeOpt::StructFuture($name) };
-    (Struct($fields:expr)) => { $crate::DataTypeOpt::Struct($fields) };
+    (Struct($fields:expr)) => {
+        $crate::DataTypeOpt::Struct(::indexmap::IndexMap::from_iter($fields.into_iter().map(|(k, v)| (k.into(), v))))
+    };
+    (Enum($items:expr)) => {
+        $crate::DataTypeOpt::Enum(::indexmap::IndexMap::from_iter($items.into_iter().map(|(k, v)| (k.into(), v))))
+    };
 
     // Recursive cases for wrapping types
     (Option, $($rest:tt)*) => {
@@ -96,6 +99,7 @@ macro_rules! field_type_opt {
 #[cfg(test)]
 mod tests {
     use super::super::DataTypeOpt;
+    use indexmap::IndexMap;
 
     #[test]
     fn test_data_type_opt_macro_simple_types() {
@@ -109,12 +113,24 @@ mod tests {
     #[test]
     fn test_data_type_opt_macro_special_types() {
         assert_eq!(
-            data_type_opt!(Object("SampleEnum")),
-            DataTypeOpt::Object("SampleEnum")
+            data_type_opt!(Enum([("SampleEnum", 0)])),
+            DataTypeOpt::Enum(IndexMap::from([("SampleEnum".into(), 0)]))
         );
         assert_eq!(
             data_type_opt!(StructFuture("SomeStruct")),
             DataTypeOpt::StructFuture("SomeStruct")
+        );
+    }
+
+    #[test]
+    fn test_data_type_opt_macro_enum_multiple_values() {
+        assert_eq!(
+            data_type_opt!(Enum([("Option1", 1), ("Option2", 2), ("Option3", 3)])),
+            DataTypeOpt::Enum(IndexMap::from([
+                ("Option1".into(), 1),
+                ("Option2".into(), 2),
+                ("Option3".into(), 3)
+            ]))
         );
     }
 
@@ -165,12 +181,12 @@ mod tests {
     }
 
     #[test]
-    fn test_data_type_opt_macro_with_object() {
-        // Option(List(Object("SampleEnum")))
+    fn test_data_type_opt_macro_with_enum() {
+        // Option(List(Enum([("opt1", 1), ("opt2", 3)])))
         assert_eq!(
-            data_type_opt!(Option, List, Object("SampleEnum")),
-            DataTypeOpt::Option(Box::new(DataTypeOpt::List(Box::new(DataTypeOpt::Object(
-                "SampleEnum"
+            data_type_opt!(Option, List, Enum([("opt1", 1), ("opt2", 3)])),
+            DataTypeOpt::Option(Box::new(DataTypeOpt::List(Box::new(DataTypeOpt::Enum(
+                IndexMap::from_iter([("opt1".into(), 1), ("opt2".into(), 3)])
             )))))
         );
     }
@@ -180,18 +196,24 @@ mod tests {
         use indexmap::IndexMap;
 
         // Simple Struct
-        let fields = IndexMap::from([("field1".into(), DataTypeOpt::String)]);
         assert_eq!(
-            data_type_opt!(Struct(fields.clone())),
-            DataTypeOpt::Struct(fields)
+            data_type_opt!(Struct([("field1", DataTypeOpt::String)])),
+            DataTypeOpt::Struct(IndexMap::from([("field1".into(), DataTypeOpt::String)]))
         );
 
         // Nested with Struct
-        let struct_fields = IndexMap::from([("subf_string".into(), DataTypeOpt::String)]);
         assert_eq!(
-            data_type_opt!(Option, List, Option, Struct(struct_fields.clone())),
+            data_type_opt!(
+                Option,
+                List,
+                Option,
+                Struct([("subf_string", DataTypeOpt::String)])
+            ),
             DataTypeOpt::Option(Box::new(DataTypeOpt::List(Box::new(DataTypeOpt::Option(
-                Box::new(DataTypeOpt::Struct(struct_fields))
+                Box::new(DataTypeOpt::Struct(IndexMap::from([(
+                    "subf_string".into(),
+                    DataTypeOpt::String
+                )])))
             )))))
         );
     }
@@ -243,15 +265,28 @@ mod tests {
 
         // Test with struct
         use indexmap::IndexMap;
-        let fields = IndexMap::from([("subfield".into(), DataTypeOpt::String)]);
-        let result7: (String, DataTypeOpt) = field_type_opt!("nested", Struct(fields.clone()));
-        assert_eq!(result7, ("nested".into(), DataTypeOpt::Struct(fields)));
+        let result7: (String, DataTypeOpt) =
+            field_type_opt!("nested", Struct([("subfield", DataTypeOpt::String)]));
+        assert_eq!(
+            result7,
+            (
+                "nested".into(),
+                DataTypeOpt::Struct(IndexMap::from([("subfield".into(), DataTypeOpt::String)]))
+            )
+        );
 
-        // Test with object types
-        let result8: (String, DataTypeOpt) = field_type_opt!("enum_field", Object("MyEnum"));
+        // Test with enum types
+        let result8: (String, DataTypeOpt) =
+            field_type_opt!("enum_field", Enum([("Value1", 1), ("Value2", 2)]));
         assert_eq!(
             result8,
-            ("enum_field".into(), DataTypeOpt::Object("MyEnum"))
+            (
+                "enum_field".into(),
+                DataTypeOpt::Enum(IndexMap::from_iter([
+                    ("Value1".into(), 1),
+                    ("Value2".into(), 2)
+                ]))
+            )
         );
     }
 }
