@@ -11,7 +11,7 @@ struct Parent {
 struct User {
     name: String,
     age: i64,
-    #[type_hint = "struct"]
+    #[type_hint("struct")]
     parents: Vec<Parent>,
 }
 

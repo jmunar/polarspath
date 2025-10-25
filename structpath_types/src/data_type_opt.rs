@@ -136,7 +136,7 @@ impl DataTypeOpt {
             };
         }
 
-        match path_component {
+        match path_component.clone() {
             PathComponent::Field(field) => {
                 let field_type = self.field_type(&field)?;
                 Ok(field_type.clone())
@@ -145,9 +145,13 @@ impl DataTypeOpt {
                 let field_type = self.field_type(&field)?;
                 match field_type {
                     DataTypeOpt::List(t) => Ok(*t.clone()),
-                    DataTypeOpt::Option(t) => t
-                        .get_type_by_path(path)
-                        .map(|type_opt| DataTypeOpt::Option(Box::new(type_opt))),
+                    DataTypeOpt::Option(midt) if matches!(*midt, DataTypeOpt::List(_)) => {
+                        if let DataTypeOpt::List(t) = *midt {
+                            Ok(DataTypeOpt::Option(t.clone()))
+                        } else {
+                            unreachable!()
+                        }
+                    }
                     _ => Err(DataTypeOptError::InvalidPath(field)),
                 }
             }
@@ -179,7 +183,7 @@ impl ToTokens for DataTypeOpt {
                         quote! { (#name.into(), #value) }
                     })
                     .collect::<Vec<_>>();
-                quote! { ::structpath::DataTypeOpt::Enum(IndexMap::from([#(#enum_values),*])) }
+                quote! { ::structpath::DataTypeOpt::Enum(::structpath::indexmap::IndexMap::from([#(#enum_values),*])) }
             }
             DataTypeOpt::List(inner_type) => {
                 quote! { ::structpath::DataTypeOpt::List(Box::new(#inner_type)) }
@@ -187,7 +191,7 @@ impl ToTokens for DataTypeOpt {
             DataTypeOpt::StructFuture(inner_type_name) => {
                 let inner_type = TokenStream::from_str(inner_type_name).ok().unwrap();
                 quote! {
-                    #inner_type::data_type_opt().clone()
+                    <#inner_type as ::structpath::HasDataTypeOpt>::data_type_opt().clone()
                 }
             }
             DataTypeOpt::Option(inner_type) => {

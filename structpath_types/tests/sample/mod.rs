@@ -35,7 +35,7 @@ impl HasDataTypeOpt for SampleSubstruct {
 impl StructPath for SampleSubstruct {
     fn fields_opt() -> &'static IndexMap<String, DataTypeOpt> {
         static SUBFIELDS_OPT: OnceLock<IndexMap<String, DataTypeOpt>> = OnceLock::new();
-        SUBFIELDS_OPT.get_or_init(|| subfields_opt())
+        SUBFIELDS_OPT.get_or_init(subfields_opt)
     }
 
     fn fields() -> &'static [Field] {
@@ -52,7 +52,7 @@ impl StructPath for SampleSubstruct {
             .as_slice()
     }
 
-    fn get_value_by_path(&self, path: &Path) -> Result<AnyValue, DataTypeOptError> {
+    fn get_value_by_path(&self, path: &Path) -> Result<AnyValue<'_>, DataTypeOptError> {
         let path_component = path.components[0].clone();
         match path_component {
             PathComponent::Field(name) => {
@@ -76,7 +76,7 @@ where
     SampleSubstruct: StructPath,
 {
     type ChunkDataType = ::polars_core::prelude::StructType;
-    fn to_any_value(&self, value: &SampleSubstruct) -> AnyValue {
+    fn to_any_value(&self, value: &SampleSubstruct) -> AnyValue<'_> {
         let field_defs = SampleSubstruct::fields().to_vec();
         let field_values = SampleSubstruct::fields_opt()
             .iter()
@@ -88,6 +88,7 @@ where
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SampleEnum {
+    #[allow(clippy::upper_case_acronyms)]
     ITEM = 1,
 }
 
@@ -121,7 +122,7 @@ where
 {
     type ChunkDataType = ::polars_core::prelude::CategoricalType;
 
-    fn to_any_value(&self, value: &SampleEnum) -> AnyValue {
+    fn to_any_value(&self, value: &SampleEnum) -> AnyValue<'_> {
         match self {
             DataTypeOpt::Enum(_) => match value {
                 SampleEnum::ITEM => AnyValue::Enum(0, SampleEnum::mapping()),
@@ -334,7 +335,7 @@ impl HasDataTypeOpt for SampleStruct {
 impl StructPath for SampleStruct {
     fn fields_opt() -> &'static IndexMap<String, DataTypeOpt> {
         static FIELDS_OPT: OnceLock<IndexMap<String, DataTypeOpt>> = OnceLock::new();
-        FIELDS_OPT.get_or_init(|| fields_opt())
+        FIELDS_OPT.get_or_init(fields_opt)
     }
 
     fn fields() -> &'static [Field] {
@@ -351,7 +352,7 @@ impl StructPath for SampleStruct {
             .as_slice()
     }
 
-    fn get_value_by_path(&self, path: &Path) -> Result<AnyValue, DataTypeOptError> {
+    fn get_value_by_path(&self, path: &Path) -> Result<AnyValue<'_>, DataTypeOptError> {
         let path_component = path.components[0].clone();
 
         if path.components.len() > 1 {
@@ -627,7 +628,7 @@ where
     SampleStruct: StructPath,
 {
     type ChunkDataType = ::polars_core::prelude::StructType;
-    fn to_any_value(&self, value: &SampleStruct) -> AnyValue {
+    fn to_any_value(&self, value: &SampleStruct) -> AnyValue<'_> {
         let field_defs = SampleStruct::fields().to_vec();
         let field_values = SampleStruct::fields_opt()
             .iter()

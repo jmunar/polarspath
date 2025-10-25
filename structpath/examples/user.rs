@@ -1,9 +1,9 @@
 use polars_core::prelude::{AnyValue, DataType, Field};
-use structpath::{DataTypeOpt, StructPath};
+use structpath::{indexmap::IndexMap, DataTypeOpt, EnumPath, StructPath};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(EnumPath, Debug, Clone, PartialEq)]
 enum Pet {
-    Dog,
+    Dog = 1,
 }
 
 #[derive(StructPath, Debug, Clone, PartialEq)]
@@ -16,11 +16,12 @@ struct Parent {
 struct User {
     name: String,
     age: i64,
-    #[type_hint = "struct"]
+    #[type_hint("struct")]
     parent_favorite: Parent,
-    #[type_hint = "struct"]
+    #[type_hint("struct")]
     parents: Vec<Parent>,
-    // pets: Option<Vec<Pet>>,
+    #[type_hint("enum", [("Dog", 1)])]
+    pets: Option<Vec<Pet>>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -41,10 +42,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 age: 67,
             },
         ],
-        // pets: Some(vec![Pet::Dog]),
+        pets: Some(vec![Pet::Dog]),
     };
 
-    let parent_type = DataTypeOpt::Struct(::structpath_types::indexmap::IndexMap::from([
+    let parent_type = DataTypeOpt::Struct(IndexMap::from([
         ("name".into(), DataTypeOpt::String),
         ("age".into(), DataTypeOpt::Int64),
     ]));
@@ -64,13 +65,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let parent_0_type = User::get_type("parents[0]")?;
     assert_eq!(parent_0_type, parent_type.clone());
-    // let pets_type = User::get_type("pets")?;
-    // assert_eq!(
-    //     pets_type,
-    //     DataTypeOpt::List(Box::new(DataTypeOpt::String))
-    // );
-    // let pets_0_type = User::get_type("pets[0]")?;
-    // assert_eq!(pets_0_type, DataTypeOpt::String);
+    let pets_type = User::get_type("pets")?;
+    assert_eq!(
+        pets_type,
+        DataTypeOpt::Option(Box::new(DataTypeOpt::List(Box::new(DataTypeOpt::Enum(
+            IndexMap::from([("Dog".into(), 1)])
+        )))))
+    );
+    let pets_0 = User::get_type("pets[0]")?;
+    assert_eq!(
+        pets_0,
+        DataTypeOpt::Option(Box::new(DataTypeOpt::Enum(IndexMap::from([(
+            "Dog".into(),
+            1
+        )]))))
+    );
 
     let name = user.get_value("name")?;
     assert_eq!(name, AnyValue::String("John"));
@@ -92,8 +101,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(parent_favorite_name, AnyValue::String("Mary"));
     let parent_0_name = user.get_value("parents[0].name")?;
     assert_eq!(parent_0_name, AnyValue::String("Joseph"));
-    // let pet_0 = user.get_value("pets[0]")?;
-    // assert_eq!(pet_0, &Pet::Dog);
+    let pet_0 = user.get_value("pets[0]")?;
+    assert_eq!(pet_0, AnyValue::Enum(0, Pet::mapping()));
 
     Ok(())
 }

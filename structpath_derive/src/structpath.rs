@@ -177,11 +177,37 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                     }
                 }
             ),
+            DataTypeOpt::Option(mid_type) if matches!(**mid_type, DataTypeOpt::List(_)) => Some(
+                quote! {
+                    stringify!(#field_name) => match &self.#field_name {
+                        Some(ref vec) => {
+                            if index < vec.len() {
+                                Ok(::structpath::IntoAnyValueWith::to_any_value(field_inner_type, &vec[index]))
+                            } else {
+                                Ok(::polars_core::prelude::AnyValue::Null)
+                            }
+                        }
+                        None => Ok(::polars_core::prelude::AnyValue::Null),
+                    }
+                }
+            ),
             _ => None,
         }
     });
 
     quote! {
+
+        impl ::structpath::HasDataTypeOpt for #type_name {
+            fn data_type_opt() -> &'static ::structpath::DataTypeOpt {
+                static DATA_TYPE_OPT: ::std::sync::OnceLock<::structpath::DataTypeOpt> = ::std::sync::OnceLock::new();
+                DATA_TYPE_OPT.get_or_init(|| ::structpath::DataTypeOpt::Struct(<Self as ::structpath::StructPath>::fields_opt().clone()))
+            }
+
+            fn data_type() -> &'static ::polars_core::prelude::DataType {
+                static DATA_TYPE: ::std::sync::OnceLock<::polars_core::prelude::DataType> = ::std::sync::OnceLock::new();
+                DATA_TYPE.get_or_init(|| Self::data_type_opt().to_data_type())
+            }
+        }
 
         impl ::structpath::StructPath for #type_name {
             fn fields_opt() -> &'static ::structpath::indexmap::IndexMap<String, ::structpath::DataTypeOpt> {
@@ -205,16 +231,6 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                             .collect()
                     })
                     .as_slice()
-            }
-
-            fn data_type_opt() -> &'static ::structpath::DataTypeOpt {
-                static DATA_TYPE_OPT: ::std::sync::OnceLock<::structpath::DataTypeOpt> = ::std::sync::OnceLock::new();
-                DATA_TYPE_OPT.get_or_init(|| ::structpath::DataTypeOpt::Struct(Self::fields_opt().clone()))
-            }
-
-            fn data_type() -> &'static ::polars_core::prelude::DataType {
-                static DATA_TYPE: ::std::sync::OnceLock<::polars_core::prelude::DataType> = ::std::sync::OnceLock::new();
-                DATA_TYPE.get_or_init(|| Self::data_type_opt().to_data_type())
             }
 
             fn get_value_by_path(&self, path: &::structpath::Path) -> Result<::polars_core::prelude::AnyValue, ::structpath::DataTypeOptError> {

@@ -9,13 +9,13 @@ use polars_core::prelude::{AnyValue, PolarsDataType, Series};
 pub trait IntoAnyValueWith<T> {
     type ChunkDataType: PolarsDataType;
 
-    fn to_any_value(&self, value: &T) -> AnyValue;
+    fn to_any_value(&self, value: &T) -> AnyValue<'_>;
 }
 
 impl IntoAnyValueWith<String> for DataTypeOpt {
     type ChunkDataType = ::polars_core::prelude::StringType;
 
-    fn to_any_value(&self, value: &String) -> AnyValue {
+    fn to_any_value(&self, value: &String) -> AnyValue<'_> {
         match self {
             DataTypeOpt::String => AnyValue::StringOwned(value.clone().into()),
             _ => panic!("Unsupported DataTypeOpt for String: {:?}", self),
@@ -26,7 +26,7 @@ impl IntoAnyValueWith<String> for DataTypeOpt {
 impl IntoAnyValueWith<i32> for DataTypeOpt {
     type ChunkDataType = ::polars_core::prelude::Int32Type;
 
-    fn to_any_value(&self, value: &i32) -> AnyValue {
+    fn to_any_value(&self, value: &i32) -> AnyValue<'_> {
         match self {
             DataTypeOpt::Int32 => AnyValue::Int32(*value),
             _ => panic!("Unsupported DataTypeOpt for i32: {:?}", self),
@@ -37,7 +37,7 @@ impl IntoAnyValueWith<i32> for DataTypeOpt {
 impl IntoAnyValueWith<i64> for DataTypeOpt {
     type ChunkDataType = ::polars_core::prelude::Int64Type;
 
-    fn to_any_value(&self, value: &i64) -> AnyValue {
+    fn to_any_value(&self, value: &i64) -> AnyValue<'_> {
         match self {
             DataTypeOpt::Int64 => AnyValue::Int64(*value),
             _ => panic!("Unsupported DataTypeOpt for i64: {:?}", self),
@@ -48,7 +48,7 @@ impl IntoAnyValueWith<i64> for DataTypeOpt {
 impl IntoAnyValueWith<f64> for DataTypeOpt {
     type ChunkDataType = ::polars_core::prelude::Float64Type;
 
-    fn to_any_value(&self, value: &f64) -> AnyValue {
+    fn to_any_value(&self, value: &f64) -> AnyValue<'_> {
         match self {
             DataTypeOpt::Float64 => AnyValue::Float64(*value),
             _ => panic!("Unsupported DataTypeOpt for f64: {:?}", self),
@@ -59,7 +59,7 @@ impl IntoAnyValueWith<f64> for DataTypeOpt {
 impl IntoAnyValueWith<bool> for DataTypeOpt {
     type ChunkDataType = ::polars_core::prelude::BooleanType;
 
-    fn to_any_value(&self, value: &bool) -> AnyValue {
+    fn to_any_value(&self, value: &bool) -> AnyValue<'_> {
         match self {
             DataTypeOpt::Boolean => AnyValue::Boolean(*value),
             _ => panic!("Unsupported DataTypeOpt for bool: {:?}", self),
@@ -91,7 +91,7 @@ where
 {
     type ChunkDataType = ::polars_core::prelude::ListType;
 
-    fn to_any_value(&self, value: &Vec<T>) -> AnyValue {
+    fn to_any_value(&self, value: &Vec<T>) -> AnyValue<'_> {
         match self {
             DataTypeOpt::List(inner_type) => {
                 let any_values: Vec<AnyValue> = value
@@ -122,7 +122,7 @@ where
 {
     type ChunkDataType = <DataTypeOpt as IntoAnyValueWith<T>>::ChunkDataType;
 
-    fn to_any_value(&self, value: &Option<T>) -> AnyValue {
+    fn to_any_value(&self, value: &Option<T>) -> AnyValue<'_> {
         match self {
             DataTypeOpt::Option(inner_type) => match value {
                 Some(value) => inner_type.to_any_value(value),
@@ -192,7 +192,7 @@ mod tests {
 
         let value = Some("test".to_string());
         let any_value = data_type_opt.to_any_value(&value);
-        assert_eq!(any_value, AnyValue::StringOwned(value.unwrap().into()));
+        assert_eq!(any_value, AnyValue::StringOwned("test".into()));
 
         let value: Option<String> = None;
         let any_value = data_type_opt.to_any_value(&value);
@@ -205,7 +205,10 @@ mod tests {
 
         let value = Some(vec!["test".to_string()]);
         let any_value = data_type_opt.to_any_value(&value);
-        assert_eq!(any_value, AnyValue::List(Series::from_iter(value.unwrap())));
+        assert_eq!(
+            any_value,
+            AnyValue::List(Series::from_iter(vec!["test".to_string()]))
+        );
 
         let value: Option<Vec<String>> = None;
         let any_value = data_type_opt.to_any_value(&value);

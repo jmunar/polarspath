@@ -29,8 +29,8 @@ pub trait StructPath: HasDataTypeOpt {
         Self::data_type_opt().get_type(path)
     }
 
-    fn get_value_by_path(&self, path: &Path) -> Result<AnyValue, DataTypeOptError>;
-    fn get_value(&self, path: &str) -> Result<AnyValue, DataTypeOptError> {
+    fn get_value_by_path(&self, path: &Path) -> Result<AnyValue<'_>, DataTypeOptError>;
+    fn get_value(&self, path: &str) -> Result<AnyValue<'_>, DataTypeOptError> {
         let path = Path::from_str(path);
         match path {
             Ok(path) => self.get_value_by_path(&path),
