@@ -6,7 +6,8 @@ pub mod sample {
 mod tests {
     use super::sample;
     use polars_core::prelude::{AnyValue, DataType, Field, Series};
-    use structpath::{indexmap::IndexMap, DataTypeOpt, StructPath};
+    use polars_dtype::categorical::{CategoricalMapping, FrozenCategories};
+    use structpath::{indexmap::IndexMap, DataTypeOpt, EnumPath,HasDataTypeOpt, StructPath};
 
     fn user_fields_expected() -> Vec<Field> {
         vec![
@@ -22,7 +23,12 @@ mod tests {
                 ]),
             ),
             Field::new("tags".into(), DataType::List(Box::new(DataType::String))),
-            Field::new("loyalty".into(), DataType::Int32),
+            Field::new(
+                "loyalty".into(),
+                DataType::Enum(
+                    FrozenCategories::new(["SILVER", "GOLD", "PLATINUM"].into_iter()).unwrap(),
+                    std::sync::Arc::new(CategoricalMapping::new(3))
+                )),
             Field::new(
                 "pets".into(),
                 DataType::List(Box::new(DataType::Struct(vec![
@@ -65,7 +71,11 @@ mod tests {
         let type_ = sample::User::get_type("tags")?;
         assert_eq!(type_, DataTypeOpt::List(Box::new(DataTypeOpt::String)));
         let type_ = sample::User::get_type("loyalty")?;
-        assert_eq!(type_, DataTypeOpt::Int32);
+        assert_eq!(type_, DataTypeOpt::Enum(IndexMap::from([
+            ("SILVER".into(), 0),
+            ("GOLD".into(), 1),
+            ("PLATINUM".into(), 2)
+        ])));
         let type_ = sample::User::get_type("pets")?;
         assert_eq!(
             type_,
@@ -136,7 +146,7 @@ mod tests {
                 "premium".to_string(),
                 "verified".to_string(),
             ])),
-            AnyValue::Int32(1),
+            AnyValue::Enum(1, sample::user::Loyalty::mapping()),
             AnyValue::List(
                 Series::from_any_values(
                     "".into(),
@@ -209,6 +219,9 @@ mod tests {
         );
         let tag0 = user.get_value("tags[0]")?;
         assert_eq!(tag0, AnyValue::String("premium"));
+
+        let loyalty = user.get_value("loyalty")?;
+        assert_eq!(loyalty, AnyValue::Enum(1, sample::user::Loyalty::mapping()));
 
         let pets = user.get_value("pets")?;
         assert_eq!(
