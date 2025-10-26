@@ -1,5 +1,5 @@
 use polars_core::prelude::{AnyValue, DataType, Field};
-use structpath::{indexmap::IndexMap, DataTypeOpt, EnumPath, StructPath};
+use structpath::{data_type_wrapper, EnumPath, StructPath};
 
 #[derive(EnumPath, Debug, Clone, PartialEq)]
 enum Pet {
@@ -45,41 +45,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         pets: Some(vec![Pet::Dog]),
     };
 
-    let parent_type = DataTypeOpt::Struct(IndexMap::from([
-        ("name".into(), DataTypeOpt::String),
-        ("age".into(), DataTypeOpt::Int64),
-    ]));
-
     let name_type = User::get_type("name")?;
-    assert_eq!(name_type, DataTypeOpt::String);
+    assert_eq!(name_type, data_type_wrapper!(String));
     let age_type = User::get_type("age")?;
-    assert_eq!(age_type, DataTypeOpt::Int64);
+    assert_eq!(age_type, data_type_wrapper!(Int64));
     let parent_favorite_type = User::get_type("parent_favorite")?;
-    assert_eq!(parent_favorite_type, parent_type.clone());
+    assert_eq!(
+        parent_favorite_type,
+        data_type_wrapper!(Struct([("name", String), ("age", Int64)]))
+    );
     let parent_favorite_name_type = User::get_type("parent_favorite.name")?;
-    assert_eq!(parent_favorite_name_type, DataTypeOpt::String);
+    assert_eq!(parent_favorite_name_type, data_type_wrapper!(String));
     let parents_type = User::get_type("parents")?;
     assert_eq!(
         parents_type,
-        DataTypeOpt::List(Box::new(parent_type.clone()))
+        data_type_wrapper!(List(Struct([("name", String), ("age", Int64)])))
     );
     let parent_0_type = User::get_type("parents[0]")?;
-    assert_eq!(parent_0_type, parent_type.clone());
+    assert_eq!(
+        parent_0_type,
+        data_type_wrapper!(Struct([("name", String), ("age", Int64)]))
+    );
     let pets_type = User::get_type("pets")?;
     assert_eq!(
         pets_type,
-        DataTypeOpt::Option(Box::new(DataTypeOpt::List(Box::new(DataTypeOpt::Enum(
-            IndexMap::from([("Dog".into(), 1)])
-        )))))
+        data_type_wrapper!(Option(List(Enum([("Dog", 1)]))))
     );
     let pets_0 = User::get_type("pets[0]")?;
-    assert_eq!(
-        pets_0,
-        DataTypeOpt::Option(Box::new(DataTypeOpt::Enum(IndexMap::from([(
-            "Dog".into(),
-            1
-        )]))))
-    );
+    assert_eq!(pets_0, data_type_wrapper!(Option(Enum([("Dog", 1)]))));
 
     let name = user.get_value("name")?;
     assert_eq!(name, AnyValue::String("John"));

@@ -1,6 +1,6 @@
 use quote::{quote, ToTokens};
 use structpath_types::indexmap::IndexMap;
-use structpath_types::DataTypeOpt;
+use structpath_types::{data_type_wrapper, DataTypeOpt, DataTypeWrapper};
 use syn::PathArguments::AngleBracketed;
 use syn::{
     AngleBracketedGenericArguments, Attribute, Expr, ExprLit, GenericArgument, Lit, Meta, Type,
@@ -132,40 +132,42 @@ fn parse_enum_array(expr: &Expr) -> IndexMap<String, u32> {
     map
 }
 
-pub fn parse_data_type(field_type: &Type, attrs: &[Attribute]) -> DataTypeOpt {
+pub fn parse_data_type(field_type: &Type, attrs: &[Attribute]) -> DataTypeWrapper {
     match field_type {
         syn::Type::Path(type_path) => match type_path.path.segments.last() {
             Some(segment) => {
                 let segment_name = segment.ident.to_string();
 
                 match segment_name.as_str() {
-                    "String" => DataTypeOpt::String,
+                    "String" => data_type_wrapper!(String),
                     "i32" => {
                         if let Some(enum_values) = has_type_hint_enum(attrs) {
-                            DataTypeOpt::Enum(enum_values)
+                            DataTypeWrapper::new(DataTypeOpt::Enum(enum_values))
                         } else {
-                            DataTypeOpt::Int32
+                            data_type_wrapper!(Int32)
                         }
                     }
-                    "i64" => DataTypeOpt::Int64,
-                    "f64" => DataTypeOpt::Float64,
-                    "bool" => DataTypeOpt::Boolean,
+                    "i64" => data_type_wrapper!(Int64),
+                    "f64" => data_type_wrapper!(Float64),
+                    "bool" => data_type_wrapper!(Boolean),
                     "Vec" => {
                         let inner_type =
                             parse_data_type(get_angle_bracketed_inner(type_path).unwrap(), attrs);
-                        DataTypeOpt::List(Box::new(inner_type))
+                        DataTypeWrapper::new(DataTypeOpt::List(Box::new(inner_type)))
                     }
                     "Option" => {
                         let inner_type =
                             parse_data_type(get_angle_bracketed_inner(type_path).unwrap(), attrs);
-                        DataTypeOpt::Option(Box::new(inner_type))
+                        DataTypeWrapper::new(DataTypeOpt::Option(Box::new(inner_type)))
                     }
                     _ => {
                         if let Some(enum_values) = has_type_hint_enum(attrs) {
-                            DataTypeOpt::Enum(enum_values)
+                            DataTypeWrapper::new(DataTypeOpt::Enum(enum_values))
                         } else if has_type_hint_struct(attrs) {
                             let type_name = type_path.to_token_stream().to_string();
-                            DataTypeOpt::StructFuture(Box::leak(type_name.into_boxed_str()))
+                            DataTypeWrapper::new(DataTypeOpt::StructFuture(Box::leak(
+                                type_name.into_boxed_str(),
+                            )))
                         } else {
                             panic!(
                                 "Unsupported type: {:?}",
@@ -196,7 +198,7 @@ mod tests {
         let field_type: syn::Type = syn::parse_str("String").unwrap();
         let attrs = vec![];
         let data_type = parse_data_type(&field_type, &attrs);
-        assert_eq!(data_type, DataTypeOpt::String);
+        assert_eq!(data_type, data_type_wrapper!(String));
     }
 
     #[test]

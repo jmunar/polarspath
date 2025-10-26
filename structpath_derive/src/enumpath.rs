@@ -74,44 +74,39 @@ pub fn derive_enum_path_impl(input: syn::DeriveInput) -> TokenStream {
     });
 
     quote! {
-        impl ::structpath::HasDataTypeOpt for #type_name {
-            fn data_type_opt() -> &'static ::structpath::DataTypeOpt {
-                static DATA_TYPE_OPT: ::std::sync::OnceLock<::structpath::DataTypeOpt> = ::std::sync::OnceLock::new();
-                DATA_TYPE_OPT.get_or_init(|| ::structpath::DataTypeOpt::Enum(::structpath::indexmap::IndexMap::from([
+        impl ::structpath::HasDataTypeWrapper for #type_name {
+            fn data_type_wrapper() -> &'static ::structpath::DataTypeWrapper {
+                static DATA_TYPE_WRAPPER: ::std::sync::OnceLock<::structpath::DataTypeWrapper> = ::std::sync::OnceLock::new();
+                DATA_TYPE_WRAPPER.get_or_init(|| ::structpath::DataTypeWrapper::new(::structpath::DataTypeOpt::Enum(::structpath::indexmap::IndexMap::from([
                     #(#variants_map),*
-                ])))
-            }
-
-            fn data_type() -> &'static ::polars_core::prelude::DataType {
-                static DATA_TYPE: ::std::sync::OnceLock<::polars_core::prelude::DataType> = ::std::sync::OnceLock::new();
-                DATA_TYPE.get_or_init(|| Self::data_type_opt().to_data_type())
+                ]))))
             }
         }
 
         impl ::structpath::EnumPath for #type_name
         where
-            #type_name: ::structpath::HasDataTypeOpt,
+            #type_name: ::structpath::HasDataTypeWrapper,
         {
             fn mapping() -> &'static ::std::sync::Arc<::polars_core::prelude::CategoricalMapping> {
-                match <Self as ::structpath::HasDataTypeOpt>::data_type() {
+                match <Self as ::structpath::HasDataTypeWrapper>::data_type() {
                     ::polars_core::prelude::DataType::Enum(_, mapping) => mapping,
                     _ => unreachable!(),
                 }
             }
         }
 
-        impl ::structpath::IntoAnyValueWith<#type_name> for ::structpath::DataTypeOpt
+        impl ::structpath::IntoAnyValueWith<#type_name> for ::structpath::DataTypeWrapper
         where
             #type_name: ::structpath::EnumPath,
         {
             type ChunkDataType = ::polars_core::prelude::CategoricalType;
 
             fn to_any_value(&self, value: &#type_name) -> ::polars_core::prelude::AnyValue {
-                match self {
+                match &self.raw {
                     ::structpath::DataTypeOpt::Enum(_) => match value {
                         #(#variant_matches),*
                     },
-                    _ => panic!("Unsupported DataTypeOpt for #type_name: {:?}", self),
+                    _ => panic!("Unsupported DataTypeWrapper for #type_name: {:?}", self),
                 }
             }
         }

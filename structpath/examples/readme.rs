@@ -30,6 +30,6 @@ fn main() {
     assert_eq!(father_name, AnyValue::String("Joseph"));
 
     // Get type information
-    let name_type = User::get_type("name").unwrap().to_data_type();
+    let name_type = User::get_type("name").unwrap().polars;
     assert_eq!(name_type, DataType::String);
 }

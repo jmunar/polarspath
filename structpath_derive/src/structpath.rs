@@ -1,12 +1,12 @@
 use crate::utils::parse_data_type;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use structpath_types::{indexmap::IndexMap, DataTypeOpt};
+use structpath_types::{indexmap::IndexMap, DataTypeOpt, DataTypeWrapper};
 
 pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
     let type_name = input.ident;
 
-    let fields: IndexMap<String, DataTypeOpt> = match input.data {
+    let fields: IndexMap<String, DataTypeWrapper> = match input.data {
         syn::Data::Struct(data_struct) if matches!(data_struct.fields, syn::Fields::Named(_)) => {
             if let syn::Fields::Named(fields_named) = data_struct.fields {
                 fields_named
@@ -37,7 +37,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
     // Elements in the implementation of get_value_by_path()
     let nested_field = fields.iter().filter_map(|(name, dtype)| {
         let field_name = format_ident!("{}", &name.to_string());
-        match &dtype {
+        match &dtype.raw {
             DataTypeOpt::StructFuture(_) => {
                 Some(
                     quote! {
@@ -46,7 +46,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                 )
             }
             DataTypeOpt::Option(mid_type) => {
-                if let DataTypeOpt::StructFuture(_) = **mid_type {
+                if let DataTypeOpt::StructFuture(_) = mid_type.raw {
                     Some(
                         quote! {
                             stringify!(#field_name) => match self.#field_name {
@@ -65,9 +65,9 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
 
     let nested_array = fields.iter().filter_map(|(name, dtype)| {
         let field_name = format_ident!("{}", &name.to_string());
-        match &dtype {
+        match &dtype.raw {
             DataTypeOpt::List(mid_type1) => {
-                match &**mid_type1 {
+                match &mid_type1.raw {
                     DataTypeOpt::StructFuture(_) => {
                         Some(
                             quote! {
@@ -82,7 +82,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                         )
                     }
                     DataTypeOpt::Option(mid_type2) => {
-                        if let DataTypeOpt::StructFuture(_) = **mid_type2 {
+                        if let DataTypeOpt::StructFuture(_) = mid_type2.raw {
                             Some(
                                 quote! {
                                     stringify!(#field_name) => {
@@ -105,8 +105,8 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                 }
             }
             DataTypeOpt::Option(mid_type1) => {
-                if let DataTypeOpt::List(ref mid_type2) = **mid_type1 {
-                    match &**mid_type2 {
+                if let DataTypeOpt::List(ref mid_type2) = mid_type1.raw {
+                    match &mid_type2.raw {
                         DataTypeOpt::StructFuture(_) => {
                             Some(
                                 quote! {
@@ -124,7 +124,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                             )
                         }
                         DataTypeOpt::Option(mid_type3) => {
-                            if let DataTypeOpt::StructFuture(_) = **mid_type3 {
+                            if let DataTypeOpt::StructFuture(_) = mid_type3.raw {
                                 Some(
                                     quote! {
                                         stringify!(#field_name) => match self.#field_name {
@@ -165,7 +165,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
 
     let final_array = fields.iter().filter_map(|(name, dtype)| {
         let field_name = format_ident!("{}", &name.to_string());
-        match &dtype {
+        match &dtype.raw {
             DataTypeOpt::List(_) => Some(
                 quote! {
                     stringify!(#field_name) => {
@@ -177,7 +177,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                     }
                 }
             ),
-            DataTypeOpt::Option(mid_type) if matches!(**mid_type, DataTypeOpt::List(_)) => Some(
+            DataTypeOpt::Option(mid_type) if matches!(mid_type.raw, DataTypeOpt::List(_)) => Some(
                 quote! {
                     stringify!(#field_name) => match &self.#field_name {
                         Some(ref vec) => {
@@ -197,102 +197,80 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
 
     quote! {
 
-        impl ::structpath::HasDataTypeOpt for #type_name {
-            fn data_type_opt() -> &'static ::structpath::DataTypeOpt {
-                static DATA_TYPE_OPT: ::std::sync::OnceLock<::structpath::DataTypeOpt> = ::std::sync::OnceLock::new();
-                DATA_TYPE_OPT.get_or_init(|| ::structpath::DataTypeOpt::Struct(<Self as ::structpath::StructPath>::fields_opt().clone()))
-            }
-
-            fn data_type() -> &'static ::polars_core::prelude::DataType {
-                static DATA_TYPE: ::std::sync::OnceLock<::polars_core::prelude::DataType> = ::std::sync::OnceLock::new();
-                DATA_TYPE.get_or_init(|| Self::data_type_opt().to_data_type())
+        impl ::structpath::HasDataTypeWrapper for #type_name {
+            fn data_type_wrapper() -> &'static ::structpath::DataTypeWrapper {
+                static DATA_TYPE_WRAPPER: ::std::sync::OnceLock<::structpath::DataTypeWrapper> = ::std::sync::OnceLock::new();
+                DATA_TYPE_WRAPPER.get_or_init(|| ::structpath::DataTypeWrapper::new(::structpath::DataTypeOpt::Struct(
+                    ::structpath::indexmap::IndexMap::from([
+                        #(#fields_tokens),*
+                    ])
+                )))
             }
         }
 
         impl ::structpath::StructPath for #type_name {
-            fn fields_opt() -> &'static ::structpath::indexmap::IndexMap<String, ::structpath::DataTypeOpt> {
-                static FIELDS_OPT: ::std::sync::OnceLock<::structpath::indexmap::IndexMap<String, ::structpath::DataTypeOpt>> = ::std::sync::OnceLock::new();
-                FIELDS_OPT.get_or_init(||
-                    ::structpath::indexmap::IndexMap::from([
-                        #(#fields_tokens),*
-                    ])
-                )
-            }
 
-            fn fields() -> &'static [::polars_core::prelude::Field] {
-                static FIELDS: ::std::sync::OnceLock<Vec<::polars_core::prelude::Field>> = ::std::sync::OnceLock::new();
-                FIELDS
-                    .get_or_init(|| {
-                        Self::fields_opt()
-                            .iter()
-                            .map(|(field_name, field_type)| {
-                                ::polars_core::prelude::Field::new(field_name.into(), field_type.to_data_type())
-                            })
-                            .collect()
-                    })
-                    .as_slice()
-            }
+            fn get_value_by_path(&self, path: &::structpath::Path) -> Result<::polars_core::prelude::AnyValue, ::structpath::DataTypeWrapperError> {
+                let path_component = path.components[0].clone();
 
-            fn get_value_by_path(&self, path: &::structpath::Path) -> Result<::polars_core::prelude::AnyValue, ::structpath::DataTypeOptError> {
                 if path.components.len() > 1 {
-                    let path_component = path.components[0].clone();
                     let remaining_path = ::structpath::Path {
                         components: path.components[1..].to_vec(),
                     };
                     return match path_component {
                         ::structpath::PathComponent::Field(field) => match field.as_str() {
                             #(#nested_field,)*
-                            _ => Err(::structpath::DataTypeOptError::FieldNotFound(field)),
+                            _ => Err(::structpath::DataTypeWrapperError::FieldNotFound(field)),
                         },
                         ::structpath::PathComponent::ArrayIndex(field, index) => match field.as_str() {
                             #(#nested_array,)*
-                            _ => Err(::structpath::DataTypeOptError::FieldNotFound(field)),
+                            _ => Err(::structpath::DataTypeWrapperError::FieldNotFound(field)),
                         },
-                    }                }
+                    }
+                }
 
-                let path_component = path.components[0].clone();
 
                 match path_component {
                     ::structpath::PathComponent::Field(name) => {
                         let field_type = Self::fields_opt()
                             .get(&name)
-                            .ok_or(::structpath::DataTypeOptError::FieldNotFound(name.to_string()))?;
+                            .ok_or(::structpath::DataTypeWrapperError::FieldNotFound(name.to_string()))?;
                         match name.as_str() {
                             #(#final_field,)*
-                            _ => Err(::structpath::DataTypeOptError::FieldNotFound(name)),
+                            _ => Err(::structpath::DataTypeWrapperError::FieldNotFound(name)),
                         }
                     },
                     ::structpath::PathComponent::ArrayIndex(name, index) => {
                         let field_type = Self::fields_opt()
                             .get(&name)
-                            .ok_or(::structpath::DataTypeOptError::FieldNotFound(name.to_string()))?;
-                        let field_inner_type = match field_type {
+                            .ok_or(::structpath::DataTypeWrapperError::FieldNotFound(name.to_string()))?;
+                        let field_inner_type = match &field_type.raw {
                             ::structpath::DataTypeOpt::List(inner_type) => &**inner_type,
-                            ::structpath::DataTypeOpt::Option(mid_ty) if matches!(**mid_ty, ::structpath::DataTypeOpt::List(_)) => {
-                                if let ::structpath::DataTypeOpt::List(inner_type) = &**mid_ty {
-                                    inner_type
+                            ::structpath::DataTypeOpt::Option(midt) if matches!(midt.raw, ::structpath::DataTypeOpt::List(_)) => {
+                                if let ::structpath::DataTypeOpt::List(ref inner_type) = midt.raw {
+                                    &**inner_type
                                 } else {
-                                    return Err(::structpath::DataTypeOptError::FieldNotFound(name.to_string()));
+                                    return Err(::structpath::DataTypeWrapperError::FieldNotFound(name.to_string()));
                                 }
                             }
-                            _ => return Err(::structpath::DataTypeOptError::FieldNotFound(name.to_string())),
+                            _ => return Err(::structpath::DataTypeWrapperError::FieldNotFound(name.to_string())),
                         };
                         match name.as_str() {
                             #(#final_array,)*
-                            _ => Err(::structpath::DataTypeOptError::FieldNotFound(name)),
+                            _ => Err(::structpath::DataTypeWrapperError::FieldNotFound(name)),
                         }
                     },
                 }
             }
         }
 
-        impl ::structpath::IntoAnyValueWith<#type_name> for ::structpath::DataTypeOpt
+        impl ::structpath::IntoAnyValueWith<#type_name> for ::structpath::DataTypeWrapper
         where #type_name: ::structpath::StructPath,
         {
             type ChunkDataType = ::polars_core::prelude::StructType;
 
             fn to_any_value(&self, value: &#type_name) -> ::polars_core::prelude::AnyValue {
-                let field_defs = <#type_name as ::structpath::StructPath>::fields().to_vec();
+                let field_defs = <#type_name as ::structpath::StructPath>::fields().clone();
                 let field_values = <#type_name as ::structpath::StructPath>::fields_opt()
                     .iter()
                     .map(|(field_name, _)| ::structpath::StructPath::get_value(value, field_name).unwrap().into_static())

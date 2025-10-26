@@ -1,8 +1,8 @@
 use indexmap::IndexMap;
-use polars_core::prelude::{AnyValue, CategoricalMapping, DataType, Field};
+use polars_core::prelude::{AnyValue, CategoricalMapping, DataType};
 use std::sync::{Arc, OnceLock};
 use structpath_types::{
-    data_type_wrapper, field_type, DataTypeOpt, DataTypeWrapper, DataTypeWrapperError, EnumPath,
+    data_type_wrapper, DataTypeOpt, DataTypeWrapper, DataTypeWrapperError, EnumPath,
     HasDataTypeWrapper, IntoAnyValueWith, Path, PathComponent, StructPath,
 };
 
@@ -94,72 +94,6 @@ where
             _ => panic!("Unsupported DataTypeWrapper for SampleEnum: {:?}", self),
         }
     }
-}
-
-#[allow(dead_code)]
-pub fn fields_polars() -> Vec<Field> {
-    Vec::from([
-        // Required scalar fields
-        field_type!("req_string", String),
-        field_type!("req_i32", Int32),
-        field_type!("req_i64", Int64),
-        field_type!("req_f64", Float64),
-        field_type!("req_bool", Boolean),
-        field_type!("req_struct", Struct([("subf_string", String)])),
-        field_type!("req_enum", Enum([("ITEM", 1)])),
-        // Optional scalar fields
-        field_type!("opt_string", String),
-        field_type!("opt_i32", Int32),
-        field_type!("opt_i64", Int64),
-        field_type!("opt_f64", Float64),
-        field_type!("opt_bool", Boolean),
-        field_type!("opt_struct", Struct([("subf_string", String)])),
-        field_type!("opt_enum", Enum([("ITEM", 1)])),
-        // Required vector fields with required items
-        field_type!("req_vec_req_item_string", List(String)),
-        field_type!("req_vec_req_item_i32", List(Int32)),
-        field_type!("req_vec_req_item_i64", List(Int64)),
-        field_type!("req_vec_req_item_f64", List(Float64)),
-        field_type!("req_vec_req_item_bool", List(Boolean)),
-        field_type!(
-            "req_vec_req_item_struct",
-            List(Struct([("subf_string", String)]))
-        ),
-        field_type!("req_vec_req_item_enum", List(Enum([("ITEM", 1)]))),
-        // Optional vector fields with required items
-        field_type!("opt_vec_req_item_string", List(String)),
-        field_type!("opt_vec_req_item_i32", List(Int32)),
-        field_type!("opt_vec_req_item_i64", List(Int64)),
-        field_type!("opt_vec_req_item_f64", List(Float64)),
-        field_type!("opt_vec_req_item_bool", List(Boolean)),
-        field_type!(
-            "opt_vec_req_item_struct",
-            List(Struct([("subf_string", String)]))
-        ),
-        field_type!("opt_vec_req_item_enum", List(Enum([("ITEM", 1)]))),
-        // Required vector fields with optional items
-        field_type!("req_vec_opt_item_string", List(String)),
-        field_type!("req_vec_opt_item_i32", List(Int32)),
-        field_type!("req_vec_opt_item_i64", List(Int64)),
-        field_type!("req_vec_opt_item_f64", List(Float64)),
-        field_type!("req_vec_opt_item_bool", List(Boolean)),
-        field_type!(
-            "req_vec_opt_item_struct",
-            List(Struct([("subf_string", String)]))
-        ),
-        field_type!("req_vec_opt_item_enum", List(Enum([("ITEM", 1)]))),
-        // Optional vector fields with optional items
-        field_type!("opt_vec_opt_item_string", List(String)),
-        field_type!("opt_vec_opt_item_i32", List(Int32)),
-        field_type!("opt_vec_opt_item_i64", List(Int64)),
-        field_type!("opt_vec_opt_item_f64", List(Float64)),
-        field_type!("opt_vec_opt_item_bool", List(Boolean)),
-        field_type!(
-            "opt_vec_opt_item_struct",
-            List(Struct([("subf_string", String)]))
-        ),
-        field_type!("opt_vec_opt_item_enum", List(Enum([("ITEM", 1)]))),
-    ])
 }
 
 #[derive(Debug, Clone)]
@@ -291,7 +225,6 @@ impl StructPath for SampleStruct {
         let path_component = path.components[0].clone();
 
         if path.components.len() > 1 {
-            let path_component = path.components[0].clone();
             let remaining_path = Path {
                 components: path.components[1..].to_vec(),
             };
@@ -558,13 +491,13 @@ impl StructPath for SampleStruct {
     }
 }
 
-impl IntoAnyValueWith<SampleStruct> for DataTypeOpt
+impl IntoAnyValueWith<SampleStruct> for DataTypeWrapper
 where
     SampleStruct: StructPath,
 {
     type ChunkDataType = ::polars_core::prelude::StructType;
     fn to_any_value(&self, value: &SampleStruct) -> AnyValue<'_> {
-        let field_defs = SampleStruct::fields().to_vec();
+        let field_defs = SampleStruct::fields().clone();
         let field_values = SampleStruct::fields_opt()
             .iter()
             .map(|(field_name, _)| value.get_value(field_name).unwrap().into_static())

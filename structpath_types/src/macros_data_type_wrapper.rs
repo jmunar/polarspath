@@ -47,12 +47,12 @@ macro_rules! data_type_wrapper {
         $crate::DataTypeWrapper::new($crate::DataTypeOpt::StructFuture($name))
     };
     (Struct([$(($field_name:expr, $($field_type:tt)*)),*])) => {
-        $crate::DataTypeWrapper::new($crate::DataTypeOpt::Struct(::indexmap::IndexMap::from_iter([
+        $crate::DataTypeWrapper::new($crate::DataTypeOpt::Struct($crate::indexmap::IndexMap::from_iter([
             $(($field_name.into(), $crate::data_type_wrapper!($($field_type)*))),*
         ])))
     };
     (Enum($items:expr)) => {
-        $crate::DataTypeWrapper::new($crate::DataTypeOpt::Enum(::indexmap::IndexMap::from_iter($items.into_iter().map(|(k, v)| (k.into(), v)))))
+        $crate::DataTypeWrapper::new($crate::DataTypeOpt::Enum($crate::indexmap::IndexMap::from_iter($items.into_iter().map(|(k, v)| (k.into(), v)))))
     };
 
     // Recursive cases for wrapping types

@@ -205,7 +205,7 @@ impl ToTokens for DataTypeWrapper {
             DataTypeOpt::StructFuture(inner_type_name) => {
                 let inner_type = TokenStream::from_str(inner_type_name).ok().unwrap();
                 quote! {
-                    <#inner_type as ::structpath::HasDataTypeOpt>::data_type_opt().clone()
+                    <#inner_type as ::structpath::HasDataTypeWrapper>::data_type_wrapper().clone()
                 }
             }
             DataTypeOpt::Option(inner_type) => {

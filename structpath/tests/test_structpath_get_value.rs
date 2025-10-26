@@ -1,5 +1,5 @@
 use polars_core::prelude::{AnyValue, DataType, Field, Series};
-use structpath::{EnumPath, HasDataTypeOpt, StructPath};
+use structpath::{EnumPath, HasDataTypeWrapper, StructPath};
 
 #[derive(EnumPath, Debug, Clone, PartialEq)]
 pub enum SampleEnum {

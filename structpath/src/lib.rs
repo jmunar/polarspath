@@ -6,6 +6,6 @@ pub use structpath_derive::{EnumPath, StructPath};
 
 extern crate structpath_types;
 pub use structpath_types::{
-    indexmap, DataTypeOpt, DataTypeOptError, EnumPath, HasDataTypeOpt, IntoAnyValueWith, Path,
-    PathComponent, StructPath,
+    data_type_wrapper, indexmap, DataTypeOpt, DataTypeWrapper, DataTypeWrapperError, EnumPath,
+    HasDataTypeWrapper, IntoAnyValueWith, Path, PathComponent, StructPath,
 };
