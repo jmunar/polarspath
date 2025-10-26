@@ -2,7 +2,7 @@ mod sample;
 use sample::{SampleEnum, SampleStruct, SampleSubstruct};
 
 use polars_core::prelude::{AnyValue, Series};
-use structpath_types::{HasDataTypeOpt, StructPath};
+use structpath_types::{HasDataTypeWrapper, StructPath};
 
 fn sample_struct() -> SampleStruct {
     SampleStruct {

@@ -16,11 +16,11 @@
 /// assert_eq!(t1, DataType::String);
 ///
 /// // List types
-/// let t2 = data_type!(List, String);
+/// let t2 = data_type!(List(String));
 /// assert_eq!(t2, DataType::List(Box::new(DataType::String)));
 ///
 /// // Complex nested types
-/// let t3 = data_type!(List, List, String);
+/// let t3 = data_type!(List(List(String)));
 /// assert_eq!(t3, DataType::List(Box::new(DataType::List(Box::new(DataType::String)))));
 /// ```
 #[macro_export]
@@ -33,14 +33,18 @@ macro_rules! data_type {
     (Boolean) => { ::polars_core::prelude::DataType::Boolean };
 
     // Special cases with parameters
-    (Struct($fields:expr)) => { ::polars_core::prelude::DataType::Struct($fields) };
+    (Struct([$(($field_name:expr, $field_type:tt)),*])) => { ::polars_core::prelude::DataType::Struct(
+        vec![
+            $(::polars_core::prelude::Field::new($field_name.into(), $crate::data_type!($field_type))),*
+        ]
+    ) };
     (Enum($items:expr)) => { ::polars_core::prelude::DataType::Enum(
         ::polars_core::prelude::FrozenCategories::new($items.into_iter().map(|(k, _v)| k)).unwrap(),
         std::sync::Arc::new(::polars_core::prelude::CategoricalMapping::new($items.len()))
     ) };
 
     // Recursive cases for wrapping types (no Option support)
-    (List, $($rest:tt)*) => {
+    (List($($rest:tt)*)) => {
         ::polars_core::prelude::DataType::List(Box::new($crate::data_type!($($rest)*)))
     };
 }
@@ -62,11 +66,11 @@ macro_rules! data_type {
 /// assert_eq!(field1, ::polars_core::prelude::Field::new("username".into(), DataType::String));
 ///
 /// // List field
-/// let field2 = field_type!("tags", List, String);
+/// let field2 = field_type!("tags", List(String));
 /// assert_eq!(field2, ::polars_core::prelude::Field::new("tags".into(), DataType::List(Box::new(DataType::String))));
 ///
 /// // Complex nested field
-/// let field3 = field_type!("nested_tags", List, List, String);
+/// let field3 = field_type!("nested_tags", List(List(String)));
 /// assert_eq!(field3, ::polars_core::prelude::Field::new("nested_tags".into(),
 ///     DataType::List(Box::new(DataType::List(Box::new(DataType::String))))));
 /// ```
@@ -95,15 +99,15 @@ mod tests {
         use polars_core::prelude::DataType;
 
         assert_eq!(
-            data_type!(List, String),
+            data_type!(List(String)),
             DataType::List(Box::new(DataType::String))
         );
         assert_eq!(
-            data_type!(List, Int32),
+            data_type!(List(Int32)),
             DataType::List(Box::new(DataType::Int32))
         );
         assert_eq!(
-            data_type!(List, Int64),
+            data_type!(List(Int64)),
             DataType::List(Box::new(DataType::Int64))
         );
     }
@@ -114,13 +118,13 @@ mod tests {
 
         // List(List(String))
         assert_eq!(
-            data_type!(List, List, String),
+            data_type!(List(List(String))),
             DataType::List(Box::new(DataType::List(Box::new(DataType::String))))
         );
 
         // List(List(List(Int64)))
         assert_eq!(
-            data_type!(List, List, List, Int64),
+            data_type!(List(List(List(Int64)))),
             DataType::List(Box::new(DataType::List(Box::new(DataType::List(
                 Box::new(DataType::Int64)
             )))))
@@ -136,7 +140,10 @@ mod tests {
             "field1".into(),
             DataType::String,
         )];
-        assert_eq!(data_type!(Struct(fields.clone())), DataType::Struct(fields));
+        assert_eq!(
+            data_type!(Struct([("field1", String)])),
+            DataType::Struct(fields)
+        );
     }
 
     #[test]
@@ -163,7 +170,7 @@ mod tests {
         );
 
         // Test list types
-        let result4 = field_type!("tags", List, String);
+        let result4 = field_type!("tags", List(String));
         assert_eq!(
             result4,
             ::polars_core::prelude::Field::new(
@@ -173,7 +180,7 @@ mod tests {
         );
 
         // Test complex nested types
-        let result5 = field_type!("nested_lists", List, List, Int32);
+        let result5 = field_type!("nested_lists", List(List(Int32)));
         assert_eq!(
             result5,
             ::polars_core::prelude::Field::new(
@@ -187,7 +194,7 @@ mod tests {
             "subfield".into(),
             DataType::String,
         )];
-        let result6 = field_type!("nested", Struct(fields.clone()));
+        let result6 = field_type!("nested", Struct([("subfield", String)]));
         assert_eq!(
             result6,
             ::polars_core::prelude::Field::new("nested".into(), DataType::Struct(fields))

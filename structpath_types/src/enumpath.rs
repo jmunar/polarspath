@@ -1,4 +1,4 @@
-use crate::HasDataTypeOpt;
+use crate::HasDataTypeWrapper;
 use polars_core::prelude::CategoricalMapping;
 use std::sync::Arc;
 
@@ -8,7 +8,7 @@ use std::sync::Arc;
 /// The end user methods are:
 /// - `mapping`
 ///
-pub trait EnumPath: HasDataTypeOpt {
+pub trait EnumPath: HasDataTypeWrapper {
     /// Returns the polars CategoricalMapping for this enum.
     fn mapping() -> &'static Arc<CategoricalMapping>;
 }

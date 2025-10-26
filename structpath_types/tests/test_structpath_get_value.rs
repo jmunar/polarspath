@@ -2,7 +2,7 @@ mod sample;
 use sample::{SampleEnum, SampleStruct, SampleSubstruct};
 
 use polars_core::prelude::{AnyValue, DataType, Field, Series};
-use structpath_types::{EnumPath, HasDataTypeOpt, StructPath};
+use structpath_types::{EnumPath, HasDataTypeWrapper, StructPath};
 
 fn sample_struct() -> SampleStruct {
     SampleStruct {
@@ -97,7 +97,6 @@ fn test_field_to_any_value_req_fields() -> Result<(), Box<dyn std::error::Error>
     );
 
     let any_value = sample_struct.get_value("req_enum")?;
-    println!("any_value: {:?}", any_value);
     assert_eq!(any_value, AnyValue::Enum(0, SampleEnum::mapping()));
 
     Ok(())
