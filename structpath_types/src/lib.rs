@@ -8,7 +8,7 @@ mod structpath;
 
 pub use any_value::IntoAnyValueWith;
 pub use data_type_wrapper::{
-    DataTypeOpt, DataTypeWrapper, DataTypeWrapperError, HasDataTypeWrapper,
+    DataTypeOpt, DataTypeWrapper, DataTypeWrapperError, EnumOptInfo, HasDataTypeWrapper,
 };
 pub use enumpath::EnumPath;
 pub use path::{Path, PathComponent};

@@ -6,7 +6,7 @@
 /// # Examples
 ///
 /// ```rust
-/// use structpath_types::{DataTypeOpt, DataTypeWrapper, data_type_wrapper};
+/// use structpath_types::{DataTypeOpt, DataTypeWrapper, EnumOptInfo, data_type_wrapper};
 /// use indexmap::IndexMap;
 ///
 /// // Simple types
@@ -31,28 +31,33 @@
 ///
 /// // Enums of string literals
 /// let t6 = data_type_wrapper!(Enum([("SampleEnum", 0)]));
-/// assert_eq!(t6, DataTypeWrapper::new(DataTypeOpt::Enum(IndexMap::from([("SampleEnum".into(), 0)]))));
+/// assert_eq!(t6, DataTypeWrapper::new(DataTypeOpt::Enum(EnumOptInfo::from_iter([("SampleEnum", 0)]))));
 /// ```
 #[macro_export]
 macro_rules! data_type_wrapper {
-    // Base case: simple types without parameters
+    // Simple types without parameters
     (String) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::String) };
     (Int32) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::Int32) };
     (Int64) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::Int64) };
     (Float64) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::Float64) };
     (Boolean) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::Boolean) };
 
-    // Special cases with parameters
-    (StructFuture($name:expr)) => {
-        $crate::DataTypeWrapper::new($crate::DataTypeOpt::StructFuture($name))
-    };
+    // Build struct or enum from its components
     (Struct([$(($field_name:expr, $($field_type:tt)*)),*])) => {
         $crate::DataTypeWrapper::new($crate::DataTypeOpt::Struct($crate::indexmap::IndexMap::from_iter([
             $(($field_name.into(), $crate::data_type_wrapper!($($field_type)*))),*
         ])))
     };
     (Enum($items:expr)) => {
-        $crate::DataTypeWrapper::new($crate::DataTypeOpt::Enum($crate::indexmap::IndexMap::from_iter($items.into_iter().map(|(k, v)| (k.into(), v)))))
+        $crate::DataTypeWrapper::new($crate::DataTypeOpt::Enum($crate::EnumOptInfo::from_iter($items)))
+    };
+
+    // Reference to an existing
+    (FromStructPath($name:ty)) => {
+        <$name as $crate::HasDataTypeWrapper>::data_type_wrapper().clone()
+    };
+    (FromEnumPath($name:ty)) => {
+        <$name as $crate::HasDataTypeWrapper>::data_type_wrapper().clone()
     };
 
     // Recursive cases for wrapping types
@@ -66,8 +71,13 @@ macro_rules! data_type_wrapper {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{DataTypeOpt, DataTypeWrapper};
+    use crate::{
+        DataTypeOpt, DataTypeWrapper, DataTypeWrapperError, EnumOptInfo, EnumPath,
+        HasDataTypeWrapper, Path, PathComponent, StructPath,
+    };
     use indexmap::IndexMap;
+    use polars_core::prelude::AnyValue;
+    use std::sync::OnceLock;
 
     #[test]
     fn test_data_type_opt_macro_simple_types() {
@@ -94,17 +104,55 @@ mod tests {
     }
 
     #[test]
-    fn test_data_type_opt_macro_special_types() {
+    fn test_data_type_opt_macro_from_enum_path() {
+        enum SomeEnum {}
+
+        impl HasDataTypeWrapper for SomeEnum {
+            fn data_type_wrapper() -> &'static DataTypeWrapper {
+                static DATA_TYPE_WRAPPER: OnceLock<DataTypeWrapper> = OnceLock::new();
+                DATA_TYPE_WRAPPER.get_or_init(|| {
+                    DataTypeWrapper::new(DataTypeOpt::Enum(EnumOptInfo::from_iter([])))
+                })
+            }
+        }
+
+        impl EnumPath for SomeEnum {}
+
         assert_eq!(
-            data_type_wrapper!(Enum([("SampleEnum", 0)])),
-            DataTypeWrapper::new(DataTypeOpt::Enum(IndexMap::from([(
-                "SampleEnum".into(),
-                0
-            )])))
+            data_type_wrapper!(FromEnumPath(SomeEnum)),
+            SomeEnum::data_type_wrapper().clone()
         );
+    }
+
+    #[test]
+    fn test_data_type_opt_macro_from_struct_path() {
+        struct SomeStruct {}
+
+        impl HasDataTypeWrapper for SomeStruct {
+            fn data_type_wrapper() -> &'static DataTypeWrapper {
+                static DATA_TYPE_WRAPPER: OnceLock<DataTypeWrapper> = OnceLock::new();
+                DATA_TYPE_WRAPPER
+                    .get_or_init(|| DataTypeWrapper::new(DataTypeOpt::Struct(IndexMap::new())))
+            }
+        }
+
+        impl StructPath for SomeStruct {
+            fn get_value_by_path(&self, path: &Path) -> Result<AnyValue<'_>, DataTypeWrapperError> {
+                let path_component = path.components[0].clone();
+                match path_component {
+                    PathComponent::Field(field) => {
+                        Err(DataTypeWrapperError::FieldNotFound(field.to_string()))
+                    }
+                    PathComponent::ArrayIndex(field, _) => {
+                        Err(DataTypeWrapperError::FieldNotFound(field.to_string()))
+                    }
+                }
+            }
+        }
+
         assert_eq!(
-            data_type_wrapper!(StructFuture("SomeStruct")),
-            DataTypeWrapper::new(DataTypeOpt::StructFuture("SomeStruct"))
+            data_type_wrapper!(FromStructPath(SomeStruct)),
+            SomeStruct::data_type_wrapper().clone()
         );
     }
 
@@ -112,7 +160,7 @@ mod tests {
     fn test_data_type_opt_macro_enum_multiple_values() {
         assert_eq!(
             data_type_wrapper!(Enum([("Option1", 1), ("Option2", 2), ("Option3", 3)])),
-            DataTypeWrapper::new(DataTypeOpt::Enum(IndexMap::from([
+            DataTypeWrapper::new(DataTypeOpt::Enum(EnumOptInfo::from_iter([
                 ("Option1".into(), 1),
                 ("Option2".into(), 2),
                 ("Option3".into(), 3)
@@ -184,7 +232,7 @@ mod tests {
             data_type_wrapper!(Option(List(Enum([("opt1", 1), ("opt2", 3)])))),
             DataTypeWrapper::new(DataTypeOpt::Option(Box::new(DataTypeWrapper::new(
                 DataTypeOpt::List(Box::new(DataTypeWrapper::new(DataTypeOpt::Enum(
-                    IndexMap::from_iter([("opt1".into(), 1), ("opt2".into(), 3)])
+                    EnumOptInfo::from_iter([("opt1", 1), ("opt2", 3)])
                 ))))
             ))))
         );

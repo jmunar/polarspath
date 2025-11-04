@@ -864,7 +864,6 @@ version = "0.1.0"
 dependencies = [
  "indexmap",
  "polars-core",
- "polars-dtype",
  "proc-macro2",
  "quote",
  "thiserror 1.0.69",

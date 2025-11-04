@@ -15,6 +15,7 @@ fn sample_struct() -> SampleStruct {
             subf_string: "subf_string1".to_string(),
         },
         req_enum: SampleEnum::ITEM,
+        req_enum2: 1,
 
         opt_string: None,
         opt_i32: None,
@@ -23,6 +24,7 @@ fn sample_struct() -> SampleStruct {
         opt_bool: None,
         opt_struct: None,
         opt_enum: None,
+        opt_enum2: None,
 
         req_vec_req_item_string: vec!["req_vec_req_item_string".to_string()],
         req_vec_req_item_i32: vec![3],
@@ -33,6 +35,7 @@ fn sample_struct() -> SampleStruct {
             subf_string: "subf_string3".to_string(),
         }],
         req_vec_req_item_enum: vec![SampleEnum::ITEM],
+        req_vec_req_item_enum2: vec![1],
 
         opt_vec_req_item_string: None,
         opt_vec_req_item_i32: None,
@@ -41,6 +44,7 @@ fn sample_struct() -> SampleStruct {
         opt_vec_req_item_bool: None,
         opt_vec_req_item_struct: None,
         opt_vec_req_item_enum: None,
+        opt_vec_req_item_enum2: None,
 
         req_vec_opt_item_string: vec![None],
         req_vec_opt_item_i32: vec![None],
@@ -49,6 +53,7 @@ fn sample_struct() -> SampleStruct {
         req_vec_opt_item_bool: vec![None],
         req_vec_opt_item_struct: vec![None],
         req_vec_opt_item_enum: vec![None],
+        req_vec_opt_item_enum2: vec![None],
 
         opt_vec_opt_item_string: Some(vec![None]),
         opt_vec_opt_item_i32: Some(vec![None]),
@@ -57,6 +62,7 @@ fn sample_struct() -> SampleStruct {
         opt_vec_opt_item_bool: Some(vec![None]),
         opt_vec_opt_item_struct: Some(vec![None]),
         opt_vec_opt_item_enum: Some(vec![None]),
+        opt_vec_opt_item_enum2: Some(vec![None]),
     }
 }
 
@@ -83,6 +89,9 @@ fn test_field_to_any_value_opt_fields_null() -> Result<(), Box<dyn std::error::E
     assert_eq!(any_value, AnyValue::Null);
 
     let any_value = sample_struct.get_value("opt_enum")?;
+    assert_eq!(any_value, AnyValue::Null);
+
+    let any_value = sample_struct.get_value("opt_enum2")?;
     assert_eq!(any_value, AnyValue::Null);
 
     Ok(())
@@ -112,6 +121,9 @@ fn test_field_to_any_value_opt_vec_fields_req_items_null() -> Result<(), Box<dyn
     assert_eq!(any_value, AnyValue::Null);
 
     let any_value = sample_struct.get_value("opt_vec_req_item_enum")?;
+    assert_eq!(any_value, AnyValue::Null);
+
+    let any_value = sample_struct.get_value("opt_vec_req_item_enum2")?;
     assert_eq!(any_value, AnyValue::Null);
 
     // Nested
@@ -163,6 +175,20 @@ fn test_field_to_any_value_req_vec_fields_opt_items_null() -> Result<(), Box<dyn
     );
 
     let any_value = sample_struct.get_value("req_vec_opt_item_enum")?;
+    assert_eq!(
+        any_value,
+        AnyValue::List(
+            Series::from_any_values_and_dtype(
+                "".into(),
+                &[AnyValue::Null],
+                SampleEnum::data_type(),
+                false
+            )
+            .unwrap()
+        )
+    );
+
+    let any_value = sample_struct.get_value("req_vec_opt_item_enum2")?;
     assert_eq!(
         any_value,
         AnyValue::List(

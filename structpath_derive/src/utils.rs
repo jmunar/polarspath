@@ -1,9 +1,8 @@
-use quote::{quote, ToTokens};
-use structpath_types::indexmap::IndexMap;
+use quote::ToTokens;
 use structpath_types::{data_type_wrapper, DataTypeOpt, DataTypeWrapper};
 use syn::PathArguments::AngleBracketed;
 use syn::{
-    AngleBracketedGenericArguments, Attribute, Expr, ExprLit, GenericArgument, Lit, Meta, Type,
+    parse2, AngleBracketedGenericArguments, Attribute, Expr, GenericArgument, Lit, Meta, Type,
 };
 
 fn get_angle_bracketed_inner(type_path: &syn::TypePath) -> Option<&Type> {
@@ -49,87 +48,77 @@ fn has_type_hint_struct(attrs: &[Attribute]) -> bool {
     false
 }
 
-fn has_type_hint_enum(attrs: &[Attribute]) -> Option<IndexMap<String, u32>> {
+fn has_type_hint_enum(attrs: &[Attribute]) -> bool {
     for attr in attrs {
+        // Check if this is our type_hint attribute
         if attr.path().is_ident("type_hint") {
+            // Handle different attribute syntaxes
+            match &attr.meta {
+                Meta::NameValue(meta_name_value) => {
+                    // #[type_hint = "enum"]
+                    if let Expr::Lit(expr_lit) = &meta_name_value.value {
+                        if let Lit::Str(lit_str) = &expr_lit.lit {
+                            return lit_str.value() == "enum";
+                        }
+                    }
+                }
+                Meta::List(meta_list) => {
+                    // #[type_hint("enum")]
+                    if let Ok(lit_str) = syn::parse2::<syn::LitStr>(meta_list.tokens.clone()) {
+                        return lit_str.value() == "enum";
+                    }
+                }
+                _ => return false,
+            }
+        }
+    }
+    false
+}
+
+// Extract the second argument of the type_hint attribute if it is an enum
+// Example: #[type_hint("enum", "sample.user.Loyalty")]
+fn get_type_hint_enum(attrs: &[Attribute]) -> Option<String> {
+    for attr in attrs {
+        // Check if this is our type_hint attribute
+        if attr.path().is_ident("type_hint") {
+            // Handle different attribute syntaxes
             match &attr.meta {
                 Meta::List(meta_list) => {
-                    // Parse #[type_hint("enum", [("item1", 3), ("item2", 5)])]
+                    // #[type_hint("enum", "sample.user.Loyalty")]
+                    // Parse the inner tokens as a tuple expression by wrapping in parentheses
+                    use proc_macro2::{Delimiter, Group};
                     let tokens = meta_list.tokens.clone();
-
-                    // Parse as a tuple by wrapping the tokens in parentheses
-                    let tuple_tokens = quote! { (#tokens) };
-                    if let Ok(parsed) = syn::parse2::<syn::ExprTuple>(tuple_tokens) {
-                        if parsed.elems.len() == 2 {
-                            // First element should be "enum"
-                            if let Some(Expr::Lit(ExprLit {
-                                lit: Lit::Str(lit_str),
-                                ..
-                            })) = parsed.elems.first()
-                            {
-                                if lit_str.value() == "enum" {
-                                    // Second element should be an array of tuples
-                                    if let Some(second_elem) = parsed.elems.get(1) {
-                                        return Some(parse_enum_array(second_elem));
-                                    }
+                    let group = Group::new(Delimiter::Parenthesis, tokens);
+                    let mut wrapped_tokens = proc_macro2::TokenStream::new();
+                    wrapped_tokens.extend(std::iter::once(proc_macro2::TokenTree::Group(group)));
+                    if let Ok(syn::Expr::Tuple(syn::ExprTuple { elems, .. })) =
+                        parse2::<syn::Expr>(wrapped_tokens)
+                    {
+                        let mut elems_iter = elems.iter();
+                        // Get the first argument
+                        if let Some(syn::Expr::Lit(syn::ExprLit {
+                            lit: syn::Lit::Str(first),
+                            ..
+                        })) = elems_iter.next()
+                        {
+                            if first.value() == "enum" {
+                                // Get the second argument if it exists
+                                if let Some(syn::Expr::Lit(syn::ExprLit {
+                                    lit: syn::Lit::Str(second),
+                                    ..
+                                })) = elems_iter.next()
+                                {
+                                    return Some(second.value());
                                 }
                             }
                         }
                     }
                 }
-                _ => continue,
+                _ => return None,
             }
         }
     }
     None
-}
-
-fn parse_enum_array(expr: &Expr) -> IndexMap<String, u32> {
-    // Parse an array like [("item1", 3), ("item2", 5)] into IndexMap<String, u32>
-    let array_expr = match expr {
-        Expr::Array(arr) => arr,
-        _ => panic!(
-            "Expected array of tuples for enum type_hint, got: {}",
-            expr.to_token_stream()
-        ),
-    };
-
-    let mut map = IndexMap::new();
-
-    for elem in &array_expr.elems {
-        let tuple_expr = match elem {
-            Expr::Tuple(tuple) if tuple.elems.len() == 2 => tuple,
-            _ => panic!(
-                "Expected tuple with exactly 2 elements, got: {}",
-                expr.to_token_stream()
-            ),
-        };
-
-        let key = match &tuple_expr.elems[0] {
-            Expr::Lit(ExprLit {
-                lit: Lit::Str(s), ..
-            }) => s.value(),
-            _ => panic!(
-                "Expected string literal as first tuple element, got: {}",
-                tuple_expr.elems[0].to_token_stream()
-            ),
-        };
-
-        let value = match &tuple_expr.elems[1] {
-            Expr::Lit(ExprLit {
-                lit: Lit::Int(i), ..
-            }) => i
-                .base10_parse()
-                .unwrap_or_else(|_| panic!("Invalid integer literal: {}", i.to_token_stream())),
-            _ => panic!(
-                "Expected integer literal as second tuple element, got: {}",
-                tuple_expr.elems[1].to_token_stream()
-            ),
-        };
-        map.insert(key, value);
-    }
-
-    map
 }
 
 pub fn parse_data_type(field_type: &Type, attrs: &[Attribute]) -> DataTypeWrapper {
@@ -141,8 +130,10 @@ pub fn parse_data_type(field_type: &Type, attrs: &[Attribute]) -> DataTypeWrappe
                 match segment_name.as_str() {
                     "String" => data_type_wrapper!(String),
                     "i32" => {
-                        if let Some(enum_values) = has_type_hint_enum(attrs) {
-                            DataTypeWrapper::new(DataTypeOpt::Enum(enum_values))
+                        if let Some(type_name) = get_type_hint_enum(attrs) {
+                            DataTypeWrapper::new(DataTypeOpt::EnumFuture(Box::leak(
+                                type_name.into_boxed_str(),
+                            )))
                         } else {
                             data_type_wrapper!(Int32)
                         }
@@ -161,8 +152,11 @@ pub fn parse_data_type(field_type: &Type, attrs: &[Attribute]) -> DataTypeWrappe
                         DataTypeWrapper::new(DataTypeOpt::Option(Box::new(inner_type)))
                     }
                     _ => {
-                        if let Some(enum_values) = has_type_hint_enum(attrs) {
-                            DataTypeWrapper::new(DataTypeOpt::Enum(enum_values))
+                        if has_type_hint_enum(attrs) {
+                            let type_name = type_path.to_token_stream().to_string();
+                            DataTypeWrapper::new(DataTypeOpt::EnumFuture(Box::leak(
+                                type_name.into_boxed_str(),
+                            )))
                         } else if has_type_hint_struct(attrs) {
                             let type_name = type_path.to_token_stream().to_string();
                             DataTypeWrapper::new(DataTypeOpt::StructFuture(Box::leak(
@@ -192,9 +186,32 @@ pub fn parse_data_type(field_type: &Type, attrs: &[Attribute]) -> DataTypeWrappe
 #[cfg(test)]
 mod tests {
     use super::*;
+    use structpath_types::{DataTypeOpt, DataTypeWrapper};
 
     #[test]
-    fn test_parse_data_type() {
+    fn test_has_type_hint_struct() {
+        let attrs: Vec<syn::Attribute> = vec![syn::parse_quote! { #[type_hint("struct")] }];
+        let has_type_hint_struct = has_type_hint_struct(&attrs);
+        assert_eq!(has_type_hint_struct, true);
+    }
+
+    #[test]
+    fn test_has_type_hint_enum() {
+        let attrs: Vec<syn::Attribute> = vec![syn::parse_quote! { #[type_hint("enum")] }];
+        let has_type_hint_enum = has_type_hint_enum(&attrs);
+        assert_eq!(has_type_hint_enum, true);
+    }
+
+    #[test]
+    fn test_get_type_hint_enum() {
+        let attrs: Vec<syn::Attribute> =
+            vec![syn::parse_quote! { #[type_hint("enum", "sample.user.Loyalty")] }];
+        let type_hint = get_type_hint_enum(&attrs);
+        assert_eq!(type_hint, Some("sample.user.Loyalty".to_string()));
+    }
+
+    #[test]
+    fn test_parse_data_type_string() {
         let field_type: syn::Type = syn::parse_str("String").unwrap();
         let attrs = vec![];
         let data_type = parse_data_type(&field_type, &attrs);
@@ -202,36 +219,65 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_enum_array_basic() {
-        // Test parsing [("item1", 3), ("item2", 5)]
-        let array_expr: Expr = syn::parse_str("[(\"item1\", 3), (\"item2\", 5)]").unwrap();
-        let result = parse_enum_array(&array_expr);
-        let expected = IndexMap::from([("item1".to_string(), 3), ("item2".to_string(), 5)]);
-        assert_eq!(result, expected);
+    fn test_parse_data_type_i32() {
+        let field_type: syn::Type = syn::parse_str("i32").unwrap();
+        let attrs = vec![];
+        let data_type = parse_data_type(&field_type, &attrs);
+        assert_eq!(data_type, data_type_wrapper!(Int32));
     }
 
     #[test]
-    fn test_parse_enum_array_empty() {
-        // Test parsing empty array []
-        let array_expr: Expr = syn::parse_str("[]").unwrap();
-        let result = parse_enum_array(&array_expr);
-        let expected = IndexMap::new();
-        assert_eq!(result, expected);
+    fn test_parse_data_type_i32_enum() {
+        let field_type: syn::Type = syn::parse_str("i32").unwrap();
+        let attrs = vec![syn::parse_quote! { #[type_hint("enum", "SomeEnum")] }];
+        let data_type = parse_data_type(&field_type, &attrs);
+        assert_eq!(
+            data_type,
+            DataTypeWrapper::new(DataTypeOpt::EnumFuture(Box::leak(
+                "SomeEnum".to_string().into_boxed_str()
+            )))
+        );
     }
 
     #[test]
-    #[should_panic(expected = "Expected integer literal as second tuple element")]
-    fn test_parse_enum_array_invalid_value() {
-        // Test parsing invalid array [("item1", "not_a_number")]
-        let array_expr: Expr = syn::parse_str("[(\"item1\", \"not_a_number\")]").unwrap();
-        parse_enum_array(&array_expr);
+    fn test_parse_data_type_vec_string() {
+        let field_type: syn::Type = syn::parse_str("Vec<String>").unwrap();
+        let attrs = vec![];
+        let data_type = parse_data_type(&field_type, &attrs);
+        assert_eq!(data_type, data_type_wrapper!(List(String)));
     }
 
     #[test]
-    #[should_panic(expected = "Expected array of tuples for enum type_hint")]
-    fn test_parse_enum_array_not_array() {
-        // Test parsing non-array expression
-        let expr: Expr = syn::parse_str("\"not_an_array\"").unwrap();
-        parse_enum_array(&expr);
+    fn test_parse_data_type_enum() {
+        let field_type: syn::Type = syn::parse_str("SomeEnum").unwrap();
+        let attrs: Vec<syn::Attribute> = vec![syn::parse_quote! { #[type_hint("enum")] }];
+        let data_type = parse_data_type(&field_type, &attrs);
+        assert_eq!(
+            data_type,
+            DataTypeWrapper::new(DataTypeOpt::EnumFuture(Box::leak(
+                "SomeEnum".to_string().into_boxed_str()
+            )))
+        );
+    }
+
+    #[test]
+    fn test_parse_data_type_struct() {
+        let field_type: syn::Type = syn::parse_str("SomeStruct").unwrap();
+        let attrs: Vec<syn::Attribute> = vec![syn::parse_quote! { #[type_hint("struct")] }];
+        let data_type = parse_data_type(&field_type, &attrs);
+        assert_eq!(
+            data_type,
+            DataTypeWrapper::new(DataTypeOpt::StructFuture(Box::leak(
+                "SomeStruct".to_string().into_boxed_str()
+            )))
+        );
+    }
+
+    #[test]
+    fn test_parse_data_type_unknown_panics() {
+        let field_type: syn::Type = syn::parse_str("Unknown").unwrap();
+        let attrs = vec![];
+        let result = std::panic::catch_unwind(|| parse_data_type(&field_type, &attrs));
+        assert!(result.is_err());
     }
 }

@@ -2,7 +2,7 @@ mod sample;
 use sample::{SampleEnum, SampleStruct, SampleSubstruct};
 
 use polars_core::prelude::{AnyValue, DataType, Field, Series};
-use structpath_types::{EnumPath, HasDataTypeWrapper, StructPath};
+use structpath_types::{EnumPath, StructPath};
 
 fn sample_struct() -> SampleStruct {
     SampleStruct {
@@ -15,6 +15,7 @@ fn sample_struct() -> SampleStruct {
             subf_string: "subf_string1".to_string(),
         },
         req_enum: SampleEnum::ITEM,
+        req_enum2: 1,
 
         opt_string: Some("opt_string".to_string()),
         opt_i32: Some(2),
@@ -25,6 +26,7 @@ fn sample_struct() -> SampleStruct {
             subf_string: "subf_string2".to_string(),
         }),
         opt_enum: Some(SampleEnum::ITEM),
+        opt_enum2: Some(1),
 
         req_vec_req_item_string: vec!["req_vec_req_item_string".to_string()],
         req_vec_req_item_i32: vec![3],
@@ -35,6 +37,7 @@ fn sample_struct() -> SampleStruct {
             subf_string: "subf_string3".to_string(),
         }],
         req_vec_req_item_enum: vec![SampleEnum::ITEM],
+        req_vec_req_item_enum2: vec![1],
 
         opt_vec_req_item_string: Some(vec!["opt_vec_req_item_string".to_string()]),
         opt_vec_req_item_i32: Some(vec![4]),
@@ -45,6 +48,7 @@ fn sample_struct() -> SampleStruct {
             subf_string: "subf_string4".to_string(),
         }]),
         opt_vec_req_item_enum: Some(vec![SampleEnum::ITEM]),
+        opt_vec_req_item_enum2: Some(vec![1]),
 
         req_vec_opt_item_string: vec![Some("req_vec_opt_item_string".to_string())],
         req_vec_opt_item_i32: vec![Some(5)],
@@ -55,6 +59,7 @@ fn sample_struct() -> SampleStruct {
             subf_string: "subf_string5".to_string(),
         })],
         req_vec_opt_item_enum: vec![Some(SampleEnum::ITEM)],
+        req_vec_opt_item_enum2: vec![Some(1)],
 
         opt_vec_opt_item_string: Some(vec![Some("opt_vec_opt_item_string".to_string())]),
         opt_vec_opt_item_i32: Some(vec![Some(6)]),
@@ -65,6 +70,7 @@ fn sample_struct() -> SampleStruct {
             subf_string: "subf_string6".to_string(),
         })]),
         opt_vec_opt_item_enum: Some(vec![Some(SampleEnum::ITEM)]),
+        opt_vec_opt_item_enum2: Some(vec![Some(1)]),
     }
 }
 
@@ -97,6 +103,9 @@ fn test_field_to_any_value_req_fields() -> Result<(), Box<dyn std::error::Error>
     );
 
     let any_value = sample_struct.get_value("req_enum")?;
+    assert_eq!(any_value, AnyValue::Enum(0, SampleEnum::mapping()));
+
+    let any_value = sample_struct.get_value("req_enum2")?;
     assert_eq!(any_value, AnyValue::Enum(0, SampleEnum::mapping()));
 
     Ok(())
@@ -133,6 +142,9 @@ fn test_field_to_any_value_opt_fields() -> Result<(), Box<dyn std::error::Error>
     let any_value = sample_struct.get_value("opt_enum")?;
     assert_eq!(any_value, AnyValue::Enum(0, SampleEnum::mapping()));
 
+    let any_value = sample_struct.get_value("opt_enum2")?;
+    assert_eq!(any_value, AnyValue::Enum(0, SampleEnum::mapping()));
+
     Ok(())
 }
 
@@ -161,34 +173,13 @@ fn test_field_to_any_value_req_vec_fields_req_items() -> Result<(), Box<dyn std:
     assert_eq!(any_value, AnyValue::List(Series::from_iter(vec![true])));
 
     let any_value = sample_struct.get_value("req_vec_req_item_struct")?;
-    assert_eq!(
-        any_value,
-        AnyValue::List(
-            Series::from_any_values(
-                "".into(),
-                &[AnyValue::StructOwned(Box::new((
-                    vec![AnyValue::StringOwned("subf_string3".into())],
-                    Vec::from([Field::new("subf_string".into(), DataType::String)])
-                )))],
-                true
-            )
-            .unwrap()
-        )
-    );
+    assert_eq!(any_value.to_string(), "[{\"subf_string3\"}]");
 
     let any_value = sample_struct.get_value("req_vec_req_item_enum")?;
-    assert_eq!(
-        any_value,
-        AnyValue::List(
-            Series::from_any_values_and_dtype(
-                "".into(),
-                &[AnyValue::Enum(0, SampleEnum::mapping())],
-                SampleEnum::data_type(),
-                true
-            )
-            .unwrap()
-        )
-    );
+    assert_eq!(any_value.to_string(), "[\"ITEM\"]");
+
+    let any_value = sample_struct.get_value("req_vec_req_item_enum2")?;
+    assert_eq!(any_value.to_string(), "[\"ITEM\"]");
 
     // Nested
     let any_value = sample_struct.get_value("req_vec_req_item_struct[0].subf_string")?;
@@ -222,34 +213,13 @@ fn test_field_to_any_value_opt_vec_fields_req_items() -> Result<(), Box<dyn std:
     assert_eq!(any_value, AnyValue::List(Series::from_iter(vec![false])));
 
     let any_value = sample_struct.get_value("opt_vec_req_item_struct")?;
-    assert_eq!(
-        any_value,
-        AnyValue::List(
-            Series::from_any_values(
-                "".into(),
-                &[AnyValue::StructOwned(Box::new((
-                    vec![AnyValue::StringOwned("subf_string4".into())],
-                    Vec::from([Field::new("subf_string".into(), DataType::String)])
-                )))],
-                true
-            )
-            .unwrap()
-        )
-    );
+    assert_eq!(any_value.to_string(), "[{\"subf_string4\"}]");
 
     let any_value = sample_struct.get_value("opt_vec_req_item_enum")?;
-    assert_eq!(
-        any_value,
-        AnyValue::List(
-            Series::from_any_values_and_dtype(
-                "".into(),
-                &[AnyValue::Enum(0, SampleEnum::mapping())],
-                SampleEnum::data_type(),
-                true
-            )
-            .unwrap()
-        )
-    );
+    assert_eq!(any_value.to_string(), "[\"ITEM\"]");
+
+    let any_value = sample_struct.get_value("opt_vec_req_item_enum2")?;
+    assert_eq!(any_value.to_string(), "[\"ITEM\"]");
 
     // Nested
     let any_value = sample_struct.get_value("opt_vec_req_item_struct[0].subf_string")?;
@@ -283,34 +253,13 @@ fn test_field_to_any_value_req_vec_fields_opt_items() -> Result<(), Box<dyn std:
     assert_eq!(any_value, AnyValue::List(Series::from_iter(vec![true])));
 
     let any_value = sample_struct.get_value("req_vec_opt_item_struct")?;
-    assert_eq!(
-        any_value,
-        AnyValue::List(
-            Series::from_any_values(
-                "".into(),
-                &[AnyValue::StructOwned(Box::new((
-                    vec![AnyValue::StringOwned("subf_string5".into())],
-                    Vec::from([Field::new("subf_string".into(), DataType::String)])
-                )))],
-                true
-            )
-            .unwrap()
-        )
-    );
+    assert_eq!(any_value.to_string(), "[{\"subf_string5\"}]");
 
     let any_value = sample_struct.get_value("req_vec_opt_item_enum")?;
-    assert_eq!(
-        any_value,
-        AnyValue::List(
-            Series::from_any_values_and_dtype(
-                "".into(),
-                &[AnyValue::Enum(0, SampleEnum::mapping())],
-                SampleEnum::data_type(),
-                true
-            )
-            .unwrap()
-        )
-    );
+    assert_eq!(any_value.to_string(), "[\"ITEM\"]");
+
+    let any_value = sample_struct.get_value("req_vec_opt_item_enum2")?;
+    assert_eq!(any_value.to_string(), "[\"ITEM\"]");
 
     // Nested
     let any_value = sample_struct.get_value("req_vec_opt_item_struct[0].subf_string")?;
@@ -344,34 +293,13 @@ fn test_field_to_any_value_opt_vec_fields_opt_items() -> Result<(), Box<dyn std:
     assert_eq!(any_value, AnyValue::List(Series::from_iter(vec![false])));
 
     let any_value = sample_struct.get_value("opt_vec_opt_item_struct")?;
-    assert_eq!(
-        any_value,
-        AnyValue::List(
-            Series::from_any_values(
-                "".into(),
-                &[AnyValue::StructOwned(Box::new((
-                    vec![AnyValue::StringOwned("subf_string6".into())],
-                    Vec::from([Field::new("subf_string".into(), DataType::String)])
-                )))],
-                true
-            )
-            .unwrap()
-        )
-    );
+    assert_eq!(any_value.to_string(), "[{\"subf_string6\"}]");
 
     let any_value = sample_struct.get_value("opt_vec_opt_item_enum")?;
-    assert_eq!(
-        any_value,
-        AnyValue::List(
-            Series::from_any_values_and_dtype(
-                "".into(),
-                &[AnyValue::Enum(0, SampleEnum::mapping())],
-                SampleEnum::data_type(),
-                true
-            )
-            .unwrap()
-        )
-    );
+    assert_eq!(any_value.to_string(), "[\"ITEM\"]");
+
+    let any_value = sample_struct.get_value("opt_vec_opt_item_enum2")?;
+    assert_eq!(any_value.to_string(), "[\"ITEM\"]");
 
     // Nested
     let any_value = sample_struct.get_value("opt_vec_opt_item_struct[0].subf_string")?;

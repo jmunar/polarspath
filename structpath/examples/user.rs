@@ -20,7 +20,7 @@ struct User {
     parent_favorite: Parent,
     #[type_hint("struct")]
     parents: Vec<Parent>,
-    #[type_hint("enum", [("Dog", 1)])]
+    #[type_hint("enum")]
     pets: Option<Vec<Pet>>,
 }
 

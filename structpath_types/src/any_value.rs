@@ -1,5 +1,5 @@
-use crate::data_type_wrapper::{DataTypeOpt, DataTypeWrapper};
-use polars_core::prelude::{AnyValue, PolarsDataType, Series};
+use crate::{DataTypeOpt, DataTypeWrapper};
+use polars_core::prelude::{AnyValue, DataType, PolarsDataType, Series};
 
 /// Trait for types allowing conversion to AnyValue
 ///
@@ -27,8 +27,19 @@ impl IntoAnyValueWith<i32> for DataTypeWrapper {
     type ChunkDataType = ::polars_core::prelude::Int32Type;
 
     fn to_any_value(&self, value: &i32) -> AnyValue<'_> {
-        match self.raw {
-            DataTypeOpt::Int32 => AnyValue::Int32(*value),
+        match &self.polars {
+            DataType::Int32 => AnyValue::Int32(*value),
+            DataType::Enum(_, ref mapping) => {
+                if let DataTypeOpt::Enum(ref info) = self.raw {
+                    let polars_index = info
+                        .rust_index_to_polars_index
+                        .get(&(*value as u32))
+                        .unwrap();
+                    AnyValue::Enum(*polars_index, mapping)
+                } else {
+                    unreachable!()
+                }
+            }
             _ => panic!("Unsupported DataTypeOpt for i32: {:?}", self),
         }
     }

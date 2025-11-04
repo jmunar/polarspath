@@ -12,6 +12,7 @@ pub fn fields_polars() -> Vec<Field> {
         field_type!("req_bool", Boolean),
         field_type!("req_struct", Struct([("subf_string", String)])),
         field_type!("req_enum", Enum([("ITEM", 1)])),
+        field_type!("req_enum2", Enum([("ITEM", 1)])),
         // Optional scalar fields
         field_type!("opt_string", String),
         field_type!("opt_i32", Int32),
@@ -20,6 +21,7 @@ pub fn fields_polars() -> Vec<Field> {
         field_type!("opt_bool", Boolean),
         field_type!("opt_struct", Struct([("subf_string", String)])),
         field_type!("opt_enum", Enum([("ITEM", 1)])),
+        field_type!("opt_enum2", Enum([("ITEM", 1)])),
         // Required vector fields with required items
         field_type!("req_vec_req_item_string", List(String)),
         field_type!("req_vec_req_item_i32", List(Int32)),
@@ -31,6 +33,7 @@ pub fn fields_polars() -> Vec<Field> {
             List(Struct([("subf_string", String)]))
         ),
         field_type!("req_vec_req_item_enum", List(Enum([("ITEM", 1)]))),
+        field_type!("req_vec_req_item_enum2", List(Enum([("ITEM", 1)]))),
         // Optional vector fields with required items
         field_type!("opt_vec_req_item_string", List(String)),
         field_type!("opt_vec_req_item_i32", List(Int32)),
@@ -42,6 +45,7 @@ pub fn fields_polars() -> Vec<Field> {
             List(Struct([("subf_string", String)]))
         ),
         field_type!("opt_vec_req_item_enum", List(Enum([("ITEM", 1)]))),
+        field_type!("opt_vec_req_item_enum2", List(Enum([("ITEM", 1)]))),
         // Required vector fields with optional items
         field_type!("req_vec_opt_item_string", List(String)),
         field_type!("req_vec_opt_item_i32", List(Int32)),
@@ -53,6 +57,7 @@ pub fn fields_polars() -> Vec<Field> {
             List(Struct([("subf_string", String)]))
         ),
         field_type!("req_vec_opt_item_enum", List(Enum([("ITEM", 1)]))),
+        field_type!("req_vec_opt_item_enum2", List(Enum([("ITEM", 1)]))),
         // Optional vector fields with optional items
         field_type!("opt_vec_opt_item_string", List(String)),
         field_type!("opt_vec_opt_item_i32", List(Int32)),
@@ -64,6 +69,7 @@ pub fn fields_polars() -> Vec<Field> {
             List(Struct([("subf_string", String)]))
         ),
         field_type!("opt_vec_opt_item_enum", List(Enum([("ITEM", 1)]))),
+        field_type!("opt_vec_opt_item_enum2", List(Enum([("ITEM", 1)]))),
     ])
 }
 

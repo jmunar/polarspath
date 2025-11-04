@@ -77,23 +77,13 @@ pub fn derive_enum_path_impl(input: syn::DeriveInput) -> TokenStream {
         impl ::structpath::HasDataTypeWrapper for #type_name {
             fn data_type_wrapper() -> &'static ::structpath::DataTypeWrapper {
                 static DATA_TYPE_WRAPPER: ::std::sync::OnceLock<::structpath::DataTypeWrapper> = ::std::sync::OnceLock::new();
-                DATA_TYPE_WRAPPER.get_or_init(|| ::structpath::DataTypeWrapper::new(::structpath::DataTypeOpt::Enum(::structpath::indexmap::IndexMap::from([
+                DATA_TYPE_WRAPPER.get_or_init(|| ::structpath::DataTypeWrapper::new(::structpath::DataTypeOpt::Enum(::structpath::EnumOptInfo::from_iter([
                     #(#variants_map),*
                 ]))))
             }
         }
 
-        impl ::structpath::EnumPath for #type_name
-        where
-            #type_name: ::structpath::HasDataTypeWrapper,
-        {
-            fn mapping() -> &'static ::std::sync::Arc<::polars_core::prelude::CategoricalMapping> {
-                match <Self as ::structpath::HasDataTypeWrapper>::data_type() {
-                    ::polars_core::prelude::DataType::Enum(_, mapping) => mapping,
-                    _ => unreachable!(),
-                }
-            }
-        }
+        impl ::structpath::EnumPath for #type_name {}
 
         impl ::structpath::IntoAnyValueWith<#type_name> for ::structpath::DataTypeWrapper
         where
