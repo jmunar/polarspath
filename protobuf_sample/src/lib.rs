@@ -5,9 +5,10 @@ pub mod sample {
 #[cfg(test)]
 mod tests {
     use super::sample;
-    use polars_core::prelude::{AnyValue, DataType, Field, Series};
-    use polars_dtype::categorical::{CategoricalMapping, FrozenCategories};
-    use structpath::{indexmap::IndexMap, DataTypeOpt, EnumPath,HasDataTypeOpt, StructPath};
+    use polars_core::prelude::{
+        AnyValue, CategoricalMapping, DataType, Field, FrozenCategories, Series,
+    };
+    use structpath::{data_type_wrapper, EnumPath, HasDataTypeWrapper, StructPath};
 
     fn user_fields_expected() -> Vec<Field> {
         vec![
@@ -26,9 +27,10 @@ mod tests {
             Field::new(
                 "loyalty".into(),
                 DataType::Enum(
-                    FrozenCategories::new(["SILVER", "GOLD", "PLATINUM"].into_iter()).unwrap(),
-                    std::sync::Arc::new(CategoricalMapping::new(3))
-                )),
+                    FrozenCategories::new(["Silver", "Gold", "Platinum"].into_iter()).unwrap(),
+                    std::sync::Arc::new(CategoricalMapping::new(3)),
+                ),
+            ),
             Field::new(
                 "pets".into(),
                 DataType::List(Box::new(DataType::Struct(vec![
@@ -51,51 +53,41 @@ mod tests {
     #[test]
     fn test_get_type_user_fields() -> Result<(), Box<dyn std::error::Error>> {
         let type_ = sample::User::get_type("name")?;
-        assert_eq!(type_, DataTypeOpt::String);
+        assert_eq!(type_, data_type_wrapper!(String));
         let type_ = sample::User::get_type("age")?;
-        assert_eq!(type_, DataTypeOpt::Int64);
+        assert_eq!(type_, data_type_wrapper!(Int64));
         let type_ = sample::User::get_type("email")?;
-        assert_eq!(type_, DataTypeOpt::Option(Box::new(DataTypeOpt::String)));
+        assert_eq!(type_, data_type_wrapper!(Option(String)));
         let type_ = sample::User::get_type("is_active")?;
-        assert_eq!(type_, DataTypeOpt::Boolean);
+        assert_eq!(type_, data_type_wrapper!(Boolean));
         let type_ = sample::User::get_type("favourite_pet")?;
         assert_eq!(
             type_,
-            DataTypeOpt::Option(Box::new(DataTypeOpt::Struct(IndexMap::from([
-                ("name".into(), DataTypeOpt::String),
-                ("birth_year".into(), DataTypeOpt::Int64)
-            ]),)))
+            data_type_wrapper!(Option(Struct([("name", String), ("birth_year", Int64)])))
         );
         let type_ = sample::User::get_type("favourite_pet.name")?;
-        assert_eq!(type_, DataTypeOpt::Option(Box::new(DataTypeOpt::String)));
+        assert_eq!(type_, data_type_wrapper!(Option(String)));
         let type_ = sample::User::get_type("tags")?;
-        assert_eq!(type_, DataTypeOpt::List(Box::new(DataTypeOpt::String)));
+        assert_eq!(type_, data_type_wrapper!(List(String)));
         let type_ = sample::User::get_type("loyalty")?;
-        assert_eq!(type_, DataTypeOpt::Enum(IndexMap::from([
-            ("SILVER".into(), 0),
-            ("GOLD".into(), 1),
-            ("PLATINUM".into(), 2)
-        ])));
+        assert_eq!(
+            type_,
+            data_type_wrapper!(Enum([("Silver", 0), ("Gold", 1), ("Platinum", 2)]))
+        );
         let type_ = sample::User::get_type("pets")?;
         assert_eq!(
             type_,
-            DataTypeOpt::List(Box::new(DataTypeOpt::Struct(IndexMap::from([
-                ("name".into(), DataTypeOpt::String),
-                ("birth_year".into(), DataTypeOpt::Int64),
-            ]),)))
+            data_type_wrapper!(List(Struct([("name", String), ("birth_year", Int64)])))
         );
         let type_ = sample::User::get_type("pets[0]")?;
         assert_eq!(
             type_,
-            DataTypeOpt::Struct(IndexMap::from([
-                ("name".into(), DataTypeOpt::String),
-                ("birth_year".into(), DataTypeOpt::Int64),
-            ]),)
+            data_type_wrapper!(Struct([("name", String), ("birth_year", Int64)]))
         );
         let type_ = sample::User::get_type("pets[0].name")?;
-        assert_eq!(type_, DataTypeOpt::String);
+        assert_eq!(type_, data_type_wrapper!(String));
         let type_ = sample::User::get_type("pets[0].birth_year")?;
-        assert_eq!(type_, DataTypeOpt::Int64);
+        assert_eq!(type_, data_type_wrapper!(Int64));
         Ok(())
     }
 
@@ -202,10 +194,7 @@ mod tests {
         );
 
         let favourite_pet_name_type = sample::User::get_type("favourite_pet.name")?;
-        assert_eq!(
-            favourite_pet_name_type,
-            DataTypeOpt::Option(Box::new(DataTypeOpt::String))
-        );
+        assert_eq!(favourite_pet_name_type, data_type_wrapper!(Option(String)));
         let favourite_pet_name = user.get_value("favourite_pet.name")?;
         assert_eq!(favourite_pet_name, AnyValue::String("Buddy"));
 
@@ -326,20 +315,8 @@ mod tests {
         assert_eq!(admin_name, AnyValue::String("John Doe"));
 
         let members = group.get_value("members")?;
-        assert_eq!(
-            members,
-            AnyValue::List(
-                Series::from_any_values(
-                    "".into(),
-                    &[AnyValue::StructOwned(Box::new((
-                        test_user_values(),
-                        user_fields_expected()
-                    ))),],
-                    true
-                )
-                .unwrap()
-            )
-        );
+        let expected = "[{\"John Doe\",30,\"john.doe@example.com\",true,{\"Buddy\",2020},[\"premium\", \"verified\"],\"Gold\",[{\"Buddy\",2020}, {\"Max\",2022}]}]";
+        assert_eq!(members.to_string(), expected);
 
         let member0_pet0_birth_year = group.get_value("members[0].pets[0].birth_year")?;
         assert_eq!(member0_pet0_birth_year, AnyValue::Int64(2020));

@@ -1,48 +1,61 @@
-use prost_types::FileDescriptorSet;
+use prost_build::Config;
 use std::fs;
 use std::path::Path;
 
-fn extract_enum_values(
-    file_descriptor_set: &FileDescriptorSet,
-    enum_type_name: &str,
-) -> Vec<(String, i32)> {
-    for file in &file_descriptor_set.file {
-        // Check top-level enums
-        for enum_type in &file.enum_type {
-            let full_enum_name = format!(
-                ".{}.{}",
-                file.package.as_ref().unwrap_or(&String::new()),
-                enum_type.name.as_ref().unwrap()
-            );
-            if full_enum_name == enum_type_name {
-                return enum_type
-                    .value
-                    .iter()
-                    .map(|value| (value.name.as_ref().unwrap().clone(), value.number.unwrap()))
-                    .collect();
-            }
-        }
+/// Extract the qualified type name from a protobuf fully-qualified path.
+/// For nested types, returns the module path::Type format including package name.
+/// Examples:
+/// - ".sample.User.Loyalty" -> "user::Loyalty" (enum inside User message)
+/// - ".sample.Loyalty" -> "Loyalty" (top-level enum)
+/// - ".sample.User" -> "User" (message)
+fn extract_type_name(package_name: &str, type_name: &str) -> String {
+    // Protobuf identifiers always start with '.' for fully-qualified paths
+    let parts: Vec<&str> = type_name.trim_start_matches('.').split('.').collect();
 
-        // Check enums inside messages
-        for message in &file.message_type {
-            for enum_type in &message.enum_type {
-                let full_enum_name = format!(
-                    ".{}.{}.{}",
-                    file.package.as_ref().unwrap_or(&String::new()),
-                    message.name.as_ref().unwrap(),
-                    enum_type.name.as_ref().unwrap()
-                );
-                if full_enum_name == enum_type_name {
-                    return enum_type
-                        .value
-                        .iter()
-                        .map(|value| (value.name.as_ref().unwrap().clone(), value.number.unwrap()))
-                        .collect();
-                }
+    // Make sure that there are at least two parts, and the first part is the package name
+    if parts.len() < 2 {
+        panic!("Invalid type name: {}", type_name);
+    }
+    if parts[0] != package_name {
+        panic!(
+            "Package name mismatch: expected {} but got {}",
+            package_name, parts[0]
+        );
+    }
+
+    // Remove the first part (package name)
+    let parts = parts[1..].to_vec();
+
+    // For nested types, convert all parts except the last to snake_case
+    let type_name_part = parts.last().unwrap();
+
+    let module_path: Vec<String> = parts[..parts.len() - 1]
+        .iter()
+        .map(|part| to_snake(part))
+        .collect();
+
+    format!("{}::{}", module_path.join("::"), type_name_part)
+}
+
+/// Convert a CamelCase or PascalCase string to snake_case.
+/// Example: "UserLoyalty" -> "user_loyalty"
+fn to_snake(s: &str) -> String {
+    let mut result = String::new();
+    let chars: Vec<char> = s.chars().collect();
+
+    for (i, c) in chars.iter().enumerate() {
+        if c.is_uppercase() {
+            // Add underscore before uppercase if not at start and previous char was lowercase
+            if i > 0 && chars[i - 1].is_lowercase() {
+                result.push('_');
             }
+            result.push_str(&c.to_lowercase().to_string());
+        } else {
+            result.push(*c);
         }
     }
-    vec![] // Return empty vec if enum not found
+
+    result
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -58,7 +71,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let mut config = prost_build::Config::new();
+    let mut config = Config::new();
 
     // Load the file descriptor set from the proto files to analyze the types
     let file_descriptor_set = config.load_fds(&proto_files, &["protobuf/sample"])?;
@@ -68,16 +81,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     config.message_attribute(".", "#[derive(structpath::StructPath)]");
 
     for file in &file_descriptor_set.file {
+        let empty_package = String::new();
+        let package_name = file.package.as_ref().unwrap_or(&empty_package);
+
         for message in &file.message_type {
             let message_name = message.name.as_ref().unwrap();
             for field in &message.field {
                 let field_name = field.name.as_ref().unwrap();
-                let field_path = format!(
-                    ".{}.{}.{}",
-                    file.package.as_ref().unwrap_or(&String::new()),
-                    message_name,
-                    field_name
-                );
+                let field_path = format!(".{}.{}.{}", package_name, message_name, field_name);
                 match field.r#type().as_str_name() {
                     "TYPE_DOUBLE" => continue,
                     "TYPE_FLOAT" => panic!("TYPE_FLOAT not supported"),
@@ -95,11 +106,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "TYPE_BYTES" => panic!("TYPE_BYTES not supported"),
                     "TYPE_UINT32" => panic!("TYPE_UINT32 not supported"),
                     "TYPE_ENUM" => {
-                        // Find the enum type for this field
-                        let enum_type_name = field.type_name.as_ref().unwrap();
-                        let enum_values = extract_enum_values(&file_descriptor_set, enum_type_name);
-                        let enum_attr = format!("#[type_hint(\"enum\", {:?})]", enum_values);
-                        config.field_attribute(&field_path, &enum_attr)
+                        let enum_type_name = extract_type_name(package_name, field.type_name());
+                        config.field_attribute(
+                            &field_path,
+                            format!("#[type_hint(\"enum\", {:?})]", enum_type_name),
+                        )
                     }
                     "TYPE_SFIXED32" => panic!("TYPE_SFIXED32 not supported"),
                     "TYPE_SFIXED64" => panic!("TYPE_SFIXED64 not supported"),
