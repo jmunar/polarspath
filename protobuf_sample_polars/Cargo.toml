@@ -5,15 +5,19 @@ edition = "2021"
 
 [lib]
 name = "protobuf_sample_polars"
-crate-type = ["rlib", "cdylib"]
+crate-type = ["rlib"]
+
+[features]
+default = []
+extension-module = ["pyo3", "pyo3/extension-module", "pyo3-polars"]
 
 [dependencies]
 polars-arrow = { version = "*", default-features = false }
 polars-core = { version = "*", features = ["dtype-array", "dtype-struct"], default-features = false }
 prost = { version = "*" }
 protobuf = { version = "*" }
-pyo3 = { version = "*", features = ["extension-module", "abi3-py38"] }
-pyo3-polars = { version = "*", features = ["derive"]}
+pyo3 = { version = "*", features = ["abi3-py38"], optional = true }
+pyo3-polars = { version = "*", features = ["derive"], optional = true }
 protobuf_sample = { path = "../protobuf_sample" }
 serde = { version = "*", features = ["derive"] }
 structpath = { version = "*", path = "../structpath", features = ["derive"] }
