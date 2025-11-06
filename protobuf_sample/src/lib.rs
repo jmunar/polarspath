@@ -27,7 +27,8 @@ mod tests {
             Field::new(
                 "loyalty".into(),
                 DataType::Enum(
-                    FrozenCategories::new(["Silver", "Gold", "Platinum"].into_iter()).unwrap(),
+                    FrozenCategories::new(["Unknown", "Silver", "Gold", "Platinum"].into_iter())
+                        .unwrap(),
                     std::sync::Arc::new(CategoricalMapping::new(3)),
                 ),
             ),
@@ -72,7 +73,12 @@ mod tests {
         let type_ = sample::User::get_type("loyalty")?;
         assert_eq!(
             type_,
-            data_type_wrapper!(Enum([("Silver", 0), ("Gold", 1), ("Platinum", 2)]))
+            data_type_wrapper!(Enum([
+                ("Unknown", 0),
+                ("Silver", 1),
+                ("Gold", 2),
+                ("Platinum", 3)
+            ]))
         );
         let type_ = sample::User::get_type("pets")?;
         assert_eq!(
@@ -107,7 +113,7 @@ mod tests {
         });
         user.tags
             .extend(["premium".to_string(), "verified".to_string()]);
-        user.loyalty = 1;
+        user.loyalty = 1; // SILVER
         user.pets.extend([
             sample::user::Pet {
                 name: "Buddy".to_string(),
@@ -315,7 +321,7 @@ mod tests {
         assert_eq!(admin_name, AnyValue::String("John Doe"));
 
         let members = group.get_value("members")?;
-        let expected = "[{\"John Doe\",30,\"john.doe@example.com\",true,{\"Buddy\",2020},[\"premium\", \"verified\"],\"Gold\",[{\"Buddy\",2020}, {\"Max\",2022}]}]";
+        let expected = "[{\"John Doe\",30,\"john.doe@example.com\",true,{\"Buddy\",2020},[\"premium\", \"verified\"],\"Silver\",[{\"Buddy\",2020}, {\"Max\",2022}]}]";
         assert_eq!(members.to_string(), expected);
 
         let member0_pet0_birth_year = group.get_value("members[0].pets[0].birth_year")?;

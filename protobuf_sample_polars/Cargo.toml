@@ -5,7 +5,7 @@ edition = "2021"
 
 [lib]
 name = "protobuf_sample_polars"
-crate-type = ["rlib"]
+crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []

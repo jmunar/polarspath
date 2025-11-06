@@ -1,6 +1,6 @@
-#[cfg(feature = "extension-module")]
-use polars_core::prelude::Field;
-use polars_core::prelude::{AnyValue, BinaryType, ChunkedArray, PolarsError, PolarsResult, Series};
+use polars_core::prelude::{
+    AnyValue, BinaryType, ChunkedArray, Field, PolarsError, PolarsResult, Series,
+};
 
 use prost::Message;
 #[cfg(feature = "extension-module")]
@@ -17,12 +17,10 @@ pub struct ExtractKwargs {
     path: String,
 }
 
-#[cfg(feature = "extension-module")]
-fn get_value_output_type<T>(input_fields: &[Field], kwargs: ExtractKwargs) -> PolarsResult<Field>
+pub fn get_type<T>(input_fields: &[Field], path: &str) -> PolarsResult<Field>
 where
     T: StructPath + Message + Default,
 {
-    let path = kwargs.path.as_str();
     let data_type_wrapper =
         T::get_type(path).map_err(|e| PolarsError::StructFieldNotFound(e.to_string().into()))?;
     let data_type = data_type_wrapper.polars;
@@ -52,19 +50,20 @@ where
         })
         .collect::<PolarsResult<Vec<AnyValue>>>()?;
 
-    Series::from_any_values("".into(), &any_values, true)
+    let dtype = T::get_type(path)
+        .map_err(|e| PolarsError::StructFieldNotFound(e.to_string().into()))?
+        .polars;
+    Series::from_any_values_and_dtype("".into(), &any_values, &dtype, true)
 }
 
 #[cfg(feature = "extension-module")]
-fn user_get_value_output_type(
-    input_fields: &[Field],
-    kwargs: ExtractKwargs,
-) -> PolarsResult<Field> {
-    get_value_output_type::<sample::User>(input_fields, kwargs)
+fn user_get_type(input_fields: &[Field], kwargs: ExtractKwargs) -> PolarsResult<Field> {
+    let path = kwargs.path.as_str();
+    get_type::<sample::User>(input_fields, path)
 }
 
 #[cfg(feature = "extension-module")]
-#[polars_expr(output_type_func_with_kwargs=user_get_value_output_type)]
+#[polars_expr(output_type_func_with_kwargs=user_get_type)]
 fn user_get_value(inputs: &[Series], kwargs: ExtractKwargs) -> PolarsResult<Series> {
     let ca: &ChunkedArray<BinaryType> = inputs[0].binary()?;
     let path = kwargs.path.as_str();
