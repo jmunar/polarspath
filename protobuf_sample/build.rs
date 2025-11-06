@@ -78,6 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Apply derive attribute to all message types at once
     config.enum_attribute(".", "#[derive(structpath::EnumPath)]");
+    config.enum_attribute(".", "#[enum_path(camel_case_to_upper_snake_case)]");
     config.message_attribute(".", "#[derive(structpath::StructPath)]");
 
     for file in &file_descriptor_set.file {

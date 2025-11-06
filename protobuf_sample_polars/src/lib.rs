@@ -19,7 +19,7 @@ pub struct ExtractKwargs {
 
 pub fn get_type<T>(input_fields: &[Field], path: &str) -> PolarsResult<Field>
 where
-    T: StructPath + Message + Default,
+    T: StructPath,
 {
     let data_type_wrapper =
         T::get_type(path).map_err(|e| PolarsError::StructFieldNotFound(e.to_string().into()))?;

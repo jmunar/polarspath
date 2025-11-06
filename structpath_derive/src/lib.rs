@@ -1,4 +1,5 @@
 mod enumpath;
+mod string;
 mod structpath;
 mod utils;
 
@@ -13,7 +14,7 @@ pub fn derive_struct_path(input: TokenStream) -> TokenStream {
     derive_struct_path_impl(input).into()
 }
 
-#[proc_macro_derive(EnumPath, attributes(type_hint))]
+#[proc_macro_derive(EnumPath, attributes(type_hint, enum_path))]
 pub fn derive_enum_path(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     derive_enum_path_impl(input).into()
