@@ -129,6 +129,22 @@ pub fn parse_data_type(field_type: &Type, attrs: &[Attribute]) -> DataTypeWrappe
 
                 match segment_name.as_str() {
                     "String" => data_type_wrapper!(String),
+                    "Vec" => {
+                        // Special handling for Vec<u8> -> Bytes
+                        if let Some(inner_type) = get_angle_bracketed_inner(type_path) {
+                            if let syn::Type::Path(inner_path) = inner_type {
+                                if let Some(inner_segment) = inner_path.path.segments.last() {
+                                    if inner_segment.ident == "u8" {
+                                        return data_type_wrapper!(Bytes);
+                                    }
+                                }
+                            }
+                            let inner_type_wrapper = parse_data_type(inner_type, attrs);
+                            DataTypeWrapper::new(DataTypeOpt::List(Box::new(inner_type_wrapper)))
+                        } else {
+                            panic!("Vec type must have type parameters");
+                        }
+                    }
                     "i32" => {
                         if let Some(type_name) = get_type_hint_enum(attrs) {
                             DataTypeWrapper::new(DataTypeOpt::EnumFuture(Box::leak(
@@ -144,11 +160,6 @@ pub fn parse_data_type(field_type: &Type, attrs: &[Attribute]) -> DataTypeWrappe
                     "f32" => data_type_wrapper!(Float32),
                     "f64" => data_type_wrapper!(Float64),
                     "bool" => data_type_wrapper!(Boolean),
-                    "Vec" => {
-                        let inner_type =
-                            parse_data_type(get_angle_bracketed_inner(type_path).unwrap(), attrs);
-                        DataTypeWrapper::new(DataTypeOpt::List(Box::new(inner_type)))
-                    }
                     "Option" => {
                         let inner_type =
                             parse_data_type(get_angle_bracketed_inner(type_path).unwrap(), attrs);

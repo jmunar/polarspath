@@ -104,7 +104,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "TYPE_MESSAGE" => {
                         config.field_attribute(&field_path, "#[type_hint(\"struct\")]")
                     }
-                    "TYPE_BYTES" => panic!("TYPE_BYTES not supported"),
+                    "TYPE_BYTES" => continue,
                     "TYPE_UINT32" => continue,
                     "TYPE_ENUM" => {
                         let enum_type_name = extract_type_name(package_name, field.type_name());

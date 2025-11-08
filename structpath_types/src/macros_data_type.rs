@@ -27,6 +27,7 @@
 macro_rules! data_type {
     // Base case: simple types without parameters
     (String) => { ::polars_core::prelude::DataType::String };
+    (Bytes) => { ::polars_core::prelude::DataType::Binary };
     (Int32) => { ::polars_core::prelude::DataType::Int32 };
     (Int64) => { ::polars_core::prelude::DataType::Int64 };
     (UInt32) => { ::polars_core::prelude::DataType::UInt32 };

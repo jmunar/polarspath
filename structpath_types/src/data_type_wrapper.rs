@@ -63,6 +63,7 @@ impl<'a> FromIterator<(&'a str, u32)> for EnumOptInfo {
 pub enum DataTypeOpt {
     // Types supported from DataType
     String,
+    Bytes,
     Int32,
     Int64,
     UInt32,
@@ -91,6 +92,7 @@ impl DataTypeWrapper {
     pub fn new(raw: DataTypeOpt) -> Self {
         let polars = match &raw {
             DataTypeOpt::String => DataType::String,
+            DataTypeOpt::Bytes => DataType::Binary,
             DataTypeOpt::Int32 => DataType::Int32,
             DataTypeOpt::Int64 => DataType::Int64,
             DataTypeOpt::UInt32 => DataType::UInt32,
@@ -129,6 +131,7 @@ impl ToTokens for DataTypeWrapper {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         tokens.extend(match &self.raw {
             DataTypeOpt::String => quote! { ::structpath::DataTypeWrapper::new(::structpath::DataTypeOpt::String) },
+            DataTypeOpt::Bytes => quote! { ::structpath::DataTypeWrapper::new(::structpath::DataTypeOpt::Bytes) },
             DataTypeOpt::Int32 => quote! { ::structpath::DataTypeWrapper::new(::structpath::DataTypeOpt::Int32) },
             DataTypeOpt::Int64 => quote! { ::structpath::DataTypeWrapper::new(::structpath::DataTypeOpt::Int64) },
             DataTypeOpt::UInt32 => quote! { ::structpath::DataTypeWrapper::new(::structpath::DataTypeOpt::UInt32) },

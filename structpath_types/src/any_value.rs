@@ -23,6 +23,17 @@ impl IntoAnyValueWith<String> for DataTypeWrapper {
     }
 }
 
+impl IntoAnyValueWith<Vec<u8>> for DataTypeWrapper {
+    type ChunkDataType = ::polars_core::prelude::BinaryType;
+
+    fn to_any_value(&self, value: &Vec<u8>) -> AnyValue<'_> {
+        match self.raw {
+            DataTypeOpt::Bytes => AnyValue::BinaryOwned(value.clone()),
+            _ => panic!("Unsupported DataTypeOpt for Vec<u8>: {:?}", self),
+        }
+    }
+}
+
 impl IntoAnyValueWith<i32> for DataTypeWrapper {
     type ChunkDataType = ::polars_core::prelude::Int32Type;
 
@@ -188,6 +199,14 @@ mod tests {
         let value = "test".to_string();
         let any_value = data_type_wrapper.to_any_value(&value);
         assert_eq!(any_value, AnyValue::StringOwned(value.into()));
+    }
+
+    #[test]
+    fn test_to_any_value_bytes() {
+        let data_type_wrapper = data_type_wrapper!(Bytes);
+        let value = b"test".to_vec();
+        let any_value = data_type_wrapper.to_any_value(&value);
+        assert_eq!(any_value, AnyValue::BinaryOwned(value));
     }
 
     #[test]

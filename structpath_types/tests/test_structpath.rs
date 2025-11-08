@@ -6,6 +6,7 @@ pub fn fields_polars() -> Vec<Field> {
     Vec::from([
         // Required scalar fields
         field_type!("req_string", String),
+        field_type!("req_bytes", Bytes),
         field_type!("req_i32", Int32),
         field_type!("req_i64", Int64),
         field_type!("req_u32", UInt32),
@@ -18,6 +19,7 @@ pub fn fields_polars() -> Vec<Field> {
         field_type!("req_enum2", Enum([("ITEM", 1)])),
         // Optional scalar fields
         field_type!("opt_string", String),
+        field_type!("opt_bytes", Bytes),
         field_type!("opt_i32", Int32),
         field_type!("opt_i64", Int64),
         field_type!("opt_u32", UInt32),
@@ -30,6 +32,7 @@ pub fn fields_polars() -> Vec<Field> {
         field_type!("opt_enum2", Enum([("ITEM", 1)])),
         // Required vector fields with required items
         field_type!("req_vec_req_item_string", List(String)),
+        field_type!("req_vec_req_item_bytes", List(Bytes)),
         field_type!("req_vec_req_item_i32", List(Int32)),
         field_type!("req_vec_req_item_i64", List(Int64)),
         field_type!("req_vec_req_item_u32", List(UInt32)),
@@ -45,6 +48,7 @@ pub fn fields_polars() -> Vec<Field> {
         field_type!("req_vec_req_item_enum2", List(Enum([("ITEM", 1)]))),
         // Optional vector fields with required items
         field_type!("opt_vec_req_item_string", List(String)),
+        field_type!("opt_vec_req_item_bytes", List(Bytes)),
         field_type!("opt_vec_req_item_i32", List(Int32)),
         field_type!("opt_vec_req_item_i64", List(Int64)),
         field_type!("opt_vec_req_item_u32", List(UInt32)),
@@ -60,6 +64,7 @@ pub fn fields_polars() -> Vec<Field> {
         field_type!("opt_vec_req_item_enum2", List(Enum([("ITEM", 1)]))),
         // Required vector fields with optional items
         field_type!("req_vec_opt_item_string", List(String)),
+        field_type!("req_vec_opt_item_bytes", List(Bytes)),
         field_type!("req_vec_opt_item_i32", List(Int32)),
         field_type!("req_vec_opt_item_i64", List(Int64)),
         field_type!("req_vec_opt_item_u32", List(UInt32)),
@@ -75,6 +80,7 @@ pub fn fields_polars() -> Vec<Field> {
         field_type!("req_vec_opt_item_enum2", List(Enum([("ITEM", 1)]))),
         // Optional vector fields with optional items
         field_type!("opt_vec_opt_item_string", List(String)),
+        field_type!("opt_vec_opt_item_bytes", List(Bytes)),
         field_type!("opt_vec_opt_item_i32", List(Int32)),
         field_type!("opt_vec_opt_item_i64", List(Int64)),
         field_type!("opt_vec_opt_item_u32", List(UInt32)),

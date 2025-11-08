@@ -37,6 +37,7 @@
 macro_rules! data_type_wrapper {
     // Simple types without parameters
     (String) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::String) };
+    (Bytes) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::Bytes) };
     (Int32) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::Int32) };
     (Int64) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::Int64) };
     (UInt32) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::UInt32) };

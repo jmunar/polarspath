@@ -7,6 +7,7 @@ use structpath_types::{EnumPath, StructPath};
 fn sample_struct() -> SampleStruct {
     SampleStruct {
         req_string: "req_string".to_string(),
+        req_bytes: b"req_bytes".to_vec(),
         req_i32: 1,
         req_i64: 1,
         req_u32: 1,
@@ -21,6 +22,7 @@ fn sample_struct() -> SampleStruct {
         req_enum2: 1,
 
         opt_string: Some("opt_string".to_string()),
+        opt_bytes: Some(b"opt_bytes".to_vec()),
         opt_i32: Some(2),
         opt_i64: Some(2),
         opt_u32: Some(2),
@@ -35,6 +37,7 @@ fn sample_struct() -> SampleStruct {
         opt_enum2: Some(1),
 
         req_vec_req_item_string: vec!["req_vec_req_item_string".to_string()],
+        req_vec_req_item_bytes: vec![b"req_vec_req_item_bytes".to_vec()],
         req_vec_req_item_i32: vec![3],
         req_vec_req_item_i64: vec![3],
         req_vec_req_item_u32: vec![3],
@@ -49,6 +52,7 @@ fn sample_struct() -> SampleStruct {
         req_vec_req_item_enum2: vec![1],
 
         opt_vec_req_item_string: Some(vec!["opt_vec_req_item_string".to_string()]),
+        opt_vec_req_item_bytes: Some(vec![b"opt_vec_req_item_bytes".to_vec()]),
         opt_vec_req_item_i32: Some(vec![4]),
         opt_vec_req_item_i64: Some(vec![4]),
         opt_vec_req_item_u32: Some(vec![4]),
@@ -63,6 +67,7 @@ fn sample_struct() -> SampleStruct {
         opt_vec_req_item_enum2: Some(vec![1]),
 
         req_vec_opt_item_string: vec![Some("req_vec_opt_item_string".to_string())],
+        req_vec_opt_item_bytes: vec![Some(b"req_vec_opt_item_bytes".to_vec())],
         req_vec_opt_item_i32: vec![Some(5)],
         req_vec_opt_item_i64: vec![Some(5)],
         req_vec_opt_item_u32: vec![Some(5)],
@@ -77,6 +82,7 @@ fn sample_struct() -> SampleStruct {
         req_vec_opt_item_enum2: vec![Some(1)],
 
         opt_vec_opt_item_string: Some(vec![Some("opt_vec_opt_item_string".to_string())]),
+        opt_vec_opt_item_bytes: Some(vec![Some(b"opt_vec_opt_item_bytes".to_vec())]),
         opt_vec_opt_item_i32: Some(vec![Some(6)]),
         opt_vec_opt_item_i64: Some(vec![Some(6)]),
         opt_vec_opt_item_u32: Some(vec![Some(6)]),
@@ -98,6 +104,9 @@ fn test_field_to_any_value_req_fields() -> Result<(), Box<dyn std::error::Error>
 
     let any_value = sample_struct.get_value("req_string")?;
     assert_eq!(any_value, AnyValue::StringOwned("req_string".into()));
+
+    let any_value = sample_struct.get_value("req_bytes")?;
+    assert_eq!(any_value, AnyValue::BinaryOwned(b"req_bytes".to_vec()));
 
     let any_value = sample_struct.get_value("req_i32")?;
     assert_eq!(any_value, AnyValue::Int32(1));
@@ -144,6 +153,9 @@ fn test_field_to_any_value_opt_fields() -> Result<(), Box<dyn std::error::Error>
 
     let any_value = sample_struct.get_value("opt_string")?;
     assert_eq!(any_value, AnyValue::StringOwned("opt_string".into()));
+
+    let any_value = sample_struct.get_value("opt_bytes")?;
+    assert_eq!(any_value, AnyValue::BinaryOwned(b"opt_bytes".to_vec()));
 
     let any_value = sample_struct.get_value("opt_i32")?;
     assert_eq!(any_value, AnyValue::Int32(2));
@@ -196,6 +208,20 @@ fn test_field_to_any_value_req_vec_fields_req_items() -> Result<(), Box<dyn std:
         ]))
     );
 
+    let any_value = sample_struct.get_value("req_vec_req_item_bytes")?;
+    assert_eq!(
+        any_value,
+        AnyValue::List(
+            Series::from_any_values_and_dtype(
+                "".into(),
+                &[AnyValue::BinaryOwned(b"req_vec_req_item_bytes".to_vec())],
+                &polars_core::prelude::DataType::Binary,
+                true
+            )
+            .unwrap()
+        )
+    );
+
     let any_value = sample_struct.get_value("req_vec_req_item_i32")?;
     assert_eq!(any_value, AnyValue::List(Series::from_iter(vec![3])));
 
@@ -243,6 +269,20 @@ fn test_field_to_any_value_opt_vec_fields_req_items() -> Result<(), Box<dyn std:
         AnyValue::List(Series::from_iter(vec![
             "opt_vec_req_item_string".to_string()
         ]))
+    );
+
+    let any_value = sample_struct.get_value("opt_vec_req_item_bytes")?;
+    assert_eq!(
+        any_value,
+        AnyValue::List(
+            Series::from_any_values_and_dtype(
+                "".into(),
+                &[AnyValue::BinaryOwned(b"opt_vec_req_item_bytes".to_vec())],
+                &polars_core::prelude::DataType::Binary,
+                true
+            )
+            .unwrap()
+        )
     );
 
     let any_value = sample_struct.get_value("opt_vec_req_item_i32")?;
@@ -294,6 +334,20 @@ fn test_field_to_any_value_req_vec_fields_opt_items() -> Result<(), Box<dyn std:
         ]))
     );
 
+    let any_value = sample_struct.get_value("req_vec_opt_item_bytes")?;
+    assert_eq!(
+        any_value,
+        AnyValue::List(
+            Series::from_any_values_and_dtype(
+                "".into(),
+                &[AnyValue::BinaryOwned(b"req_vec_opt_item_bytes".to_vec())],
+                &polars_core::prelude::DataType::Binary,
+                false
+            )
+            .unwrap()
+        )
+    );
+
     let any_value = sample_struct.get_value("req_vec_opt_item_i32")?;
     assert_eq!(any_value, AnyValue::List(Series::from_iter(vec![5])));
 
@@ -341,6 +395,20 @@ fn test_field_to_any_value_opt_vec_fields_opt_items() -> Result<(), Box<dyn std:
         AnyValue::List(Series::from_iter(vec![
             "opt_vec_opt_item_string".to_string()
         ]))
+    );
+
+    let any_value = sample_struct.get_value("opt_vec_opt_item_bytes")?;
+    assert_eq!(
+        any_value,
+        AnyValue::List(
+            Series::from_any_values_and_dtype(
+                "".into(),
+                &[AnyValue::BinaryOwned(b"opt_vec_opt_item_bytes".to_vec())],
+                &polars_core::prelude::DataType::Binary,
+                false
+            )
+            .unwrap()
+        )
     );
 
     let any_value = sample_struct.get_value("opt_vec_opt_item_i32")?;

@@ -8,6 +8,9 @@ fn test_get_type_req_fields() -> Result<(), Box<dyn std::error::Error>> {
     let t = SampleStruct::get_type("req_string")?;
     assert_eq!(t, data_type_wrapper!(String));
 
+    let t = SampleStruct::get_type("req_bytes")?;
+    assert_eq!(t, data_type_wrapper!(Bytes));
+
     let t = SampleStruct::get_type("req_i64")?;
     assert_eq!(t, data_type_wrapper!(Int64));
 
@@ -46,6 +49,9 @@ fn test_get_type_req_fields() -> Result<(), Box<dyn std::error::Error>> {
 fn test_get_type_opt_fields() -> Result<(), Box<dyn std::error::Error>> {
     let t = SampleStruct::get_type("opt_string")?;
     assert_eq!(t, data_type_wrapper!(Option(String)));
+
+    let t = SampleStruct::get_type("opt_bytes")?;
+    assert_eq!(t, data_type_wrapper!(Option(Bytes)));
 
     let t = SampleStruct::get_type("opt_i64")?;
     assert_eq!(t, data_type_wrapper!(Option(Int64)));
@@ -89,6 +95,9 @@ fn test_get_type_req_vec_req_item_fields() -> Result<(), Box<dyn std::error::Err
     let t = SampleStruct::get_type("req_vec_req_item_string")?;
     assert_eq!(t, data_type_wrapper!(List(String)));
 
+    let t = SampleStruct::get_type("req_vec_req_item_bytes")?;
+    assert_eq!(t, data_type_wrapper!(List(Bytes)));
+
     let t = SampleStruct::get_type("req_vec_req_item_i64")?;
     assert_eq!(t, data_type_wrapper!(List(Int64)));
 
@@ -130,6 +139,9 @@ fn test_get_type_req_vec_req_item_fields() -> Result<(), Box<dyn std::error::Err
 fn test_get_type_opt_vec_req_item_fields() -> Result<(), Box<dyn std::error::Error>> {
     let t = SampleStruct::get_type("opt_vec_req_item_string")?;
     assert_eq!(t, data_type_wrapper!(Option(List(String))));
+
+    let t = SampleStruct::get_type("opt_vec_req_item_bytes")?;
+    assert_eq!(t, data_type_wrapper!(Option(List(Bytes))));
 
     let t = SampleStruct::get_type("opt_vec_req_item_i64")?;
     assert_eq!(t, data_type_wrapper!(Option(List(Int64))));
@@ -173,6 +185,9 @@ fn test_get_type_req_vec_opt_item_fields() -> Result<(), Box<dyn std::error::Err
     let t = SampleStruct::get_type("req_vec_opt_item_string")?;
     assert_eq!(t, data_type_wrapper!(List(Option(String))));
 
+    let t = SampleStruct::get_type("req_vec_opt_item_bytes")?;
+    assert_eq!(t, data_type_wrapper!(List(Option(Bytes))));
+
     let t = SampleStruct::get_type("req_vec_opt_item_i64")?;
     assert_eq!(t, data_type_wrapper!(List(Option(Int64))));
 
@@ -214,6 +229,9 @@ fn test_get_type_req_vec_opt_item_fields() -> Result<(), Box<dyn std::error::Err
 fn test_get_type_opt_vec_opt_item_fields() -> Result<(), Box<dyn std::error::Error>> {
     let t = SampleStruct::get_type("opt_vec_opt_item_string")?;
     assert_eq!(t, data_type_wrapper!(Option(List(Option(String)))));
+
+    let t = SampleStruct::get_type("opt_vec_opt_item_bytes")?;
+    assert_eq!(t, data_type_wrapper!(Option(List(Option(Bytes)))));
 
     let t = SampleStruct::get_type("opt_vec_opt_item_i64")?;
     assert_eq!(t, data_type_wrapper!(Option(List(Option(Int64)))));

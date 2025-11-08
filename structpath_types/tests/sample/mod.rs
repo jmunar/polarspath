@@ -88,6 +88,7 @@ where
 #[derive(Debug, Clone)]
 pub struct SampleStruct {
     pub req_string: String,
+    pub req_bytes: Vec<u8>,
     pub req_i32: i32,
     pub req_i64: i64,
     pub req_u32: u32,
@@ -100,6 +101,7 @@ pub struct SampleStruct {
     pub req_enum2: i32,
 
     pub opt_string: Option<String>,
+    pub opt_bytes: Option<Vec<u8>>,
     pub opt_i32: Option<i32>,
     pub opt_i64: Option<i64>,
     pub opt_u32: Option<u32>,
@@ -112,6 +114,7 @@ pub struct SampleStruct {
     pub opt_enum2: Option<i32>,
 
     pub req_vec_req_item_string: Vec<String>,
+    pub req_vec_req_item_bytes: Vec<Vec<u8>>,
     pub req_vec_req_item_i32: Vec<i32>,
     pub req_vec_req_item_i64: Vec<i64>,
     pub req_vec_req_item_u32: Vec<u32>,
@@ -124,6 +127,7 @@ pub struct SampleStruct {
     pub req_vec_req_item_enum2: Vec<i32>,
 
     pub opt_vec_req_item_string: Option<Vec<String>>,
+    pub opt_vec_req_item_bytes: Option<Vec<Vec<u8>>>,
     pub opt_vec_req_item_i32: Option<Vec<i32>>,
     pub opt_vec_req_item_i64: Option<Vec<i64>>,
     pub opt_vec_req_item_u32: Option<Vec<u32>>,
@@ -136,6 +140,7 @@ pub struct SampleStruct {
     pub opt_vec_req_item_enum2: Option<Vec<i32>>,
 
     pub req_vec_opt_item_string: Vec<Option<String>>,
+    pub req_vec_opt_item_bytes: Vec<Option<Vec<u8>>>,
     pub req_vec_opt_item_i32: Vec<Option<i32>>,
     pub req_vec_opt_item_i64: Vec<Option<i64>>,
     pub req_vec_opt_item_u32: Vec<Option<u32>>,
@@ -148,6 +153,7 @@ pub struct SampleStruct {
     pub req_vec_opt_item_enum2: Vec<Option<i32>>,
 
     pub opt_vec_opt_item_string: Option<Vec<Option<String>>>,
+    pub opt_vec_opt_item_bytes: Option<Vec<Option<Vec<u8>>>>,
     pub opt_vec_opt_item_i32: Option<Vec<Option<i32>>>,
     pub opt_vec_opt_item_i64: Option<Vec<Option<i64>>>,
     pub opt_vec_opt_item_u32: Option<Vec<Option<u32>>>,
@@ -167,6 +173,7 @@ impl HasDataTypeWrapper for SampleStruct {
             data_type_wrapper!(Struct([
                 // Required scalar fields
                 ("req_string", String),
+                ("req_bytes", Bytes),
                 ("req_i32", Int32),
                 ("req_i64", Int64),
                 ("req_u32", UInt32),
@@ -179,6 +186,7 @@ impl HasDataTypeWrapper for SampleStruct {
                 ("req_enum2", FromEnumPath(SampleEnum)),
                 // Optional scalar fields
                 ("opt_string", Option(String)),
+                ("opt_bytes", Option(Bytes)),
                 ("opt_i32", Option(Int32)),
                 ("opt_i64", Option(Int64)),
                 ("opt_u32", Option(UInt32)),
@@ -191,6 +199,7 @@ impl HasDataTypeWrapper for SampleStruct {
                 ("opt_enum2", Option(FromEnumPath(SampleEnum))),
                 // Required vector fields with required items
                 ("req_vec_req_item_string", List(String)),
+                ("req_vec_req_item_bytes", List(Bytes)),
                 ("req_vec_req_item_i32", List(Int32)),
                 ("req_vec_req_item_i64", List(Int64)),
                 ("req_vec_req_item_u32", List(UInt32)),
@@ -206,6 +215,7 @@ impl HasDataTypeWrapper for SampleStruct {
                 ("req_vec_req_item_enum2", List(FromEnumPath(SampleEnum))),
                 // Optional vector fields with required items
                 ("opt_vec_req_item_string", Option(List(String))),
+                ("opt_vec_req_item_bytes", Option(List(Bytes))),
                 ("opt_vec_req_item_i32", Option(List(Int32))),
                 ("opt_vec_req_item_i64", Option(List(Int64))),
                 ("opt_vec_req_item_u32", Option(List(UInt32))),
@@ -227,6 +237,7 @@ impl HasDataTypeWrapper for SampleStruct {
                 ),
                 // Required vector fields with optional items
                 ("req_vec_opt_item_string", List(Option(String))),
+                ("req_vec_opt_item_bytes", List(Option(Bytes))),
                 ("req_vec_opt_item_i32", List(Option(Int32))),
                 ("req_vec_opt_item_i64", List(Option(Int64))),
                 ("req_vec_opt_item_u32", List(Option(UInt32))),
@@ -248,6 +259,7 @@ impl HasDataTypeWrapper for SampleStruct {
                 ),
                 // Optional vector fields with optional items
                 ("opt_vec_opt_item_string", Option(List(Option(String)))),
+                ("opt_vec_opt_item_bytes", Option(List(Option(Bytes)))),
                 ("opt_vec_opt_item_i32", Option(List(Option(Int32)))),
                 ("opt_vec_opt_item_i64", Option(List(Option(Int64)))),
                 ("opt_vec_opt_item_u32", Option(List(Option(UInt32)))),
@@ -322,6 +334,7 @@ impl StructPath for SampleStruct {
                     .ok_or(DataTypeWrapperError::FieldNotFound(name.to_string()))?;
                 match name.as_str() {
                     "req_string" => Ok(field_type.to_any_value(&self.req_string)),
+                    "req_bytes" => Ok(field_type.to_any_value(&self.req_bytes)),
                     "req_i32" => Ok(field_type.to_any_value(&self.req_i32)),
                     "req_i64" => Ok(field_type.to_any_value(&self.req_i64)),
                     "req_u32" => Ok(field_type.to_any_value(&self.req_u32)),
@@ -333,6 +346,7 @@ impl StructPath for SampleStruct {
                     "req_enum" => Ok(field_type.to_any_value(&self.req_enum)),
                     "req_enum2" => Ok(field_type.to_any_value(&self.req_enum2)),
                     "opt_string" => Ok(field_type.to_any_value(&self.opt_string)),
+                    "opt_bytes" => Ok(field_type.to_any_value(&self.opt_bytes)),
                     "opt_i32" => Ok(field_type.to_any_value(&self.opt_i32)),
                     "opt_i64" => Ok(field_type.to_any_value(&self.opt_i64)),
                     "opt_u32" => Ok(field_type.to_any_value(&self.opt_u32)),
@@ -345,6 +359,9 @@ impl StructPath for SampleStruct {
                     "opt_enum2" => Ok(field_type.to_any_value(&self.opt_enum2)),
                     "req_vec_req_item_string" => {
                         Ok(field_type.to_any_value(&self.req_vec_req_item_string))
+                    }
+                    "req_vec_req_item_bytes" => {
+                        Ok(field_type.to_any_value(&self.req_vec_req_item_bytes))
                     }
                     "req_vec_req_item_i32" => {
                         Ok(field_type.to_any_value(&self.req_vec_req_item_i32))
@@ -379,6 +396,9 @@ impl StructPath for SampleStruct {
                     "opt_vec_req_item_string" => {
                         Ok(field_type.to_any_value(&self.opt_vec_req_item_string))
                     }
+                    "opt_vec_req_item_bytes" => {
+                        Ok(field_type.to_any_value(&self.opt_vec_req_item_bytes))
+                    }
                     "opt_vec_req_item_i32" => {
                         Ok(field_type.to_any_value(&self.opt_vec_req_item_i32))
                     }
@@ -412,6 +432,9 @@ impl StructPath for SampleStruct {
                     "req_vec_opt_item_string" => {
                         Ok(field_type.to_any_value(&self.req_vec_opt_item_string))
                     }
+                    "req_vec_opt_item_bytes" => {
+                        Ok(field_type.to_any_value(&self.req_vec_opt_item_bytes))
+                    }
                     "req_vec_opt_item_i32" => {
                         Ok(field_type.to_any_value(&self.req_vec_opt_item_i32))
                     }
@@ -444,6 +467,9 @@ impl StructPath for SampleStruct {
                     }
                     "opt_vec_opt_item_string" => {
                         Ok(field_type.to_any_value(&self.opt_vec_opt_item_string))
+                    }
+                    "opt_vec_opt_item_bytes" => {
+                        Ok(field_type.to_any_value(&self.opt_vec_opt_item_bytes))
                     }
                     "opt_vec_opt_item_i32" => {
                         Ok(field_type.to_any_value(&self.opt_vec_opt_item_i32))
@@ -497,6 +523,9 @@ impl StructPath for SampleStruct {
                     "req_vec_req_item_string" => {
                         Ok(field_inner_type.to_any_value(&self.req_vec_req_item_string[index]))
                     }
+                    "req_vec_req_item_bytes" => {
+                        Ok(field_inner_type.to_any_value(&self.req_vec_req_item_bytes[index]))
+                    }
                     "req_vec_req_item_i32" => {
                         Ok(field_inner_type.to_any_value(&self.req_vec_req_item_i32[index]))
                     }
@@ -528,6 +557,10 @@ impl StructPath for SampleStruct {
                         Ok(field_inner_type.to_any_value(&self.req_vec_req_item_enum2[index]))
                     }
                     "opt_vec_req_item_string" => match self.opt_vec_req_item_string {
+                        Some(ref vec) => Ok(field_inner_type.to_any_value(&vec[index])),
+                        None => Ok(AnyValue::Null),
+                    },
+                    "opt_vec_req_item_bytes" => match self.opt_vec_req_item_bytes {
                         Some(ref vec) => Ok(field_inner_type.to_any_value(&vec[index])),
                         None => Ok(AnyValue::Null),
                     },
@@ -574,6 +607,9 @@ impl StructPath for SampleStruct {
                     "req_vec_opt_item_string" => {
                         Ok(field_inner_type.to_any_value(&self.req_vec_opt_item_string[index]))
                     }
+                    "req_vec_opt_item_bytes" => {
+                        Ok(field_inner_type.to_any_value(&self.req_vec_opt_item_bytes[index]))
+                    }
                     "req_vec_opt_item_i32" => {
                         Ok(field_inner_type.to_any_value(&self.req_vec_opt_item_i32[index]))
                     }
@@ -605,6 +641,10 @@ impl StructPath for SampleStruct {
                         Ok(field_inner_type.to_any_value(&self.req_vec_opt_item_enum2[index]))
                     }
                     "opt_vec_opt_item_string" => match self.opt_vec_opt_item_string {
+                        Some(ref vec) => Ok(field_inner_type.to_any_value(&vec[index])),
+                        None => Ok(AnyValue::Null),
+                    },
+                    "opt_vec_opt_item_bytes" => match self.opt_vec_opt_item_bytes {
                         Some(ref vec) => Ok(field_inner_type.to_any_value(&vec[index])),
                         None => Ok(AnyValue::Null),
                     },
