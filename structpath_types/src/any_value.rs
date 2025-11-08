@@ -56,6 +56,28 @@ impl IntoAnyValueWith<i64> for DataTypeWrapper {
     }
 }
 
+impl IntoAnyValueWith<u32> for DataTypeWrapper {
+    type ChunkDataType = ::polars_core::prelude::UInt32Type;
+
+    fn to_any_value(&self, value: &u32) -> AnyValue<'_> {
+        match self.raw {
+            DataTypeOpt::UInt32 => AnyValue::UInt32(*value),
+            _ => panic!("Unsupported DataTypeOpt for u32: {:?}", self),
+        }
+    }
+}
+
+impl IntoAnyValueWith<u64> for DataTypeWrapper {
+    type ChunkDataType = ::polars_core::prelude::UInt64Type;
+
+    fn to_any_value(&self, value: &u64) -> AnyValue<'_> {
+        match self.raw {
+            DataTypeOpt::UInt64 => AnyValue::UInt64(*value),
+            _ => panic!("Unsupported DataTypeOpt for u64: {:?}", self),
+        }
+    }
+}
+
 impl IntoAnyValueWith<f32> for DataTypeWrapper {
     type ChunkDataType = ::polars_core::prelude::Float32Type;
 
@@ -182,6 +204,22 @@ mod tests {
         let value = 1;
         let any_value = data_type_wrapper.to_any_value(&value);
         assert_eq!(any_value, AnyValue::Int64(value));
+    }
+
+    #[test]
+    fn test_to_any_value_u32() {
+        let data_type_wrapper = data_type_wrapper!(UInt32);
+        let value = 1u32;
+        let any_value = data_type_wrapper.to_any_value(&value);
+        assert_eq!(any_value, AnyValue::UInt32(value));
+    }
+
+    #[test]
+    fn test_to_any_value_u64() {
+        let data_type_wrapper = data_type_wrapper!(UInt64);
+        let value = 1u64;
+        let any_value = data_type_wrapper.to_any_value(&value);
+        assert_eq!(any_value, AnyValue::UInt64(value));
     }
 
     #[test]

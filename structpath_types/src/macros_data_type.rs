@@ -29,6 +29,8 @@ macro_rules! data_type {
     (String) => { ::polars_core::prelude::DataType::String };
     (Int32) => { ::polars_core::prelude::DataType::Int32 };
     (Int64) => { ::polars_core::prelude::DataType::Int64 };
+    (UInt32) => { ::polars_core::prelude::DataType::UInt32 };
+    (UInt64) => { ::polars_core::prelude::DataType::UInt64 };
     (Float32) => { ::polars_core::prelude::DataType::Float32 };
     (Float64) => { ::polars_core::prelude::DataType::Float64 };
     (Boolean) => { ::polars_core::prelude::DataType::Boolean };
@@ -91,6 +93,8 @@ mod tests {
         assert_eq!(data_type!(String), DataType::String);
         assert_eq!(data_type!(Int32), DataType::Int32);
         assert_eq!(data_type!(Int64), DataType::Int64);
+        assert_eq!(data_type!(UInt32), DataType::UInt32);
+        assert_eq!(data_type!(UInt64), DataType::UInt64);
         assert_eq!(data_type!(Float32), DataType::Float32);
         assert_eq!(data_type!(Float64), DataType::Float64);
         assert_eq!(data_type!(Boolean), DataType::Boolean);
@@ -111,6 +115,14 @@ mod tests {
         assert_eq!(
             data_type!(List(Int64)),
             DataType::List(Box::new(DataType::Int64))
+        );
+        assert_eq!(
+            data_type!(List(UInt32)),
+            DataType::List(Box::new(DataType::UInt32))
+        );
+        assert_eq!(
+            data_type!(List(UInt64)),
+            DataType::List(Box::new(DataType::UInt64))
         );
     }
 
@@ -169,6 +181,18 @@ mod tests {
         assert_eq!(
             result3,
             ::polars_core::prelude::Field::new("big_age".into(), DataType::Int64)
+        );
+
+        let result3a = field_type!("big_u32", UInt32);
+        assert_eq!(
+            result3a,
+            ::polars_core::prelude::Field::new("big_u32".into(), DataType::UInt32)
+        );
+
+        let result3b = field_type!("big_u64", UInt64);
+        assert_eq!(
+            result3b,
+            ::polars_core::prelude::Field::new("big_u64".into(), DataType::UInt64)
         );
 
         // Test list types
