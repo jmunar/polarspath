@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nuser.proto\x12\x06sample\"\xf2\x02\n\x04User\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0b\n\x03\x61ge\x18\x02 \x01(\x03\x12\x12\n\x05\x65mail\x18\x03 \x01(\tH\x00\x88\x01\x01\x12\x11\n\tis_active\x18\x04 \x01(\x08\x12\'\n\rfavourite_pet\x18\x05 \x01(\x0b\x32\x10.sample.User.Pet\x12\x0c\n\x04tags\x18\x06 \x03(\t\x12%\n\x07loyalty\x18\x07 \x01(\x0e\x32\x14.sample.User.Loyalty\x12\x1e\n\x04pets\x18\x08 \x03(\x0b\x32\x10.sample.User.Pet\x1a\'\n\x03Pet\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x12\n\nbirth_year\x18\x02 \x01(\x03\x1a#\n\x06\x46\x61ther\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0b\n\x03\x61ge\x18\x02 \x01(\x03\x1a#\n\x06Mother\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0b\n\x03\x61ge\x18\x02 \x01(\x03\"-\n\x07Loyalty\x12\n\n\x06SILVER\x10\x00\x12\x08\n\x04GOLD\x10\x01\x12\x0c\n\x08PLATINUM\x10\x02\x42\x08\n\x06_emailb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nuser.proto\x12\x06sample\"\xff\x02\n\x04User\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0b\n\x03\x61ge\x18\x02 \x01(\x03\x12\x12\n\x05\x65mail\x18\x03 \x01(\tH\x00\x88\x01\x01\x12\x11\n\tis_active\x18\x04 \x01(\x08\x12\'\n\rfavourite_pet\x18\x05 \x01(\x0b\x32\x10.sample.User.Pet\x12\x0c\n\x04tags\x18\x06 \x03(\t\x12%\n\x07loyalty\x18\x07 \x01(\x0e\x32\x14.sample.User.Loyalty\x12\x1e\n\x04pets\x18\x08 \x03(\x0b\x32\x10.sample.User.Pet\x1a\'\n\x03Pet\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x12\n\nbirth_year\x18\x02 \x01(\x03\x1a#\n\x06\x46\x61ther\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0b\n\x03\x61ge\x18\x02 \x01(\x03\x1a#\n\x06Mother\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0b\n\x03\x61ge\x18\x02 \x01(\x03\":\n\x07Loyalty\x12\x0b\n\x07UNKNOWN\x10\x00\x12\n\n\x06SILVER\x10\x01\x12\x08\n\x04GOLD\x10\x02\x12\x0c\n\x08PLATINUM\x10\x03\x42\x08\n\x06_emailb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,7 +32,7 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'user_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_USER']._serialized_start=23
-  _globals['_USER']._serialized_end=393
+  _globals['_USER']._serialized_end=406
   _globals['_USER_PET']._serialized_start=223
   _globals['_USER_PET']._serialized_end=262
   _globals['_USER_FATHER']._serialized_start=264
@@ -40,5 +40,5 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_USER_MOTHER']._serialized_start=301
   _globals['_USER_MOTHER']._serialized_end=336
   _globals['_USER_LOYALTY']._serialized_start=338
-  _globals['_USER_LOYALTY']._serialized_end=383
+  _globals['_USER_LOYALTY']._serialized_end=396
 # @@protoc_insertion_point(module_scope)

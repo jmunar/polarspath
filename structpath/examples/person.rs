@@ -1,5 +1,5 @@
 use polars_core::prelude::AnyValue;
-use structpath::{DataTypeOpt, StructPath};
+use structpath::{data_type_wrapper, StructPath};
 
 #[derive(StructPath, Debug, Clone, PartialEq)]
 struct Person {
@@ -14,9 +14,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let name_type = Person::get_type("name")?;
-    assert_eq!(name_type, DataTypeOpt::String);
+    assert_eq!(name_type, data_type_wrapper!(String));
     let age_type = Person::get_type("age")?;
-    assert_eq!(age_type, DataTypeOpt::Int64);
+    assert_eq!(age_type, data_type_wrapper!(Int64));
 
     let name = person.get_value("name")?;
     assert_eq!(name, AnyValue::String("John"));

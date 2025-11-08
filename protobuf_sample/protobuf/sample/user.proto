@@ -19,9 +19,10 @@ message User {
   }
 
   enum Loyalty {
-    SILVER = 0;
-    GOLD = 1;
-    PLATINUM = 2;
+    UNKNOWN = 0;
+    SILVER = 1;
+    GOLD = 2;
+    PLATINUM = 3;
   }
 
   string name = 1;

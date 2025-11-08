@@ -2,8 +2,9 @@
 
 CARGOS := structpath_types structpath_derive structpath protobuf_sample protobuf_sample_polars
 
-all: format check test build
-all-rust: format-rust check-rust test-rust build-rust
+all: format check test build-python
+all-python: format-python check-python build-python
+all-rust: format-rust check-rust test-rust
 
 install-uv:
 	@curl -LsSf https://astral.sh/uv/install.sh | sh

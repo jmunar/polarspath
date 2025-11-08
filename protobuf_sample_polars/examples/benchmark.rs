@@ -40,11 +40,11 @@ struct SampleMessage {
     f_string_repeated: Vec<String>,
 
     #[prost(message, tag = "9")]
-    #[type_hint = "struct"]
+    #[type_hint("struct")]
     f_submessage: Option<SampleSubmessage>,
 
     #[prost(message, repeated, tag = "10")]
-    #[type_hint = "struct"]
+    #[type_hint("struct")]
     f_submessage_repeated: Vec<SampleSubmessage>,
 }
 
