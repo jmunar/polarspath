@@ -56,6 +56,17 @@ impl IntoAnyValueWith<i64> for DataTypeWrapper {
     }
 }
 
+impl IntoAnyValueWith<f32> for DataTypeWrapper {
+    type ChunkDataType = ::polars_core::prelude::Float32Type;
+
+    fn to_any_value(&self, value: &f32) -> AnyValue<'_> {
+        match self.raw {
+            DataTypeOpt::Float32 => AnyValue::Float32(*value),
+            _ => panic!("Unsupported DataTypeOpt for f32: {:?}", self),
+        }
+    }
+}
+
 impl IntoAnyValueWith<f64> for DataTypeWrapper {
     type ChunkDataType = ::polars_core::prelude::Float64Type;
 
@@ -171,6 +182,14 @@ mod tests {
         let value = 1;
         let any_value = data_type_wrapper.to_any_value(&value);
         assert_eq!(any_value, AnyValue::Int64(value));
+    }
+
+    #[test]
+    fn test_to_any_value_f32() {
+        let data_type_wrapper = data_type_wrapper!(Float32);
+        let value = 1.0f32;
+        let any_value = data_type_wrapper.to_any_value(&value);
+        assert_eq!(any_value, AnyValue::Float32(value));
     }
 
     #[test]

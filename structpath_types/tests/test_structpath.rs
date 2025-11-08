@@ -8,6 +8,7 @@ pub fn fields_polars() -> Vec<Field> {
         field_type!("req_string", String),
         field_type!("req_i32", Int32),
         field_type!("req_i64", Int64),
+        field_type!("req_f32", Float32),
         field_type!("req_f64", Float64),
         field_type!("req_bool", Boolean),
         field_type!("req_struct", Struct([("subf_string", String)])),
@@ -17,6 +18,7 @@ pub fn fields_polars() -> Vec<Field> {
         field_type!("opt_string", String),
         field_type!("opt_i32", Int32),
         field_type!("opt_i64", Int64),
+        field_type!("opt_f32", Float32),
         field_type!("opt_f64", Float64),
         field_type!("opt_bool", Boolean),
         field_type!("opt_struct", Struct([("subf_string", String)])),
@@ -26,6 +28,7 @@ pub fn fields_polars() -> Vec<Field> {
         field_type!("req_vec_req_item_string", List(String)),
         field_type!("req_vec_req_item_i32", List(Int32)),
         field_type!("req_vec_req_item_i64", List(Int64)),
+        field_type!("req_vec_req_item_f32", List(Float32)),
         field_type!("req_vec_req_item_f64", List(Float64)),
         field_type!("req_vec_req_item_bool", List(Boolean)),
         field_type!(
@@ -38,6 +41,7 @@ pub fn fields_polars() -> Vec<Field> {
         field_type!("opt_vec_req_item_string", List(String)),
         field_type!("opt_vec_req_item_i32", List(Int32)),
         field_type!("opt_vec_req_item_i64", List(Int64)),
+        field_type!("opt_vec_req_item_f32", List(Float32)),
         field_type!("opt_vec_req_item_f64", List(Float64)),
         field_type!("opt_vec_req_item_bool", List(Boolean)),
         field_type!(
@@ -50,6 +54,7 @@ pub fn fields_polars() -> Vec<Field> {
         field_type!("req_vec_opt_item_string", List(String)),
         field_type!("req_vec_opt_item_i32", List(Int32)),
         field_type!("req_vec_opt_item_i64", List(Int64)),
+        field_type!("req_vec_opt_item_f32", List(Float32)),
         field_type!("req_vec_opt_item_f64", List(Float64)),
         field_type!("req_vec_opt_item_bool", List(Boolean)),
         field_type!(
@@ -62,6 +67,7 @@ pub fn fields_polars() -> Vec<Field> {
         field_type!("opt_vec_opt_item_string", List(String)),
         field_type!("opt_vec_opt_item_i32", List(Int32)),
         field_type!("opt_vec_opt_item_i64", List(Int64)),
+        field_type!("opt_vec_opt_item_f32", List(Float32)),
         field_type!("opt_vec_opt_item_f64", List(Float64)),
         field_type!("opt_vec_opt_item_bool", List(Boolean)),
         field_type!(

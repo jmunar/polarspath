@@ -39,6 +39,7 @@ macro_rules! data_type_wrapper {
     (String) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::String) };
     (Int32) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::Int32) };
     (Int64) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::Int64) };
+    (Float32) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::Float32) };
     (Float64) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::Float64) };
     (Boolean) => { $crate::DataTypeWrapper::new($crate::DataTypeOpt::Boolean) };
 
@@ -92,6 +93,10 @@ mod tests {
         assert_eq!(
             data_type_wrapper!(Int64),
             DataTypeWrapper::new(DataTypeOpt::Int64)
+        );
+        assert_eq!(
+            data_type_wrapper!(Float32),
+            DataTypeWrapper::new(DataTypeOpt::Float32)
         );
         assert_eq!(
             data_type_wrapper!(Float64),

@@ -92,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let field_path = format!(".{}.{}.{}", package_name, message_name, field_name);
                 match field.r#type().as_str_name() {
                     "TYPE_DOUBLE" => continue,
-                    "TYPE_FLOAT" => panic!("TYPE_FLOAT not supported"),
+                    "TYPE_FLOAT" => continue,
                     "TYPE_INT64" => continue,
                     "TYPE_UINT64" => panic!("TYPE_UINT64 not supported"),
                     "TYPE_INT32" => continue,

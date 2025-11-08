@@ -65,6 +65,7 @@ pub enum DataTypeOpt {
     String,
     Int32,
     Int64,
+    Float32,
     Float64,
     Boolean,
     Enum(EnumOptInfo),
@@ -90,6 +91,7 @@ impl DataTypeWrapper {
             DataTypeOpt::String => DataType::String,
             DataTypeOpt::Int32 => DataType::Int32,
             DataTypeOpt::Int64 => DataType::Int64,
+            DataTypeOpt::Float32 => DataType::Float32,
             DataTypeOpt::Float64 => DataType::Float64,
             DataTypeOpt::Boolean => DataType::Boolean,
             DataTypeOpt::Enum(enum_mapping) => {
@@ -125,6 +127,7 @@ impl ToTokens for DataTypeWrapper {
             DataTypeOpt::String => quote! { ::structpath::DataTypeWrapper::new(::structpath::DataTypeOpt::String) },
             DataTypeOpt::Int32 => quote! { ::structpath::DataTypeWrapper::new(::structpath::DataTypeOpt::Int32) },
             DataTypeOpt::Int64 => quote! { ::structpath::DataTypeWrapper::new(::structpath::DataTypeOpt::Int64) },
+            DataTypeOpt::Float32 => quote! { ::structpath::DataTypeWrapper::new(::structpath::DataTypeOpt::Float32) },
             DataTypeOpt::Float64 => quote! { ::structpath::DataTypeWrapper::new(::structpath::DataTypeOpt::Float64) },
             DataTypeOpt::Boolean => quote! { ::structpath::DataTypeWrapper::new(::structpath::DataTypeOpt::Boolean) },
             DataTypeOpt::List(inner_type) => {

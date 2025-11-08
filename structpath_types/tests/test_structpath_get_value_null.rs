@@ -9,6 +9,7 @@ fn sample_struct() -> SampleStruct {
         req_string: "req_string".to_string(),
         req_i32: 1,
         req_i64: 1,
+        req_f32: 1.0f32,
         req_f64: 1.0,
         req_bool: true,
         req_struct: SampleSubstruct {
@@ -20,6 +21,7 @@ fn sample_struct() -> SampleStruct {
         opt_string: None,
         opt_i32: None,
         opt_i64: None,
+        opt_f32: None,
         opt_f64: None,
         opt_bool: None,
         opt_struct: None,
@@ -29,6 +31,7 @@ fn sample_struct() -> SampleStruct {
         req_vec_req_item_string: vec!["req_vec_req_item_string".to_string()],
         req_vec_req_item_i32: vec![3],
         req_vec_req_item_i64: vec![3],
+        req_vec_req_item_f32: vec![3.0f32],
         req_vec_req_item_f64: vec![3.0],
         req_vec_req_item_bool: vec![true],
         req_vec_req_item_struct: vec![SampleSubstruct {
@@ -40,6 +43,7 @@ fn sample_struct() -> SampleStruct {
         opt_vec_req_item_string: None,
         opt_vec_req_item_i32: None,
         opt_vec_req_item_i64: None,
+        opt_vec_req_item_f32: None,
         opt_vec_req_item_f64: None,
         opt_vec_req_item_bool: None,
         opt_vec_req_item_struct: None,
@@ -49,6 +53,7 @@ fn sample_struct() -> SampleStruct {
         req_vec_opt_item_string: vec![None],
         req_vec_opt_item_i32: vec![None],
         req_vec_opt_item_i64: vec![None],
+        req_vec_opt_item_f32: vec![None],
         req_vec_opt_item_f64: vec![None],
         req_vec_opt_item_bool: vec![None],
         req_vec_opt_item_struct: vec![None],
@@ -58,6 +63,7 @@ fn sample_struct() -> SampleStruct {
         opt_vec_opt_item_string: Some(vec![None]),
         opt_vec_opt_item_i32: Some(vec![None]),
         opt_vec_opt_item_i64: Some(vec![None]),
+        opt_vec_opt_item_f32: Some(vec![None]),
         opt_vec_opt_item_f64: Some(vec![None]),
         opt_vec_opt_item_bool: Some(vec![None]),
         opt_vec_opt_item_struct: Some(vec![None]),
@@ -77,6 +83,9 @@ fn test_field_to_any_value_opt_fields_null() -> Result<(), Box<dyn std::error::E
     assert_eq!(any_value, AnyValue::Null);
 
     let any_value = sample_struct.get_value("opt_i64")?;
+    assert_eq!(any_value, AnyValue::Null);
+
+    let any_value = sample_struct.get_value("opt_f32")?;
     assert_eq!(any_value, AnyValue::Null);
 
     let any_value = sample_struct.get_value("opt_f64")?;
@@ -109,6 +118,9 @@ fn test_field_to_any_value_opt_vec_fields_req_items_null() -> Result<(), Box<dyn
     assert_eq!(any_value, AnyValue::Null);
 
     let any_value = sample_struct.get_value("opt_vec_req_item_i64")?;
+    assert_eq!(any_value, AnyValue::Null);
+
+    let any_value = sample_struct.get_value("opt_vec_req_item_f32")?;
     assert_eq!(any_value, AnyValue::Null);
 
     let any_value = sample_struct.get_value("opt_vec_req_item_f64")?;
@@ -151,6 +163,12 @@ fn test_field_to_any_value_req_vec_fields_opt_items_null() -> Result<(), Box<dyn
     );
 
     let any_value = sample_struct.get_value("req_vec_opt_item_i64")?;
+    assert_eq!(
+        any_value,
+        AnyValue::List(Series::from_any_values("".into(), &[AnyValue::Null], false).unwrap())
+    );
+
+    let any_value = sample_struct.get_value("req_vec_opt_item_f32")?;
     assert_eq!(
         any_value,
         AnyValue::List(Series::from_any_values("".into(), &[AnyValue::Null], false).unwrap())

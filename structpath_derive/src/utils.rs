@@ -139,6 +139,7 @@ pub fn parse_data_type(field_type: &Type, attrs: &[Attribute]) -> DataTypeWrappe
                         }
                     }
                     "i64" => data_type_wrapper!(Int64),
+                    "f32" => data_type_wrapper!(Float32),
                     "f64" => data_type_wrapper!(Float64),
                     "bool" => data_type_wrapper!(Boolean),
                     "Vec" => {
