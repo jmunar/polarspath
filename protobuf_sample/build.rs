@@ -91,21 +91,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let field_name = field.name.as_ref().unwrap();
                 let field_path = format!(".{}.{}.{}", package_name, message_name, field_name);
                 match field.r#type().as_str_name() {
-                    "TYPE_DOUBLE" => continue,
-                    "TYPE_FLOAT" => continue,
-                    "TYPE_INT64" => continue,
-                    "TYPE_UINT64" => continue,
-                    "TYPE_INT32" => continue,
-                    "TYPE_FIXED64" => continue,
-                    "TYPE_FIXED32" => continue,
-                    "TYPE_BOOL" => continue,
-                    "TYPE_STRING" => continue,
-                    "TYPE_GROUP" => panic!("TYPE_GROUP not supported"), // Proto2 syntax only, and deprecated.
+                    "TYPE_DOUBLE" | "TYPE_FLOAT" | "TYPE_INT64" | "TYPE_UINT64" | "TYPE_INT32"
+                    | "TYPE_FIXED64" | "TYPE_FIXED32" | "TYPE_BOOL" | "TYPE_STRING"
+                    | "TYPE_GROUP" | "TYPE_BYTES" | "TYPE_UINT32" | "TYPE_SFIXED32"
+                    | "TYPE_SFIXED64" => continue,
                     "TYPE_MESSAGE" => {
                         config.field_attribute(&field_path, "#[type_hint(\"struct\")]")
                     }
-                    "TYPE_BYTES" => continue,
-                    "TYPE_UINT32" => continue,
                     "TYPE_ENUM" => {
                         let enum_type_name = extract_type_name(package_name, field.type_name());
                         config.field_attribute(
@@ -113,8 +105,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             format!("#[type_hint(\"enum\", {:?})]", enum_type_name),
                         )
                     }
-                    "TYPE_SFIXED32" => continue,
-                    "TYPE_SFIXED64" => continue,
                     _ => panic!("Unknown field type: {}", field.r#type().as_str_name()),
                 };
             }
