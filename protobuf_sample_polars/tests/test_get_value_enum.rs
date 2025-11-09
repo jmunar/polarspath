@@ -32,7 +32,7 @@ impl Msg {
 #[test]
 fn test_get_value_req_enum() {
     let samples = Msg::gen_seq(10);
-    let result = get_value::<Msg>(&samples, "req_enum").unwrap();
+    let result = get_value::<Msg>(&samples, "req_enum", false).unwrap();
     // Cast enum to string to access string values
     let string_series = result.cast(&DataType::String).unwrap();
     let string_series: &ChunkedArray<StringType> = string_series.str().unwrap();

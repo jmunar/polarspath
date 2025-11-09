@@ -99,7 +99,7 @@ fn benchmark_prost_decode(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_string(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_string");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_string").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_string", false).unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -127,7 +127,7 @@ fn benchmark_f_string(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_integer(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_integer");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_integer").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_integer", false).unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -155,7 +155,7 @@ fn benchmark_f_integer(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_double(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_double");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_double").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_double", false).unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -183,7 +183,7 @@ fn benchmark_f_double(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_boolean(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_boolean");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_boolean").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_boolean", false).unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -211,7 +211,7 @@ fn benchmark_f_boolean(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_integer_optional(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_integer_optional");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_integer_optional").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_integer_optional", false).unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -260,7 +260,7 @@ fn benchmark_f_integer_optional(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_string_optional(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_string_optional");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_string_optional").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_string_optional", false).unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -314,7 +314,7 @@ fn benchmark_f_string_optional(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_integer_repeated(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_integer_repeated");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_integer_repeated").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_integer_repeated", false).unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -365,7 +365,7 @@ fn benchmark_f_integer_repeated(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_string_repeated(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_string_repeated");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_string_repeated").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_string_repeated", false).unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -416,7 +416,7 @@ fn benchmark_f_string_repeated(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_submessage(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_submessage");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_submessage").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_submessage", false).unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
@@ -464,7 +464,7 @@ fn benchmark_f_submessage(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_submessage_repeated(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_submessage_repeated");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_submessage_repeated").unwrap();
+    let result_path = get_value::<SampleMessage>(&samples, "f_submessage_repeated", false).unwrap();
     let t1 = std::time::Instant::now();
     println!(
         "    Time taken (structpath): {:>8.4} s",
