@@ -83,28 +83,29 @@ impl SampleMessage {
     }
 }
 
+fn print_time(label: &str, t0: std::time::Instant) {
+    let t1 = std::time::Instant::now();
+    println!("    {:<42} {:>10.4} s", label, (t1 - t0).as_secs_f64());
+}
+
 fn benchmark_prost_decode(samples: &ChunkedArray<BinaryType>) {
     println!("Prost decode time");
     let t0 = std::time::Instant::now();
     samples.into_iter().for_each(|bytes| {
         let _ = SampleMessage::decode(bytes.unwrap()).unwrap();
     });
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken:              {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    print_time("Time taken:", t0);
 }
 
 fn benchmark_f_string(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_string");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_string").unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (structpath): {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    let result_path_parallel = get_value::<SampleMessage>(&samples, "f_string", true).unwrap();
+    print_time("Time taken (structpath parallel):", t0);
+
+    let t0 = std::time::Instant::now();
+    let result_path = get_value::<SampleMessage>(&samples, "f_string", false).unwrap();
+    print_time("Time taken (structpath non-parallel):", t0);
 
     let t0 = std::time::Instant::now();
     let result_direct = samples
@@ -115,24 +116,21 @@ fn benchmark_f_string(samples: &ChunkedArray<BinaryType>) {
         })
         .collect::<ChunkedArray<StringType>>()
         .into_series();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (direct):     {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    print_time("Time taken (direct):", t0);
 
+    assert_eq!(result_path_parallel, result_direct);
     assert_eq!(result_path, result_direct);
 }
 
 fn benchmark_f_integer(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_integer");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_integer").unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (structpath): {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    let result_path_parallel = get_value::<SampleMessage>(&samples, "f_integer", true).unwrap();
+    print_time("Time taken (structpath parallel):", t0);
+
+    let t0 = std::time::Instant::now();
+    let result_path = get_value::<SampleMessage>(&samples, "f_integer", false).unwrap();
+    print_time("Time taken (structpath non-parallel):", t0);
 
     let t0 = std::time::Instant::now();
     let result_direct = samples
@@ -143,24 +141,21 @@ fn benchmark_f_integer(samples: &ChunkedArray<BinaryType>) {
         })
         .collect::<ChunkedArray<Int64Type>>()
         .into_series();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (direct):     {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    print_time("Time taken (direct):", t0);
 
+    assert_eq!(result_path_parallel, result_direct);
     assert_eq!(result_path, result_direct);
 }
 
 fn benchmark_f_double(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_double");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_double").unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (structpath): {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    let result_path_parallel = get_value::<SampleMessage>(&samples, "f_double", true).unwrap();
+    print_time("Time taken (structpath parallel):", t0);
+
+    let t0 = std::time::Instant::now();
+    let result_path = get_value::<SampleMessage>(&samples, "f_double", false).unwrap();
+    print_time("Time taken (structpath non-parallel):", t0);
 
     let t0 = std::time::Instant::now();
     let result_direct = samples
@@ -171,24 +166,21 @@ fn benchmark_f_double(samples: &ChunkedArray<BinaryType>) {
         })
         .collect::<ChunkedArray<Float64Type>>()
         .into_series();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (direct):     {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    print_time("Time taken (direct):", t0);
 
+    assert_eq!(result_path_parallel, result_direct);
     assert_eq!(result_path, result_direct);
 }
 
 fn benchmark_f_boolean(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_boolean");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_boolean").unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (structpath): {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    let result_path_parallel = get_value::<SampleMessage>(&samples, "f_boolean", true).unwrap();
+    print_time("Time taken (structpath parallel):", t0);
+
+    let t0 = std::time::Instant::now();
+    let result_path = get_value::<SampleMessage>(&samples, "f_boolean", false).unwrap();
+    print_time("Time taken (structpath non-parallel):", t0);
 
     let t0 = std::time::Instant::now();
     let result_direct = samples
@@ -199,24 +191,22 @@ fn benchmark_f_boolean(samples: &ChunkedArray<BinaryType>) {
         })
         .collect::<ChunkedArray<BooleanType>>()
         .into_series();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (direct):     {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    print_time("Time taken (direct):", t0);
 
+    assert_eq!(result_path_parallel, result_direct);
     assert_eq!(result_path, result_direct);
 }
 
 fn benchmark_f_integer_optional(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_integer_optional");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_integer_optional").unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (structpath): {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    let result_path_parallel =
+        get_value::<SampleMessage>(&samples, "f_integer_optional", true).unwrap();
+    print_time("Time taken (structpath parallel):", t0);
+
+    let t0 = std::time::Instant::now();
+    let result_path = get_value::<SampleMessage>(&samples, "f_integer_optional", false).unwrap();
+    print_time("Time taken (structpath non-parallel):", t0);
 
     let t0 = std::time::Instant::now();
     let result_direct = samples
@@ -227,11 +217,7 @@ fn benchmark_f_integer_optional(samples: &ChunkedArray<BinaryType>) {
         })
         .collect::<ChunkedArray<Int64Type>>()
         .into_series();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (direct):     {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    print_time("Time taken (direct):", t0);
 
     // Optimized version using AnyValue to avoid intermediate allocations
     let t0 = std::time::Instant::now();
@@ -247,12 +233,9 @@ fn benchmark_f_integer_optional(samples: &ChunkedArray<BinaryType>) {
         .collect::<Vec<AnyValue>>();
 
     let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (any value):  {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    print_time("Time taken (any value):", t0);
 
+    assert_eq!(result_path_parallel, result_direct);
     assert_eq!(result_path, result_direct);
     assert_eq!(result_path, result_optimized);
 }
@@ -260,12 +243,13 @@ fn benchmark_f_integer_optional(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_string_optional(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_string_optional");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_string_optional").unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (structpath): {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    let result_path_parallel =
+        get_value::<SampleMessage>(&samples, "f_string_optional", true).unwrap();
+    print_time("Time taken (structpath parallel):", t0);
+
+    let t0 = std::time::Instant::now();
+    let result_path = get_value::<SampleMessage>(&samples, "f_string_optional", false).unwrap();
+    print_time("Time taken (structpath non-parallel):", t0);
 
     let t0 = std::time::Instant::now();
     let result_direct = samples
@@ -276,11 +260,7 @@ fn benchmark_f_string_optional(samples: &ChunkedArray<BinaryType>) {
         })
         .collect::<ChunkedArray<StringType>>()
         .into_series();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (direct):     {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    print_time("Time taken (direct):", t0);
 
     // Optimized version using AnyValue to avoid intermediate allocations
     let t0 = std::time::Instant::now();
@@ -301,12 +281,9 @@ fn benchmark_f_string_optional(samples: &ChunkedArray<BinaryType>) {
         .collect();
 
     let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (any value):  {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    print_time("Time taken (any value):", t0);
 
+    assert_eq!(result_path_parallel, result_direct);
     assert_eq!(result_path, result_direct);
     assert_eq!(result_path, result_optimized);
 }
@@ -314,12 +291,13 @@ fn benchmark_f_string_optional(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_integer_repeated(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_integer_repeated");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_integer_repeated").unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (structpath): {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    let result_path_parallel =
+        get_value::<SampleMessage>(&samples, "f_integer_repeated", true).unwrap();
+    print_time("Time taken (structpath parallel):", t0);
+
+    let t0 = std::time::Instant::now();
+    let result_path = get_value::<SampleMessage>(&samples, "f_integer_repeated", false).unwrap();
+    print_time("Time taken (structpath non-parallel):", t0);
 
     let t0 = std::time::Instant::now();
     let result_direct = samples
@@ -332,11 +310,7 @@ fn benchmark_f_integer_repeated(samples: &ChunkedArray<BinaryType>) {
         })
         .collect::<ChunkedArray<ListType>>()
         .into_series();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (direct):     {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    print_time("Time taken (direct):", t0);
 
     // Optimized version using AnyValue to avoid intermediate allocations
     let t0 = std::time::Instant::now();
@@ -352,12 +326,9 @@ fn benchmark_f_integer_repeated(samples: &ChunkedArray<BinaryType>) {
         .collect::<Vec<AnyValue>>();
 
     let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (any value):  {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    print_time("Time taken (any value):", t0);
 
+    assert_eq!(result_path_parallel, result_direct);
     assert_eq!(result_path, result_direct);
     assert_eq!(result_path, result_optimized);
 }
@@ -365,12 +336,13 @@ fn benchmark_f_integer_repeated(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_string_repeated(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_string_repeated");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_string_repeated").unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (structpath): {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    let result_path_parallel =
+        get_value::<SampleMessage>(&samples, "f_string_repeated", true).unwrap();
+    print_time("Time taken (structpath parallel):", t0);
+
+    let t0 = std::time::Instant::now();
+    let result_path = get_value::<SampleMessage>(&samples, "f_string_repeated", false).unwrap();
+    print_time("Time taken (structpath non-parallel):", t0);
 
     let t0 = std::time::Instant::now();
     let result_direct = samples
@@ -383,11 +355,7 @@ fn benchmark_f_string_repeated(samples: &ChunkedArray<BinaryType>) {
         })
         .collect::<ChunkedArray<ListType>>()
         .into_series();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (direct):     {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    print_time("Time taken (direct):", t0);
 
     // Optimized version using AnyValue to avoid intermediate allocations
     let t0 = std::time::Instant::now();
@@ -403,12 +371,9 @@ fn benchmark_f_string_repeated(samples: &ChunkedArray<BinaryType>) {
         .collect::<Vec<AnyValue>>();
 
     let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (any value):  {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    print_time("Time taken (any value):", t0);
 
+    assert_eq!(result_path_parallel, result_direct);
     assert_eq!(result_path, result_direct);
     assert_eq!(result_path, result_optimized);
 }
@@ -416,12 +381,12 @@ fn benchmark_f_string_repeated(samples: &ChunkedArray<BinaryType>) {
 fn benchmark_f_submessage(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_submessage");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_submessage").unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (structpath): {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    let result_path_parallel = get_value::<SampleMessage>(&samples, "f_submessage", true).unwrap();
+    print_time("Time taken (structpath parallel):", t0);
+
+    let t0 = std::time::Instant::now();
+    let result_path = get_value::<SampleMessage>(&samples, "f_submessage", false).unwrap();
+    print_time("Time taken (structpath non-parallel):", t0);
 
     // Optimized version using AnyValue to avoid intermediate allocations
     let t0 = std::time::Instant::now();
@@ -452,24 +417,22 @@ fn benchmark_f_submessage(samples: &ChunkedArray<BinaryType>) {
         .collect::<Vec<AnyValue>>();
 
     let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (any value):  {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    print_time("Time taken (any value):", t0);
 
+    assert_eq!(result_path_parallel, result_optimized);
     assert_eq!(result_path, result_optimized);
 }
 
 fn benchmark_f_submessage_repeated(samples: &ChunkedArray<BinaryType>) {
     println!("Extracting f_submessage_repeated");
     let t0 = std::time::Instant::now();
-    let result_path = get_value::<SampleMessage>(&samples, "f_submessage_repeated").unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (structpath): {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    let result_path_parallel =
+        get_value::<SampleMessage>(&samples, "f_submessage_repeated", true).unwrap();
+    print_time("Time taken (structpath parallel):", t0);
+
+    let t0 = std::time::Instant::now();
+    let result_path = get_value::<SampleMessage>(&samples, "f_submessage_repeated", false).unwrap();
+    print_time("Time taken (structpath non-parallel):", t0);
 
     let t0 = std::time::Instant::now();
     let any_values = samples
@@ -500,12 +463,9 @@ fn benchmark_f_submessage_repeated(samples: &ChunkedArray<BinaryType>) {
         .collect::<Vec<AnyValue>>();
 
     let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
-    let t1 = std::time::Instant::now();
-    println!(
-        "    Time taken (direct):     {:>8.4} s",
-        (t1 - t0).as_secs_f64()
-    );
+    print_time("Time taken (direct):", t0);
 
+    assert_eq!(result_path_parallel, result_optimized);
     assert_eq!(result_path, result_optimized);
 }
 

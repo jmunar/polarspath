@@ -25,7 +25,7 @@ impl Msg {
 #[test]
 fn test_get_value_req_vec_req_item_string() {
     let samples = Msg::gen_seq(10);
-    let result = get_value::<Msg>(&samples, "req_vec_req_item_string").unwrap();
+    let result = get_value::<Msg>(&samples, "req_vec_req_item_string", true).unwrap();
 
     // Test that we can properly access the list elements as expected
     let series_as_any = result.as_any();

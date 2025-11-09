@@ -25,7 +25,7 @@ impl Msg {
 #[test]
 fn test_get_value_req_string() {
     let samples = Msg::gen_seq(10);
-    let result = get_value::<Msg>(&samples, "req_string").unwrap();
+    let result = get_value::<Msg>(&samples, "req_string", true).unwrap();
     let string_series: &ChunkedArray<StringType> = result.str().unwrap();
     for (i, opt_value) in string_series.into_iter().enumerate() {
         let expected = format!("req_string{}", i);
