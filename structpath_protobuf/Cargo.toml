@@ -1,0 +1,9 @@
+[package]
+name = "structpath_protobuf"
+edition.workspace = true
+
+[dependencies]
+polars-arrow = { workspace = true }
+polars-core = { workspace = true, features = ["dtype-array", "dtype-struct"] }
+prost = { workspace = true }
+structpath = { workspace = true, features = ["derive"] }

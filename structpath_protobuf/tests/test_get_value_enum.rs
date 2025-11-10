@@ -1,6 +1,6 @@
 use polars_core::prelude::{BinaryType, ChunkedArray, DataType, StringType};
 use prost::Message;
-use protobuf_sample_polars::get_value;
+use structpath_protobuf::get_value;
 
 #[derive(structpath::EnumPath, Clone, PartialEq)]
 pub enum MsgEnum {

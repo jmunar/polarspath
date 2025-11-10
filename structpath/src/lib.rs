@@ -9,3 +9,5 @@ pub use structpath_types::{
     data_type_wrapper, indexmap, DataTypeOpt, DataTypeWrapper, DataTypeWrapperError, EnumOptInfo,
     EnumPath, HasDataTypeWrapper, IntoAnyValueWith, Path, PathComponent, StructPath,
 };
+
+pub extern crate polars_core;

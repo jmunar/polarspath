@@ -1,11 +1,11 @@
 #[cfg(feature = "extension-module")]
 pub mod extension_impl {
 
-    use crate::base::{get_type, get_value};
+    use crate::sample;
     use polars_core::prelude::{BinaryType, ChunkedArray, Field, PolarsResult, Series};
-    use protobuf_sample::sample;
     use pyo3_polars::derive::{polars_expr, CallerContext};
     use serde::Deserialize;
+    use structpath_protobuf::{get_type, get_value};
 
     #[derive(Deserialize)]
     pub struct ExtractKwargs {

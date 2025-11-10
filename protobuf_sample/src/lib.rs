@@ -2,10 +2,13 @@ pub mod sample {
     include!(concat!(env!("OUT_DIR"), "/sample.rs"));
 }
 
+#[cfg(feature = "extension-module")]
+mod extension;
+
 #[cfg(test)]
 mod tests {
     use super::sample;
-    use polars_core::prelude::{
+    use structpath::polars_core::prelude::{
         AnyValue, CategoricalMapping, DataType, Field, FrozenCategories, Series,
     };
     use structpath::{data_type_wrapper, EnumPath, HasDataTypeWrapper, StructPath};

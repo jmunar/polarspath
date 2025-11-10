@@ -51,7 +51,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                         quote! {
                             stringify!(#field_name) => match self.#field_name {
                                 Some(ref struct_value) => struct_value.get_value_by_path(&remaining_path),
-                                None => Ok(::polars_core::prelude::AnyValue::Null),
+                                None => Ok(::structpath::polars_core::prelude::AnyValue::Null),
                             }
                         }
                     )
@@ -75,7 +75,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                                     if index < self.#field_name.len() {
                                         self.#field_name[index].get_value_by_path(&remaining_path)
                                     } else {
-                                        Ok(::polars_core::prelude::AnyValue::Null)
+                                        Ok(::structpath::polars_core::prelude::AnyValue::Null)
                                     }
                                 }
                             }
@@ -89,10 +89,10 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                                         if index < self.#field_name.len() {
                                             match self.#field_name[index] {
                                                 Some(ref struct_value) => struct_value.get_value_by_path(&remaining_path),
-                                                None => Ok(::polars_core::prelude::AnyValue::Null),
+                                                None => Ok(::structpath::polars_core::prelude::AnyValue::Null),
                                             }
                                         } else {
-                                            Ok(::polars_core::prelude::AnyValue::Null)
+                                            Ok(::structpath::polars_core::prelude::AnyValue::Null)
                                         }
                                     }
                                 }
@@ -115,10 +115,10 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                                             if index < vec.len() {
                                                 vec[index].get_value_by_path(&remaining_path)
                                             } else {
-                                                Ok(::polars_core::prelude::AnyValue::Null)
+                                                Ok(::structpath::polars_core::prelude::AnyValue::Null)
                                             }
                                         }
-                                        None => Ok(::polars_core::prelude::AnyValue::Null),
+                                        None => Ok(::structpath::polars_core::prelude::AnyValue::Null),
                                     }
                                 }
                             )
@@ -132,13 +132,13 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                                                 if index < vec.len() {
                                                     match vec[index] {
                                                         Some(ref struct_value) => struct_value.get_value_by_path(&remaining_path),
-                                                        None => Ok(::polars_core::prelude::AnyValue::Null),
+                                                        None => Ok(::structpath::polars_core::prelude::AnyValue::Null),
                                                     }
                                                 } else {
-                                                    Ok(::polars_core::prelude::AnyValue::Null)
+                                                    Ok(::structpath::polars_core::prelude::AnyValue::Null)
                                                 }
                                             }
-                                            None => Ok(::polars_core::prelude::AnyValue::Null),
+                                            None => Ok(::structpath::polars_core::prelude::AnyValue::Null),
                                         }
                                     }
                                 )
@@ -172,7 +172,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                         if index < self.#field_name.len() {
                             Ok(::structpath::IntoAnyValueWith::to_any_value(field_inner_type, &self.#field_name[index]))
                         } else {
-                            Ok(::polars_core::prelude::AnyValue::Null)
+                            Ok(::structpath::polars_core::prelude::AnyValue::Null)
                         }
                     }
                 }
@@ -184,10 +184,10 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
                             if index < vec.len() {
                                 Ok(::structpath::IntoAnyValueWith::to_any_value(field_inner_type, &vec[index]))
                             } else {
-                                Ok(::polars_core::prelude::AnyValue::Null)
+                                Ok(::structpath::polars_core::prelude::AnyValue::Null)
                             }
                         }
-                        None => Ok(::polars_core::prelude::AnyValue::Null),
+                        None => Ok(::structpath::polars_core::prelude::AnyValue::Null),
                     }
                 }
             ),
@@ -210,7 +210,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
 
         impl ::structpath::StructPath for #type_name {
 
-            fn get_value_by_path(&self, path: &::structpath::Path) -> Result<::polars_core::prelude::AnyValue, ::structpath::DataTypeWrapperError> {
+            fn get_value_by_path(&self, path: &::structpath::Path) -> Result<::structpath::polars_core::prelude::AnyValue, ::structpath::DataTypeWrapperError> {
                 let path_component = path.components[0].clone();
 
                 if path.components.len() > 1 {
@@ -267,15 +267,15 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
         impl ::structpath::IntoAnyValueWith<#type_name> for ::structpath::DataTypeWrapper
         where #type_name: ::structpath::StructPath,
         {
-            type ChunkDataType = ::polars_core::prelude::StructType;
+            type ChunkDataType = ::structpath::polars_core::prelude::StructType;
 
-            fn to_any_value(&self, value: &#type_name) -> ::polars_core::prelude::AnyValue {
+            fn to_any_value(&self, value: &#type_name) -> ::structpath::polars_core::prelude::AnyValue {
                 let field_defs = <#type_name as ::structpath::StructPath>::fields().clone();
                 let field_values = <#type_name as ::structpath::StructPath>::fields_opt()
                     .iter()
                     .map(|(field_name, _)| ::structpath::StructPath::get_value(value, field_name).unwrap().into_static())
-                    .collect::<Vec<::polars_core::prelude::AnyValue>>();
-                ::polars_core::prelude::AnyValue::StructOwned(Box::new((field_values, field_defs)))
+                    .collect::<Vec<::structpath::polars_core::prelude::AnyValue>>();
+                ::structpath::polars_core::prelude::AnyValue::StructOwned(Box::new((field_values, field_defs)))
             }
         }
     }

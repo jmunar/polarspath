@@ -1,6 +1,6 @@
 use polars_core::prelude::{BinaryType, ChunkedArray};
 use prost::Message;
-use protobuf_sample_polars::get_value;
+use structpath_protobuf::get_value;
 
 #[derive(structpath::StructPath, Clone, PartialEq, ::prost::Message)]
 pub struct Msg {

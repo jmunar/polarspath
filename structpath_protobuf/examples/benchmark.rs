@@ -8,7 +8,7 @@ use polars_core::prelude::{
     IntoSeries, ListType, Series, StringType,
 };
 use prost::Message;
-use protobuf_sample_polars::get_value;
+use structpath_protobuf::get_value;
 
 #[derive(structpath::StructPath, Clone, PartialEq, Message)]
 struct SampleSubmessage {

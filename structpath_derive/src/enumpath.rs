@@ -173,7 +173,7 @@ pub fn derive_enum_path_impl(input: syn::DeriveInput) -> TokenStream {
             converted_name
         };
         let variant_ident = syn::Ident::new(original_name, proc_macro2::Span::call_site());
-        quote! { #type_name::#variant_ident => ::polars_core::prelude::AnyValue::Enum(#index as u32, <#type_name as ::structpath::EnumPath>::mapping()) }
+        quote! { #type_name::#variant_ident => ::structpath::polars_core::prelude::AnyValue::Enum(#index as u32, <#type_name as ::structpath::EnumPath>::mapping()) }
     });
 
     quote! {
@@ -192,9 +192,9 @@ pub fn derive_enum_path_impl(input: syn::DeriveInput) -> TokenStream {
         where
             #type_name: ::structpath::EnumPath,
         {
-            type ChunkDataType = ::polars_core::prelude::CategoricalType;
+            type ChunkDataType = ::structpath::polars_core::prelude::CategoricalType;
 
-            fn to_any_value(&self, value: &#type_name) -> ::polars_core::prelude::AnyValue {
+            fn to_any_value(&self, value: &#type_name) -> ::structpath::polars_core::prelude::AnyValue {
                 match &self.raw {
                     ::structpath::DataTypeOpt::Enum(_) => match value {
                         #(#variant_matches),*

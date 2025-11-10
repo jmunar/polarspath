@@ -1,84 +1,86 @@
 .PHONY: all clean test build format check update-deps
 
-CARGOS := structpath_types structpath_derive structpath protobuf_sample protobuf_sample_polars
-
-all: format check test build-python
+all: format check test examples build-python
 all-python: format-python check-python build-python
-all-rust: format-rust check-rust test-rust
+all-rust: format-rust check-rust test-rust examples-rust
 
 install-uv:
 	@curl -LsSf https://astral.sh/uv/install.sh | sh
 
 build-rust:
-	@set -e; for cargo in $(CARGOS); do \
-		echo "Building Rust $$cargo..."; \
-		(cd $$cargo && cargo build --release) || exit 1; \
-	done
+	@echo "Building Rust workspace..."
+	@cargo build --workspace --release
 
 build-python:
 	@echo "Building Python protobuf sample package..."
-	@mkdir -p protobuf_sample_polars/protobuf_sample_polars/sample && \
+	@mkdir -p protobuf_sample/protobuf_sample/sample && \
 		protoc \
 			-I=protobuf_sample/protobuf/sample \
-			--python_out=protobuf_sample_polars/protobuf_sample_polars/sample \
+			--python_out=protobuf_sample/protobuf_sample/sample \
 			protobuf_sample/protobuf/sample/*.proto
-	@echo "Building Python protobuf_sample_polars package..."
-	@cd protobuf_sample_polars && uv run maturin develop --release
+	@echo "Building Python protobuf_sample package..."
+	@cd protobuf_sample && uv run maturin develop --release
 
 build: build-rust build-python
 
 format-rust:
-	@set -e; for cargo in $(CARGOS); do \
-		echo "Format fix in Rust $$cargo..."; \
-		(cd $$cargo && cargo fmt) || exit 1; \
-	done
+	@echo "Formatting Rust workspace..."
+	@cargo fmt --all
 
 format-python:
-	@echo "Format fix in Python protobuf_sample_polars..."
-	@cd protobuf_sample_polars && uv run ruff format --exclude sample
+	@echo "Format fix in Python protobuf_sample..."
+	@cd protobuf_sample && uv run ruff format --exclude sample
 
 format: format-rust format-python
 
 check-rust:
-	@set -e; for cargo in $(CARGOS); do \
-		echo "Format check in Rust $$cargo..."; \
-		(cd $$cargo && cargo clippy -- -D warnings) || exit 1; \
-	done
+	@echo "Running clippy on Rust workspace..."
+	@cargo clippy --workspace -- -D warnings
 
 check-python:
-	@echo "Format check in Python protobuf_sample_polars..."
-	@cd protobuf_sample_polars && uv run ruff check --exclude sample
+	@echo "Format check in Python protobuf_sample..."
+	@cd protobuf_sample && uv run ruff check --exclude sample
 
 check: check-rust check-python
 
 update-deps:
-	@set -e; for cargo in $(CARGOS); do \
-		echo "Updating dependencies for Rust $$cargo..."; \
-		(cd $$cargo && cargo update) || exit 1; \
-	done
+	@echo "Updating dependencies for Rust workspace..."
+	@cargo update --workspace
 
 test-rust:
-	@set -e; for cargo in $(CARGOS); do \
-		echo "Running tests for Rust $$cargo..."; \
-		(cd $$cargo && cargo test) || exit 1; \
-		if [ "$$cargo" = "structpath" ]; then \
-			echo "Running tests for Rust $$cargo with derive feature..."; \
-			(cd $$cargo && cargo test --features derive) || exit 1; \
-		fi \
-	done
+	@echo "Running tests for Rust workspace..."
+	@cargo test --workspace
+	@echo "Running tests for structpath with derive feature..."
+	@cargo test -p structpath --features derive
 
 test: test-rust
 
-clean-rust:
-	@set -e; for cargo in $(CARGOS); do \
-		echo "Cleaning Rust $$cargo..."; \
-		(cd $$cargo && cargo clean) || exit 1; \
-		rm -rf $$cargo/target; \
+examples-rust:
+	@set -e; \
+	workspace_root=$$(pwd); \
+	for member in $$(cargo metadata --format-version 1 2>/dev/null | grep '"workspace_members"' | sed 's/.*"workspace_members":\[\([^]]*\)\].*/\1/' | tr ',' '\n' | sed 's/.*path+file:\/\/\([^#]*\).*/\1/' | sed "s|$$workspace_root/||"); do \
+		if [ -d "$$member/examples" ]; then \
+			crate_name=$$(grep '^name = ' $$member/Cargo.toml 2>/dev/null | head -1 | sed 's/^name = "\(.*\)"/\1/' | tr -d ' '); \
+			if [ -n "$$crate_name" ]; then \
+				for example in $$member/examples/*.rs; do \
+					if [ -f "$$example" ] && [ "$$(basename $$example)" != "readme.rs" ]; then \
+						echo "Running example $$example..."; \
+						cargo run -p $$crate_name --example $$(basename $$example .rs) || exit 1; \
+					fi; \
+				done; \
+			fi; \
+		fi; \
 	done
+
+examples: examples-rust
+
+clean-rust:
+	@echo "Cleaning Rust workspace..."
+	@cargo clean
 
 clean-python:
 	@echo "Cleaning Python protobuf sample package..."
-	@rm -rf protobuf_sample_polars/protobuf_sample_polars/sample
+	@rm -rf protobuf_sample/protobuf_sample/sample
 
 clean: clean-rust clean-python
 
@@ -87,8 +89,10 @@ help:
 	@echo "  make build            - Build all Rust crates and the Python package"
 	@echo "  make build-rust       - Build all Rust crates only"
 	@echo "  make build-python     - Build the Python package only"
-	@echo "  make test             - Run tests in all Rust crates"
-	@echo "  make test-rust        - Run tests in all Rust crates only"
+	@echo "  make test             - Run tests in Rust"
+	@echo "  make test-rust        - Run tests in Rust only"
+	@echo "  make examples         - Run examples in Rust"
+	@echo "  make examples-rust    - Run examples in Rust only"
 	@echo "  make format           - Format Rust and Python code"
 	@echo "  make format-rust      - Format Rust code only"
 	@echo "  make format-python    - Format Python code only"
