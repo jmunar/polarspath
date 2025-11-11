@@ -22,3 +22,5 @@ structpath_protobuf = { workspace = true }
 
 [build-dependencies]
 structpath_protobuf = { workspace = true, features = ["build"] }
+prost-build = { workspace = true }
+prost-types = { workspace = true }

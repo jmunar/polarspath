@@ -1237,6 +1237,8 @@ name = "protobuf_sample"
 version = "0.0.0"
 dependencies = [
  "prost",
+ "prost-build",
+ "prost-types",
  "pyo3",
  "pyo3-polars",
  "serde",
