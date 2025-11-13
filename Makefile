@@ -12,14 +12,17 @@ build-rust:
 	@cargo build --workspace --release
 
 build-python:
-	@echo "Building Python protobuf sample package..."
+	@echo "Re-creating structpath_protobuf_example..."
+	@rm -rf structpath_protobuf_example
+	@cd structpath_protobuf && ./create_project.sh --project-name structpath_protobuf_example -p -t -w
 	@mkdir -p structpath_protobuf_example/structpath_protobuf_example/pybindings && \
 		protoc \
 			-I=structpath_protobuf_example/protobuf/structpath_protobuf_example \
 			--python_out=structpath_protobuf_example/structpath_protobuf_example/pybindings \
 			structpath_protobuf_example/protobuf/structpath_protobuf_example/*.proto
+
 	@echo "Building Python structpath_protobuf_example package..."
-	@cd structpath_protobuf_example && uv run maturin develop --release
+	@cd structpath_protobuf_example && uv sync
 
 build: build-rust build-python
 
@@ -71,7 +74,6 @@ examples-rust:
 			fi; \
 		fi; \
 	done
-
 examples: examples-rust
 
 clean-rust:
