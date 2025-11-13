@@ -20,9 +20,9 @@ pub struct BuildConfig {
 /// Configuration for generating Polars extension code and Python modules
 #[derive(Clone)]
 pub struct ExtensionConfig {
-    /// Path to the Python package directory (e.g., "protobuf_sample/protobuf_sample")
+    /// Path to the Python package directory (e.g., "structpath_protobuf_example/structpath_protobuf_example")
     pub python_package_dir: String,
-    /// Name of the Python package (e.g., "protobuf_sample")
+    /// Name of the Python package (e.g., "structpath_protobuf_example")
     pub python_package_name: String,
 }
 
@@ -350,8 +350,6 @@ if TYPE_CHECKING:
 
 # Get the path to the compiled library
 # Polars expects either a directory or the full path to the .so file
-# Using the directory should work, but if it doesn't, uncomment the line below:
-# LIB = LIB_DIR / \"protobuf_sample.abi3.so\"
 LIB = Path(__file__).parent
 
 "

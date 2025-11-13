@@ -1,8 +1,7 @@
 [project]
-name = "polarspath"
+name = "structpath_protobuf_example"
 version = "0.1.0"
 description = "Polars Protobuf utilities"
-authors = [{ name = "Javier Munarriz", email = "jmunarriz@gmx.com" }]
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Rust",
@@ -25,10 +24,10 @@ dev = [
 ]
 
 [tool.hatch.build.targets.sdist]
-include = ["polarspath"]
+include = ["structpath_protobuf_example"]
 
 [tool.hatch.build.targets.wheel]
-include = ["polarspath"]
+include = ["structpath_protobuf_example"]
 
 [tool.isort]
 profile = "black"

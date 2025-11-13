@@ -1,11 +1,10 @@
 [package]
-name = "protobuf_sample"
+name = "structpath_protobuf_example"
 edition.workspace = true
-description = "Sample Protocol Buffer messages for the polarspath project"
-license = "MIT"
+description = "Protocol Buffer messages with structpath support"
+license = "MIT OR Apache-2.0"
 
 [lib]
-name = "protobuf_sample"
 crate-type = ["cdylib", "rlib"]
 
 [features]
@@ -14,11 +13,11 @@ extension-module = ["pyo3", "pyo3/extension-module", "pyo3-polars", "serde"]
 
 [dependencies]
 prost = { workspace = true }
+structpath = { workspace = true, features = ["derive"] }
+structpath_protobuf = { workspace = true }
 pyo3 = { workspace = true, optional = true }
 pyo3-polars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
-structpath = { workspace = true, features = ["derive"] }
-structpath_protobuf = { workspace = true }
 
 [build-dependencies]
 structpath_protobuf = { workspace = true, features = ["build"] }

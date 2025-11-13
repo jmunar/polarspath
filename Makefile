@@ -13,13 +13,13 @@ build-rust:
 
 build-python:
 	@echo "Building Python protobuf sample package..."
-	@mkdir -p protobuf_sample/protobuf_sample/sample && \
+	@mkdir -p structpath_protobuf_example/structpath_protobuf_example/pybindings && \
 		protoc \
-			-I=protobuf_sample/protobuf/sample \
-			--python_out=protobuf_sample/protobuf_sample/sample \
-			protobuf_sample/protobuf/sample/*.proto
-	@echo "Building Python protobuf_sample package..."
-	@cd protobuf_sample && uv run maturin develop --release
+			-I=structpath_protobuf_example/protobuf/structpath_protobuf_example \
+			--python_out=structpath_protobuf_example/structpath_protobuf_example/pybindings \
+			structpath_protobuf_example/protobuf/structpath_protobuf_example/*.proto
+	@echo "Building Python structpath_protobuf_example package..."
+	@cd structpath_protobuf_example && uv run maturin develop --release
 
 build: build-rust build-python
 
@@ -28,8 +28,8 @@ format-rust:
 	@cargo fmt --all
 
 format-python:
-	@echo "Format fix in Python protobuf_sample..."
-	@cd protobuf_sample && uv run ruff format --exclude sample
+	@echo "Format fix in Python structpath_protobuf_example..."
+	@cd structpath_protobuf_example && uv run ruff format --exclude sample
 
 format: format-rust format-python
 
@@ -38,8 +38,8 @@ check-rust:
 	@cargo clippy --workspace -- -D warnings
 
 check-python:
-	@echo "Format check in Python protobuf_sample..."
-	@cd protobuf_sample && uv run ruff check --exclude sample
+	@echo "Format check in Python structpath_protobuf_example..."
+	@cd structpath_protobuf_example && uv run ruff check --exclude sample
 
 check: check-rust check-python
 
@@ -80,7 +80,7 @@ clean-rust:
 
 clean-python:
 	@echo "Cleaning Python protobuf sample package..."
-	@rm -rf protobuf_sample/protobuf_sample/sample
+	@rm -rf structpath_protobuf_example/structpath_protobuf_example/sample
 
 clean: clean-rust clean-python
 

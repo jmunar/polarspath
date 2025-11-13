@@ -1233,20 +1233,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "protobuf_sample"
-version = "0.0.0"
-dependencies = [
- "prost",
- "prost-build",
- "prost-types",
- "pyo3",
- "pyo3-polars",
- "serde",
- "structpath",
- "structpath_protobuf",
-]
-
-[[package]]
 name = "psm"
 version = "0.1.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1764,6 +1750,20 @@ dependencies = [
  "prost-build",
  "prost-types",
  "structpath",
+]
+
+[[package]]
+name = "structpath_protobuf_example"
+version = "0.0.0"
+dependencies = [
+ "prost",
+ "prost-build",
+ "prost-types",
+ "pyo3",
+ "pyo3-polars",
+ "serde",
+ "structpath",
+ "structpath_protobuf",
 ]
 
 [[package]]

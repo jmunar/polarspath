@@ -4,7 +4,7 @@ members = [
     "structpath_derive",
     "structpath",
     "structpath_protobuf",
-    "protobuf_sample",
+    "structpath_protobuf_example"
 ]
 
 resolver = "2"
