@@ -21,14 +21,15 @@ This repository contains several interconnected crates:
 
 ### Core Libraries
 
-- **`structpath`**: Main library providing the `StructPath` trait and path-based access functionality
-- **`structpath_types`**: Helper library with common types and data structures shared across the ecosystem
-- **`structpath_derive`**: Helper library for procedural macros for automatic `StructPath` trait implementation
+- **`structpath`**: Main library providing the `StructPath` trait and path-based access functionality.
+  It's a wrapper for the 2 cargos below
+- **`structpath_types`**: Helper library for `structpath`, defining and implementing all types and traits
+- **`structpath_derive`**: Helper library for `structpath`, implementing the derive macros `StructPath` and `EnumPath`
 
-### Sample Applications
+### Protobuf cargo
 
-- **`protobuf_sample`**: Sample Protocol Buffer messages and basic extraction functionality
-- **`protobuf_sample_polars`**: Advanced protobuf integration with Polars, including Python bindings
+- **`structpath_protobuf`**: Library for automatically generating structpath implementations for Protocol Buffer messages
+- **`structpath_protobuf_example`**: Example project demonstrating protobuf integration with Polars, including Python bindings
 
 ## Quick Start
 
@@ -75,22 +76,25 @@ fn main() {
 ### Protocol Buffers Integration
 
 ```rust
-use protobuf_sample_polars::get_value;
+use structpath::StructPath;
 
-// Extract values from protobuf messages
-let value = get_value(&message, "f_submessage.f_string")?;
+// After deriving StructPath for your protobuf message, you can access fields directly
+let person = my_package::Person::default();
+let name = person.get_value("name")?;
+let street = person.get_value("address.street")?;
 ```
 
 ### Python Integration
 
 ```python
 import polars as pl
-from protobuf_sample_polars import get_value
+from structpath_protobuf_example import structpath_protobuf_example
 
-# Extract values from protobuf data in Python
+# Extract values from protobuf data in Python using Polars expressions
 df = pl.DataFrame({"data": [protobuf_bytes]})
 result = df.with_columns([
-    pl.col("data").map_elements(lambda x: get_value(x, "field.path"))
+    structpath_protobuf_example.Person.get_value(pl.col("data"), "name").alias("name"),
+    structpath_protobuf_example.Person.get_value(pl.col("data"), "address.street").alias("street"),
 ])
 ```
 
@@ -111,14 +115,23 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-structpath = { version = "0.1.0", features = ["derive"] }
+structpath = { version = "*", features = ["derive"] }
 ```
 
 ### Python
 
+The Python package is built from source using `maturin`. To install:
+
 ```bash
-# Install the Python package
-pip install protobuf_sample_polars
+# Build and install from source
+cd structpath_protobuf_example
+uv run maturin develop --release
+```
+
+Or install using pip after building:
+
+```bash
+pip install structpath_protobuf_example
 ```
 
 ## Building from Source
@@ -168,7 +181,7 @@ work with protobuf messages from python.
 See the `examples/` directories in each crate for comprehensive usage examples:
 
 - `structpath/examples/`: Basic structpath usage
-- `protobuf_sample_polars/examples/`: Protocol Buffers integration
+- `structpath_protobuf/examples/`: Protocol Buffers integration and benchmarks
 
 ## Performance
 

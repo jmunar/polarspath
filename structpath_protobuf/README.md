@@ -1,6 +1,7 @@
 # structpath_protobuf
 
-A Rust library that automatically generates [structpath](https://github.com/your-org/structpath) implementations for Protocol Buffer messages, enabling type-safe field access and Polars integration.
+A Rust library that automatically generates [structpath](https://github.com/jmunar/polarspath)
+implementations for Protocol Buffer messages, enabling type-safe field access and Polars integration.
 
 ## Quick Start
 
@@ -41,4 +42,4 @@ let street = person.get_value("address.street")?;
 ## See Also
 
 - [structpath](../structpath/README.md) - Core structpath library
-- [protobuf_sample](../protobuf_sample/) - Complete working example
+- [structpath_protobuf_example](../structpath_protobuf_example/) - Complete working example
