@@ -419,11 +419,11 @@ help:
 	@echo "  make clean          - Clean build artifacts"
 
 install-uv:
-	@if command -v uv >/dev/null 2>&1; then \
-		echo "uv is already installed"; \
-	else \
-		echo "Installing uv..."; \
-		curl -LsSf https://astral.sh/uv/install.sh | sh; \
+	@if command -v uv >/dev/null 2>&1; then \\
+		echo "uv is already installed"; \\
+	else \\
+		echo "Installing uv..."; \\
+		curl -LsSf https://astral.sh/uv/install.sh | sh; \\
 	fi
 
 build-rust:
