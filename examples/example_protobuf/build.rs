@@ -1,4 +1,4 @@
-use polars_structpath_protobuf::build::{build_protobuf, BuildConfig, ExtensionConfig};
+use polars_protobuf::build::{build_protobuf, BuildConfig, ExtensionConfig};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     build_protobuf(BuildConfig {

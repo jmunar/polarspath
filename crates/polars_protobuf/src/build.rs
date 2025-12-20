@@ -7,17 +7,56 @@ use std::path::Path;
 use crate::string::{indent_lines, to_snake_case};
 
 /// Configuration for building protobuf files with polars_structpath support.
+///
+/// This struct configures the build process for protobuf files, including where to find
+/// `.proto` files, include paths for protobuf compilation, and optional Python extension
+/// generation.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use polars_protobuf::build::{BuildConfig, ExtensionConfig};
+///
+/// let config = BuildConfig {
+///     proto_dir: "protobuf/sample".to_string(),
+///     include_paths: vec!["protobuf/sample".to_string()],
+///     generate_extensions: Some(ExtensionConfig {
+///         python_package_dir: "example_protobuf/example_protobuf".to_string(),
+///         python_package_name: "example_protobuf".to_string(),
+///     }),
+/// };
+/// ```
 #[derive(Default)]
 pub struct BuildConfig {
     /// Path to the directory containing .proto files
     pub proto_dir: String,
     /// Include paths for protobuf compilation
     pub include_paths: Vec<String>,
-    /// Optional: Generate Polars extension code
+    /// Optional: Generate Polars extension code and Python modules
     pub generate_extensions: Option<ExtensionConfig>,
 }
 
-/// Configuration for generating Polars extension code and Python modules
+/// Configuration for generating Polars extension code and Python modules.
+///
+/// When provided in `BuildConfig::generate_extensions`, this configuration enables
+/// automatic generation of:
+/// - Rust extension code for Polars plugin functions
+/// - Python wrapper modules that provide a class-based API for accessing protobuf fields
+///
+/// The generated Python module will be placed at `{python_package_dir}/structpath.py` and
+/// will provide a class-based API like `sample.User.get_value()` for accessing protobuf
+/// message fields in Polars DataFrames.
+///
+/// # Example
+///
+/// ```no_run
+/// use polars_protobuf::build::ExtensionConfig;
+///
+/// let ext_config = ExtensionConfig {
+///     python_package_dir: "example_protobuf/example_protobuf".to_string(),
+///     python_package_name: "example_protobuf".to_string(),
+/// };
+/// ```
 #[derive(Clone)]
 pub struct ExtensionConfig {
     /// Path to the Python package directory (e.g., "example_protobuf/example_protobuf")
@@ -76,10 +115,10 @@ fn extract_type_name(package_name: &str, type_name: &str) -> String {
 /// # Example
 ///
 /// ```no_run
-/// use polars_structpath_protobuf::build::BuildConfig;
+/// use polars_protobuf::build::BuildConfig;
 ///
 /// fn main() -> Result<(), Box<dyn std::error::Error>> {
-///     polars_structpath_protobuf::build::build_protobuf(BuildConfig {
+///     polars_protobuf::build::build_protobuf(BuildConfig {
 ///         proto_dir: "protobuf/sample".to_string(),
 ///         include_paths: vec!["protobuf/sample".to_string()],
 ///     })?;
@@ -168,7 +207,7 @@ fn generate_rust_file(
 use polars_core::prelude::{{BinaryType, ChunkedArray, Field, PolarsResult, Series}};
 use pyo3_polars::derive::{{polars_expr, CallerContext}};
 use serde::Deserialize;
-use polars_structpath_protobuf::{{get_type, get_value}};
+use polars_protobuf::{{get_type, get_value}};
 
 #[derive(Deserialize)]
 pub struct ExtractKwargs {{
@@ -400,7 +439,41 @@ LIB = Path(__file__).parent
     Ok(())
 }
 
-/// Generate Polars extension code and Python modules
+/// Generate Polars extension code and Python modules for protobuf messages.
+///
+/// This function generates:
+/// 1. Rust extension code (`extension_generated.rs`) that provides Polars plugin functions
+///    for each protobuf message type
+/// 2. Python wrapper module (`structpath.py`) that provides a class-based API for accessing
+///    protobuf fields in Polars DataFrames
+///
+/// The generated code enables Python users to extract protobuf fields using expressions like:
+/// ```python
+/// df.with_columns([
+///     sample.User.get_value(pl.col("binary_column"), "name").alias("user_name")
+/// ])
+/// ```
+///
+/// # Arguments
+///
+/// * `file_descriptor_set` - The protobuf file descriptor set containing all message definitions
+/// * `config` - Configuration specifying where to generate the Python module
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success, or an error if file generation fails.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The `OUT_DIR` environment variable is not set
+/// - File creation or writing fails
+///
+/// # Note
+///
+/// This function is typically called automatically by `build_protobuf` when
+/// `BuildConfig::generate_extensions` is set. It's exposed as a public function for
+/// advanced use cases where you need more control over the generation process.
 pub fn generate_extensions(
     file_descriptor_set: &prost_types::FileDescriptorSet,
     config: &ExtensionConfig,

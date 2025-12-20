@@ -1,5 +1,5 @@
 use polars_core::prelude::{BinaryType, ChunkedArray, StringType};
-use polars_structpath_protobuf::get_value;
+use polars_protobuf::get_value;
 use prost::Message;
 
 #[derive(polars_structpath::StructPath, Clone, PartialEq, ::prost::Message)]
