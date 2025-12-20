@@ -468,7 +468,7 @@ fn benchmark_f_submessage_repeated(samples: &ChunkedArray<BinaryType>) {
         .collect::<Vec<AnyValue>>();
 
     let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
-    print_time("Time taken (direct):", t0);
+    print_time("Time taken (any value):", t0);
 
     let t0 = std::time::Instant::now();
     let result_path_single =

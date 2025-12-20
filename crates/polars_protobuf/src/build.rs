@@ -235,7 +235,7 @@ pub fn {}_get_value(
 ) -> PolarsResult<Series> {{
     let ca: &ChunkedArray<BinaryType> = inputs[0].binary()?;
     let path = kwargs.path.as_str();
-    get_value::<crate::{}>(ca, path, context.parallel())
+    get_value::<crate::{}>(ca, path, !context.parallel())
 }}
 
 ",
