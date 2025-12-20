@@ -345,6 +345,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca81e6b4777c89fd810c25a4be2b1bd93ea034fbe58e6a75216a34c6b82c539b"
 
 [[package]]
+name = "example_protobuf"
+version = "0.0.0"
+dependencies = [
+ "polars_structpath",
+ "polars_structpath_protobuf",
+ "prost",
+ "prost-build",
+ "prost-types",
+ "pyo3",
+ "pyo3-polars",
+ "serde",
+]
+
+[[package]]
 name = "fallible-streaming-iterator"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1148,6 +1162,50 @@ dependencies = [
 ]
 
 [[package]]
+name = "polars_structpath"
+version = "0.1.0"
+dependencies = [
+ "polars-core",
+ "polars_structpath_derive",
+ "polars_structpath_types",
+ "trybuild",
+]
+
+[[package]]
+name = "polars_structpath_derive"
+version = "0.1.0"
+dependencies = [
+ "polars_structpath_types",
+ "proc-macro2",
+ "quote",
+ "syn",
+ "thiserror",
+]
+
+[[package]]
+name = "polars_structpath_protobuf"
+version = "0.1.0"
+dependencies = [
+ "polars-arrow",
+ "polars-core",
+ "polars_structpath",
+ "prost",
+ "prost-build",
+ "prost-types",
+]
+
+[[package]]
+name = "polars_structpath_types"
+version = "0.1.0"
+dependencies = [
+ "indexmap",
+ "polars-core",
+ "proc-macro2",
+ "quote",
+ "thiserror",
+]
+
+[[package]]
 name = "portable-atomic"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1719,64 +1777,6 @@ name = "strength_reduce"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe895eb47f22e2ddd4dabc02bce419d2e643c8e3b585c78158b349195bc24d82"
-
-[[package]]
-name = "structpath"
-version = "0.1.0"
-dependencies = [
- "polars-core",
- "structpath_derive",
- "structpath_types",
- "trybuild",
-]
-
-[[package]]
-name = "structpath_derive"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "structpath_types",
- "syn",
- "thiserror",
-]
-
-[[package]]
-name = "structpath_protobuf"
-version = "0.1.0"
-dependencies = [
- "polars-arrow",
- "polars-core",
- "prost",
- "prost-build",
- "prost-types",
- "structpath",
-]
-
-[[package]]
-name = "structpath_protobuf_example"
-version = "0.0.0"
-dependencies = [
- "prost",
- "prost-build",
- "prost-types",
- "pyo3",
- "pyo3-polars",
- "serde",
- "structpath",
- "structpath_protobuf",
-]
-
-[[package]]
-name = "structpath_types"
-version = "0.1.0"
-dependencies = [
- "indexmap",
- "polars-core",
- "proc-macro2",
- "quote",
- "thiserror",
-]
 
 [[package]]
 name = "strum_macros"

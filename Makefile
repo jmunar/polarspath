@@ -12,17 +12,17 @@ build-rust:
 	@cargo build --workspace --release
 
 build-python:
-	@echo "Re-creating structpath_protobuf_example..."
-	@rm -rf structpath_protobuf_example
-	@cd structpath_protobuf && ./create_project.sh --project-name structpath_protobuf_example -p -t -w
-	@mkdir -p structpath_protobuf_example/structpath_protobuf_example/pybindings && \
+	@echo "Re-creating example_protobuf..."
+	@rm -rf examples/example_protobuf
+	@cd examples && ../crates/polars_structpath_protobuf/create_project.sh --project-name example_protobuf -p -t -w
+	@mkdir -p examples/example_protobuf/example_protobuf/pybindings && \
 		protoc \
-			-I=structpath_protobuf_example/protobuf/structpath_protobuf_example \
-			--python_out=structpath_protobuf_example/structpath_protobuf_example/pybindings \
-			structpath_protobuf_example/protobuf/structpath_protobuf_example/*.proto
+			-I=examples/example_protobuf/protobuf/example_protobuf \
+			--python_out=examples/example_protobuf/example_protobuf/pybindings \
+			examples/example_protobuf/protobuf/example_protobuf/*.proto
 
-	@echo "Building Python structpath_protobuf_example package..."
-	@cd structpath_protobuf_example && uv sync
+	@echo "Building Python example_protobuf package..."
+	@cd examples/example_protobuf && uv sync
 
 build: build-rust build-python
 
@@ -31,8 +31,8 @@ format-rust:
 	@cargo fmt --all
 
 format-python:
-	@echo "Format fix in Python structpath_protobuf_example..."
-	@cd structpath_protobuf_example && uv run ruff format --exclude sample
+	@echo "Format fix in Python example_protobuf..."
+	@cd examples/example_protobuf && uv run ruff format --exclude sample
 
 format: format-rust format-python
 
@@ -41,8 +41,8 @@ check-rust:
 	@cargo clippy --workspace -- -D warnings
 
 check-python:
-	@echo "Format check in Python structpath_protobuf_example..."
-	@cd structpath_protobuf_example && uv run ruff check --exclude sample
+	@echo "Format check in Python example_protobuf..."
+	@cd examples/example_protobuf && uv run ruff check --exclude sample
 
 check: check-rust check-python
 
@@ -53,8 +53,8 @@ update-deps:
 test-rust:
 	@echo "Running tests for Rust workspace..."
 	@cargo test --workspace
-	@echo "Running tests for structpath with derive feature..."
-	@cargo test -p structpath --features derive
+	@echo "Running tests for polars_structpath with derive feature..."
+	@cargo test -p polars_structpath --features derive
 
 test: test-rust
 
@@ -82,7 +82,7 @@ clean-rust:
 
 clean-python:
 	@echo "Cleaning Python protobuf sample package..."
-	@rm -rf structpath_protobuf_example/structpath_protobuf_example/sample
+	@rm -rf examples/example_protobuf/example_protobuf/sample
 
 clean: clean-rust clean-python
 

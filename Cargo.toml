@@ -1,10 +1,10 @@
 [workspace]
 members = [
-    "structpath_types",
-    "structpath_derive",
-    "structpath",
-    "structpath_protobuf",
-    "structpath_protobuf_example"
+    "crates/polars_structpath_types",
+    "crates/polars_structpath_derive",
+    "crates/polars_structpath",
+    "crates/polars_structpath_protobuf",
+    "examples/example_protobuf"
 ]
 
 resolver = "2"
@@ -16,10 +16,10 @@ license = "MIT"
 
 [workspace.dependencies]
 # Internal dependencies
-structpath_types = { version = "0.1.0", path = "structpath_types" }
-structpath_derive = { version = "0.1.0", path = "structpath_derive" }
-structpath = { version = "0.1.0", path = "structpath" }
-structpath_protobuf = { version = "0.1.0", path = "structpath_protobuf" }
+polars_structpath_types = { version = "0.1.0", path = "crates/polars_structpath_types" }
+polars_structpath_derive = { version = "0.1.0", path = "crates/polars_structpath_derive" }
+polars_structpath = { version = "0.1.0", path = "crates/polars_structpath" }
+polars_structpath_protobuf = { version = "0.1.0", path = "crates/polars_structpath_protobuf" }
 
 # Common dependencies
 indexmap = "2.12.1"
