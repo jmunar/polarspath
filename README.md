@@ -176,6 +176,26 @@ work with protobuf messages from python.
 3. Install `uv` for managing python environments: `make install-uv`
 4. Build the project: `make build`
 
+### Publishing the crates
+
+Prerequisites:
+
+* Create a crates.io account** (if you don't have one), signing up with your GitHub account
+* Get your API token from your personal space at crates.io
+* Login to cargo:
+   ```bash
+   cargo login <your-api-token>
+   ```
+
+Then, simply do:
+
+```shell
+cargo publish --workspace
+```
+
+If the publishing fails and you end up with a partial publishing, remove the
+already published packages using the option `--exclude [package_name]`
+
 ## Examples
 
 See the `examples/` directories in each crate for comprehensive usage examples:
