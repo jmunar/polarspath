@@ -1,6 +1,12 @@
 [package]
 name = "structpath_protobuf"
 edition.workspace = true
+version.workspace = true
+license.workspace = true
+description = "Automatic structpath implementations for Protocol Buffer messages"
+repository = "https://github.com/jmunar/polarspath"
+keywords = ["structpath", "protobuf", "protocol-buffers", "polars", "prost"]
+categories = ["data-structures", "encoding"]
 
 [features]
 default = []

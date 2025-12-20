@@ -1,7 +1,12 @@
 [package]
 name = "structpath_derive"
 edition.workspace = true
+version.workspace = true
+license.workspace = true
 description = "Derive macros for structpath"
+repository = "https://github.com/jmunar/polarspath"
+keywords = ["structpath", "derive", "macro", "proc-macro"]
+categories = ["development-tools", "procedural-macro-helpers"]
 
 [lib]
 proc-macro = true
