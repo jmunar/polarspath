@@ -10,16 +10,16 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 license = "MIT"
 
 [workspace.dependencies]
 # Internal dependencies
-polars_structpath_types = { version = "0.2.0", path = "crates/polars_structpath_types" }
-polars_structpath_derive = { version = "0.2.0", path = "crates/polars_structpath_derive" }
-polars_structpath = { version = "0.2.0", path = "crates/polars_structpath" }
-polars_protobuf = { version = "0.2.0", path = "crates/polars_protobuf" }
+polars_structpath_types = { version = "0.2.1", path = "crates/polars_structpath_types" }
+polars_structpath_derive = { version = "0.2.1", path = "crates/polars_structpath_derive" }
+polars_structpath = { version = "0.2.1", path = "crates/polars_structpath" }
+polars_protobuf = { version = "0.2.1", path = "crates/polars_protobuf" }
 
 # Common dependencies
 indexmap = "2.12.1"

@@ -79,7 +79,6 @@ already published packages using the option `--exclude [package_name]`
 ## Roadmap
 
 - [ ] Full support of protobuf messages: `one_of`
-- [ ] Performance optimisation using multiple threads
 - [ ] JSONPath-like parser for Polars DataFrame
 - [ ] Convert JSON payloads to columnar format, with schema evolution
 

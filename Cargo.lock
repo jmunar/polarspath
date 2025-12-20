@@ -1163,7 +1163,7 @@ dependencies = [
 
 [[package]]
 name = "polars_protobuf"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "polars-arrow",
  "polars-core",
@@ -1175,7 +1175,7 @@ dependencies = [
 
 [[package]]
 name = "polars_structpath"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "polars-core",
  "polars_structpath_derive",
@@ -1185,7 +1185,7 @@ dependencies = [
 
 [[package]]
 name = "polars_structpath_derive"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "polars_structpath_types",
  "proc-macro2",
@@ -1196,7 +1196,7 @@ dependencies = [
 
 [[package]]
 name = "polars_structpath_types"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "indexmap",
  "polars-core",

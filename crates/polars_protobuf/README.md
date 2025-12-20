@@ -32,6 +32,12 @@ The script will:
 - Create a `Makefile` for building the project
 - Optionally create sample protobuf messages (`-p`) and tests (`-t`)
 
+After the scripts finishes creating all the necessary fles, the python environment (including
+the Polars extension) can be created by going into the project folder and running `make build`.
+
+An example on how to use the package in python can be found in
+[this notebook](../../examples/example_protobuf.ipynb).
+
 ## Usage
 
 ### In Build Scripts
@@ -114,6 +120,66 @@ let field = get_type::<Person>(&[], "name")?;
 - **`build_protobuf`**: Main function to build protobuf files with polars_structpath support
 - **`BuildConfig`**: Configuration for the build process
 - **`ExtensionConfig`**: Configuration for generating Python extension modules
+
+## Benchmark versus static extraction of nested fields
+
+In order to compare the performance of using the `polars_structpath` backend versus using
+`prost` directly, we have built a benchmark in the `examples` folder. You can run it using
+
+```shell
+cargo run --example benchmark --release
+```
+
+On an Apple M1 laptop, the results are:
+
+```
+Prost decode time
+    Time taken:                                    0.0513 s
+Extracting f_string
+    Time taken (direct):                           0.0524 s
+    Time taken (structpath single-threaded):       0.0800 s
+    Time taken (structpath multi-threaded):        0.0154 s
+Extracting f_integer
+    Time taken (direct):                           0.0481 s
+    Time taken (structpath single-threaded):       0.0750 s
+    Time taken (structpath multi-threaded):        0.0154 s
+Extracting f_double
+    Time taken (direct):                           0.0474 s
+    Time taken (structpath single-threaded):       0.0739 s
+    Time taken (structpath multi-threaded):        0.0146 s
+Extracting f_boolean
+    Time taken (direct):                           0.0491 s
+    Time taken (structpath single-threaded):       0.0741 s
+    Time taken (structpath multi-threaded):        0.0155 s
+Extracting f_integer_optional
+    Time taken (direct):                           0.0474 s
+    Time taken (any value):                        0.0493 s
+    Time taken (structpath single-threaded):       0.0838 s
+    Time taken (structpath multi-threaded):        0.0164 s
+Extracting f_string_optional
+    Time taken (direct):                           0.0498 s
+    Time taken (any value):                        0.0484 s
+    Time taken (structpath single-threaded):       0.0850 s
+    Time taken (structpath multi-threaded):        0.0168 s
+Extracting f_integer_repeated
+    Time taken (direct):                           0.0905 s
+    Time taken (any value):                        0.0718 s
+    Time taken (structpath single-threaded):       0.1382 s
+    Time taken (structpath multi-threaded):        0.0466 s
+Extracting f_string_repeated
+    Time taken (direct):                           0.0857 s
+    Time taken (any value):                        0.0671 s
+    Time taken (structpath single-threaded):       0.1562 s
+    Time taken (structpath multi-threaded):        0.0513 s
+Extracting f_submessage
+    Time taken (any value):                        0.0684 s
+    Time taken (structpath single-threaded):       0.1625 s
+    Time taken (structpath multi-threaded):        0.0431 s
+Extracting f_submessage_repeated
+    Time taken (any value):                        0.4206 s
+    Time taken (structpath single-threaded):       0.6474 s
+    Time taken (structpath multi-threaded):        0.3386 s
+```
 
 ## See Also
 

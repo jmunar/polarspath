@@ -15,14 +15,8 @@ build-python:
 	@echo "Re-creating example_protobuf..."
 	@rm -rf examples/example_protobuf
 	@cd examples && ../crates/polars_protobuf/create_polars_protobuf_project.sh --project-name example_protobuf -p -t -w
-	@mkdir -p examples/example_protobuf/example_protobuf/pybindings && \
-		protoc \
-			-I=examples/example_protobuf/protobuf/example_protobuf \
-			--python_out=examples/example_protobuf/example_protobuf/pybindings \
-			examples/example_protobuf/protobuf/example_protobuf/*.proto
-
 	@echo "Building Python example_protobuf package..."
-	@cd examples/example_protobuf && uv sync
+	@cd examples/example_protobuf && make build
 
 build: build-rust build-python
 
