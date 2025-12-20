@@ -1,0 +1,19 @@
+[package]
+name = "polars_structpath_derive"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+description = "Derive macros for polars_structpath"
+repository = "https://github.com/jmunar/polarspath"
+keywords = ["polars_structpath", "derive", "macro", "proc-macro"]
+categories = ["development-tools"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+polars_structpath_types = { workspace = true }
+syn = { workspace = true }
+thiserror = { workspace = true }

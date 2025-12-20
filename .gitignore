@@ -20,6 +20,7 @@ target/
 __pycache__/
 
 # Project
+.env
 .python-version
 work-notebooks/
 *.so

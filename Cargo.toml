@@ -1,10 +1,10 @@
 [workspace]
 members = [
-    "structpath_types",
-    "structpath_derive",
-    "structpath",
-    "structpath_protobuf",
-    "structpath_protobuf_example"
+    "crates/polars_structpath_types",
+    "crates/polars_structpath_derive",
+    "crates/polars_structpath",
+    "crates/polars_structpath_protobuf",
+    "examples/example_protobuf"
 ]
 
 resolver = "2"
@@ -12,37 +12,37 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 
 [workspace.dependencies]
 # Internal dependencies
-structpath_types = { path = "structpath_types" }
-structpath_derive = { path = "structpath_derive" }
-structpath = { path = "structpath" }
-structpath_protobuf = { path = "structpath_protobuf" }
+polars_structpath_types = { version = "0.1.0", path = "crates/polars_structpath_types" }
+polars_structpath_derive = { version = "0.1.0", path = "crates/polars_structpath_derive" }
+polars_structpath = { version = "0.1.0", path = "crates/polars_structpath" }
+polars_structpath_protobuf = { version = "0.1.0", path = "crates/polars_structpath_protobuf" }
 
 # Common dependencies
-indexmap = "2.0"
-proc-macro2 = "1.0"
-quote = "1.0"
-thiserror = "1.0"
-syn = { version = "2.0", features = ["full"] }
+indexmap = "2.12.1"
+proc-macro2 = "1.0.103"
+quote = "1.0.42"
+thiserror = "1.0.69"
+syn = { version = "2.0.111", features = ["full"] }
 
 # Polars dependencies
-polars-core = { version = "*", default-features = false }
-polars-arrow = { version = "*", default-features = false }
+polars-core = { version = "0.52.0", default-features = false }
+polars-arrow = { version = "0.52.0", default-features = false }
 
 # Protocol Buffers
-prost = "*"
-prost-build = "*"
-prost-types = "*"
+prost = "0.14.1"
+prost-build = "0.14.1"
+prost-types = "0.14.1"
 
 # Python bindings
-pyo3 = { version = "*", features = ["abi3-py38"] }
-pyo3-polars = { version = "*", features = ["derive"] }
+pyo3 = { version = "0.26.0", features = ["abi3-py38"] }
+pyo3-polars = { version = "0.25.0", features = ["derive"] }
 
 # Serialization
-serde = { version = "*", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
 
 # Dev dependencies
 trybuild = "1.0"

@@ -21,23 +21,23 @@ This repository contains several interconnected crates:
 
 ### Core Libraries
 
-- **`structpath`**: Main library providing the `StructPath` trait and path-based access functionality.
+- **`polars_structpath`**: Main library providing the `StructPath` trait and path-based access functionality.
   It's a wrapper for the 2 cargos below
-- **`structpath_types`**: Helper library for `structpath`, defining and implementing all types and traits
-- **`structpath_derive`**: Helper library for `structpath`, implementing the derive macros `StructPath` and `EnumPath`
+- **`polars_structpath_types`**: Helper library for `polars_structpath`, defining and implementing all types and traits
+- **`polars_structpath_derive`**: Helper library for `polars_structpath`, implementing the derive macros `StructPath` and `EnumPath`
 
 ### Protobuf cargo
 
-- **`structpath_protobuf`**: Library for automatically generating structpath implementations for Protocol Buffer messages
-- **`structpath_protobuf_example`**: Example project demonstrating protobuf integration with Polars, including Python bindings
+- **`polars_structpath_protobuf`**: Library for automatically generating polars_structpath implementations for Protocol Buffer messages
+- **`example_protobuf`**: Example project demonstrating protobuf integration with Polars, including Python bindings
 
 ## Quick Start
 
-### Basic Usage (`structpath` crate)
+### Basic Usage (`polars_structpath` crate)
 
 ```rust
 use polars_core::prelude::{AnyValue, DataType};
-use structpath::StructPath;
+use polars_structpath::StructPath;
 
 #[derive(StructPath, Debug, Clone)]
 struct Parent {
@@ -76,7 +76,7 @@ fn main() {
 ### Protocol Buffers Integration
 
 ```rust
-use structpath::StructPath;
+use polars_structpath::StructPath;
 
 // After deriving StructPath for your protobuf message, you can access fields directly
 let person = my_package::Person::default();
@@ -88,13 +88,13 @@ let street = person.get_value("address.street")?;
 
 ```python
 import polars as pl
-from structpath_protobuf_example import structpath_protobuf_example
+from example_protobuf import example_protobuf
 
 # Extract values from protobuf data in Python using Polars expressions
 df = pl.DataFrame({"data": [protobuf_bytes]})
 result = df.with_columns([
-    structpath_protobuf_example.Person.get_value(pl.col("data"), "name").alias("name"),
-    structpath_protobuf_example.Person.get_value(pl.col("data"), "address.street").alias("street"),
+    example_protobuf.Person.get_value(pl.col("data"), "name").alias("name"),
+    example_protobuf.Person.get_value(pl.col("data"), "address.street").alias("street"),
 ])
 ```
 
@@ -115,7 +115,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-structpath = { version = "*", features = ["derive"] }
+polars_structpath = { version = "*", features = ["derive"] }
 ```
 
 ### Python
@@ -124,14 +124,14 @@ The Python package is built from source using `maturin`. To install:
 
 ```bash
 # Build and install from source
-cd structpath_protobuf_example
+cd example_protobuf
 uv run maturin develop --release
 ```
 
 Or install using pip after building:
 
 ```bash
-pip install structpath_protobuf_example
+pip install example_protobuf
 ```
 
 ## Building from Source
@@ -176,12 +176,32 @@ work with protobuf messages from python.
 3. Install `uv` for managing python environments: `make install-uv`
 4. Build the project: `make build`
 
+### Publishing the crates
+
+Prerequisites:
+
+* Create a crates.io account** (if you don't have one), signing up with your GitHub account
+* Get your API token from your personal space at crates.io
+* Login to cargo:
+   ```bash
+   cargo login <your-api-token>
+   ```
+
+Then, simply do:
+
+```shell
+cargo publish --workspace
+```
+
+If the publishing fails and you end up with a partial publishing, remove the
+already published packages using the option `--exclude [package_name]`
+
 ## Examples
 
 See the `examples/` directories in each crate for comprehensive usage examples:
 
-- `structpath/examples/`: Basic structpath usage
-- `structpath_protobuf/examples/`: Protocol Buffers integration and benchmarks
+- `polars_structpath/examples/`: Basic polars_structpath usage
+- `polars_structpath_protobuf/examples/`: Protocol Buffers integration and benchmarks
 
 ## Performance
 
