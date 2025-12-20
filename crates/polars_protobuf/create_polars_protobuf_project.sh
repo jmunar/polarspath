@@ -79,7 +79,7 @@ if [[ ! "$PROJECT_NAME" =~ ^[a-z][a-z0-9_]*$ ]]; then
     exit 1
 fi
 
-echo -e "${GREEN}polars_structpath_protobuf Project Generator${NC}"
+echo -e "${GREEN}polars_protobuf Project Generator${NC}"
 echo "=================================="
 echo ""
 
@@ -126,13 +126,13 @@ extension-module = ["pyo3", "pyo3/extension-module", "pyo3-polars", "serde"]
 [dependencies]
 prost = { workspace = true }
 polars_structpath = { workspace = true, features = ["derive"] }
-polars_structpath_protobuf = { workspace = true }
+polars_protobuf = { workspace = true }
 pyo3 = { workspace = true, optional = true }
 pyo3-polars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 
 [build-dependencies]
-polars_structpath_protobuf = { workspace = true, features = ["build"] }
+polars_protobuf = { workspace = true, features = ["build"] }
 prost-build = { workspace = true }
 prost-types = { workspace = true }
 EOF
@@ -154,13 +154,13 @@ extension-module = ["pyo3", "pyo3/extension-module", "pyo3-polars", "serde"]
 [dependencies]
 prost = "*"
 polars_structpath = { version = "*", features = ["derive"] }
-polars_structpath_protobuf = { version = "*" }
+polars_protobuf = { version = "*" }
 pyo3 = { version = "*", optional = true, features = ["abi3-py38"] }
 pyo3-polars = { version = "*", optional = true, features = ["derive"] }
 serde = { version = "*", optional = true, features = ["derive"] }
 
 [build-dependencies]
-polars_structpath_protobuf = { version = "*", features = ["build"] }
+polars_protobuf = { version = "*", features = ["build"] }
 prost-build = "*"
 prost-types = "*"
 EOF
@@ -169,7 +169,7 @@ fi
 # Create build.rs
 echo "Creating build.rs..."
 cat > build.rs <<EOF
-use polars_structpath_protobuf::build::{build_protobuf, BuildConfig, ExtensionConfig};
+use polars_protobuf::build::{build_protobuf, BuildConfig, ExtensionConfig};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     build_protobuf(BuildConfig {
@@ -364,7 +364,7 @@ cat > pyproject.toml <<EOF
 [project]
 name = "$PYTHON_PACKAGE_NAME"
 version = "0.1.0"
-description = "Polars Protobuf utilities"
+description = "Python package for $PYTHON_PACKAGE_NAME"
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Rust",
@@ -455,7 +455,7 @@ echo "  2. Run 'cargo build' to build the Rust project"
 echo "  3. Run 'make build-python' to build the Python package"
 echo "  4. Run 'cargo test' to run tests"
 echo ""
-echo -e "${YELLOW}Note: Make sure to add polars_structpath_protobuf dependencies to your Cargo.toml${NC}"
+echo -e "${YELLOW}Note: Make sure to add polars_protobuf dependencies to your Cargo.toml${NC}"
 echo "      You may need to use path dependencies or publish to crates.io"
 echo ""
 

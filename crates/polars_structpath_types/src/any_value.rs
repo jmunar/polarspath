@@ -1,14 +1,74 @@
+//! Module for converting Rust values to Polars `AnyValue`.
+//!
+//! This module provides the `IntoAnyValueWith` trait and implementations for
+//! converting various Rust types (scalars, vectors, options) to Polars `AnyValue`,
+//! which is the type-erased value type used in Polars DataFrames and Series.
+
 use crate::{DataTypeOpt, DataTypeWrapper};
 use polars_core::prelude::{AnyValue, DataType, PolarsDataType, Series};
 
-/// Trait for types allowing conversion to AnyValue
+/// Trait for converting Rust values to Polars `AnyValue`.
 ///
-/// The function to_any_value() takes a reference as first argument because
-/// AnyValue is actually AnyValue<'_>. Thus, the return value lives as long
-/// as the reference to the value.
+/// This trait enables conversion of Rust types to Polars `AnyValue`, which is
+/// the type-erased value type used in Polars DataFrames and Series. The conversion
+/// is performed using a `DataTypeWrapper` that provides the necessary type information.
+///
+/// # Lifetime Semantics
+///
+/// The `to_any_value()` method takes a reference to the value because `AnyValue`
+/// is actually `AnyValue<'_>` - a type with a lifetime parameter. The returned
+/// `AnyValue` lives as long as the reference to the input value, allowing for
+/// zero-copy conversions when possible.
+///
+/// # Type Parameter
+///
+/// The trait is generic over the input type `T` that will be converted. The
+/// `ChunkDataType` associated type specifies the Polars chunk data type that
+/// corresponds to this conversion.
+///
+/// # Example
+///
+/// ```rust
+/// use polars_core::prelude::AnyValue;
+/// use polars_structpath_types::{DataTypeWrapper, DataTypeOpt, IntoAnyValueWith};
+///
+/// // Convert a string
+/// let wrapper = DataTypeWrapper::new(DataTypeOpt::String);
+/// let value = "hello".to_string();
+/// let any_value = wrapper.to_any_value(&value);
+/// assert!(matches!(any_value, AnyValue::StringOwned(_)));
+///
+/// // Convert an integer
+/// let wrapper = DataTypeWrapper::new(DataTypeOpt::Int64);
+/// let value = 42i64;
+/// let any_value = wrapper.to_any_value(&value);
+/// assert_eq!(any_value, AnyValue::Int64(42));
+/// ```
 pub trait IntoAnyValueWith<T> {
+    /// The Polars chunk data type for this conversion.
     type ChunkDataType: PolarsDataType;
 
+    /// Converts a Rust value to a Polars `AnyValue`.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - A reference to the Rust value to convert
+    ///
+    /// # Returns
+    ///
+    /// A `AnyValue<'_>` representing the converted value. The lifetime of the
+    /// returned value is tied to the lifetime of the input reference.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use polars_core::prelude::AnyValue;
+    /// use polars_structpath_types::{DataTypeWrapper, DataTypeOpt, IntoAnyValueWith};
+    ///
+    /// let wrapper = DataTypeWrapper::new(DataTypeOpt::String);
+    /// let value = "test".to_string();
+    /// let any_value = wrapper.to_any_value(&value);
+    /// ```
     fn to_any_value(&self, value: &T) -> AnyValue<'_>;
 }
 

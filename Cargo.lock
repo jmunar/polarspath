@@ -348,8 +348,8 @@ checksum = "ca81e6b4777c89fd810c25a4be2b1bd93ea034fbe58e6a75216a34c6b82c539b"
 name = "example_protobuf"
 version = "0.0.0"
 dependencies = [
+ "polars_protobuf",
  "polars_structpath",
- "polars_structpath_protobuf",
  "prost",
  "prost-build",
  "prost-types",
@@ -1162,29 +1162,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "polars_structpath"
-version = "0.1.0"
-dependencies = [
- "polars-core",
- "polars_structpath_derive",
- "polars_structpath_types",
- "trybuild",
-]
-
-[[package]]
-name = "polars_structpath_derive"
-version = "0.1.0"
-dependencies = [
- "polars_structpath_types",
- "proc-macro2",
- "quote",
- "syn",
- "thiserror",
-]
-
-[[package]]
-name = "polars_structpath_protobuf"
-version = "0.1.0"
+name = "polars_protobuf"
+version = "0.2.0"
 dependencies = [
  "polars-arrow",
  "polars-core",
@@ -1195,8 +1174,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "polars_structpath"
+version = "0.2.0"
+dependencies = [
+ "polars-core",
+ "polars_structpath_derive",
+ "polars_structpath_types",
+ "trybuild",
+]
+
+[[package]]
+name = "polars_structpath_derive"
+version = "0.2.0"
+dependencies = [
+ "polars_structpath_types",
+ "proc-macro2",
+ "quote",
+ "syn",
+ "thiserror",
+]
+
+[[package]]
 name = "polars_structpath_types"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "indexmap",
  "polars-core",

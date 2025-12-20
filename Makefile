@@ -14,7 +14,7 @@ build-rust:
 build-python:
 	@echo "Re-creating example_protobuf..."
 	@rm -rf examples/example_protobuf
-	@cd examples && ../crates/polars_structpath_protobuf/create_project.sh --project-name example_protobuf -p -t -w
+	@cd examples && ../crates/polars_protobuf/create_polars_protobuf_project.sh --project-name example_protobuf -p -t -w
 	@mkdir -p examples/example_protobuf/example_protobuf/pybindings && \
 		protoc \
 			-I=examples/example_protobuf/protobuf/example_protobuf \
