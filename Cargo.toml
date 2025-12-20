@@ -16,10 +16,10 @@ license = "MIT"
 
 [workspace.dependencies]
 # Internal dependencies
-structpath_types = { path = "structpath_types" }
-structpath_derive = { path = "structpath_derive" }
-structpath = { path = "structpath" }
-structpath_protobuf = { path = "structpath_protobuf" }
+structpath_types = { version = "0.1.0", path = "structpath_types" }
+structpath_derive = { version = "0.1.0", path = "structpath_derive" }
+structpath = { version = "0.1.0", path = "structpath" }
+structpath_protobuf = { version = "0.1.0", path = "structpath_protobuf" }
 
 # Common dependencies
 indexmap = "2.12.1"

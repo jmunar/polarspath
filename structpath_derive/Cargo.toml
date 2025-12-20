@@ -6,7 +6,7 @@ license.workspace = true
 description = "Derive macros for structpath"
 repository = "https://github.com/jmunar/polarspath"
 keywords = ["structpath", "derive", "macro", "proc-macro"]
-categories = ["development-tools", "procedural-macro-helpers"]
+categories = ["development-tools"]
 
 [lib]
 proc-macro = true
