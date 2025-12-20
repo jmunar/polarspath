@@ -22,11 +22,11 @@ structpath = { path = "structpath" }
 structpath_protobuf = { path = "structpath_protobuf" }
 
 # Common dependencies
-indexmap = "2.0"
-proc-macro2 = "1.0"
-quote = "1.0"
-thiserror = "1.0"
-syn = { version = "2.0", features = ["full"] }
+indexmap = "*"
+proc-macro2 = "*"
+quote = "*"
+thiserror = "*"
+syn = { version = "*", features = ["full"] }
 
 # Polars dependencies
 polars-core = { version = "*", default-features = false }
