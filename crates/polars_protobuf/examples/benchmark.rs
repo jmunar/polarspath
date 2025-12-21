@@ -3,10 +3,10 @@ This example benchmarks the direct access to the protobuf fields vs the use of t
 `polars_protobuf` library.
 */
 
-use polars_core::prelude::{
-    AnyValue, BinaryType, BooleanType, ChunkedArray, DataType, Field, Float64Type, Int64Type,
-    IntoSeries, ListType, Series, StringType,
-};
+use polars_arrow::array::{Array, Int64Array, ListArray, StructArray, Utf8Array};
+use polars_arrow::datatypes::{ArrowDataType, Field as ArrowField};
+use polars_arrow::offset::OffsetsBuffer;
+use polars_core::prelude::*;
 use polars_protobuf::get_value;
 use prost::Message;
 
@@ -228,7 +228,7 @@ fn benchmark_f_integer_optional(samples: &ChunkedArray<BinaryType>) {
         })
         .collect::<Vec<AnyValue>>();
 
-    let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
+    let result_direct_any_value = Series::from_any_values("".into(), &any_values, true).unwrap();
     print_time("Time taken (any value):", t0);
 
     let t0 = std::time::Instant::now();
@@ -241,7 +241,7 @@ fn benchmark_f_integer_optional(samples: &ChunkedArray<BinaryType>) {
         get_value::<SampleMessage>(&samples, "f_integer_optional", true).unwrap();
     print_time("Time taken (structpath multi-threaded):", t0);
 
-    assert_eq!(result_optimized, result_direct);
+    assert_eq!(result_direct_any_value, result_direct);
     assert_eq!(result_path_single, result_direct);
     assert_eq!(result_path_threaded, result_direct);
 }
@@ -278,7 +278,7 @@ fn benchmark_f_string_optional(samples: &ChunkedArray<BinaryType>) {
         })
         .collect();
 
-    let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
+    let result_direct_any_value = Series::from_any_values("".into(), &any_values, true).unwrap();
     print_time("Time taken (any value):", t0);
 
     let t0 = std::time::Instant::now();
@@ -291,7 +291,7 @@ fn benchmark_f_string_optional(samples: &ChunkedArray<BinaryType>) {
         get_value::<SampleMessage>(&samples, "f_string_optional", true).unwrap();
     print_time("Time taken (structpath multi-threaded):", t0);
 
-    assert_eq!(result_optimized, result_direct);
+    assert_eq!(result_direct_any_value, result_direct);
     assert_eq!(result_path_single, result_direct);
     assert_eq!(result_path_threaded, result_direct);
 }
@@ -325,7 +325,7 @@ fn benchmark_f_integer_repeated(samples: &ChunkedArray<BinaryType>) {
         })
         .collect::<Vec<AnyValue>>();
 
-    let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
+    let result_direct_any_value = Series::from_any_values("".into(), &any_values, true).unwrap();
     print_time("Time taken (any value):", t0);
 
     let t0 = std::time::Instant::now();
@@ -338,7 +338,7 @@ fn benchmark_f_integer_repeated(samples: &ChunkedArray<BinaryType>) {
         get_value::<SampleMessage>(&samples, "f_integer_repeated", true).unwrap();
     print_time("Time taken (structpath multi-threaded):", t0);
 
-    assert_eq!(result_optimized, result_direct);
+    assert_eq!(result_direct_any_value, result_direct);
     assert_eq!(result_path_single, result_direct);
     assert_eq!(result_path_threaded, result_direct);
 }
@@ -372,7 +372,7 @@ fn benchmark_f_string_repeated(samples: &ChunkedArray<BinaryType>) {
         })
         .collect::<Vec<AnyValue>>();
 
-    let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
+    let result_direct_any_value = Series::from_any_values("".into(), &any_values, true).unwrap();
     print_time("Time taken (any value):", t0);
 
     let t0 = std::time::Instant::now();
@@ -385,7 +385,7 @@ fn benchmark_f_string_repeated(samples: &ChunkedArray<BinaryType>) {
         get_value::<SampleMessage>(&samples, "f_string_repeated", true).unwrap();
     print_time("Time taken (structpath multi-threaded):", t0);
 
-    assert_eq!(result_optimized, result_direct);
+    assert_eq!(result_direct_any_value, result_direct);
     assert_eq!(result_path_single, result_direct);
     assert_eq!(result_path_threaded, result_direct);
 }
@@ -421,7 +421,7 @@ fn benchmark_f_submessage(samples: &ChunkedArray<BinaryType>) {
         })
         .collect::<Vec<AnyValue>>();
 
-    let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
+    let result_direct_any_value = Series::from_any_values("".into(), &any_values, true).unwrap();
     print_time("Time taken (any value):", t0);
 
     let t0 = std::time::Instant::now();
@@ -432,8 +432,99 @@ fn benchmark_f_submessage(samples: &ChunkedArray<BinaryType>) {
     let result_path_threaded = get_value::<SampleMessage>(&samples, "f_submessage", true).unwrap();
     print_time("Time taken (structpath multi-threaded):", t0);
 
-    assert_eq!(result_path_single, result_optimized);
-    assert_eq!(result_path_threaded, result_optimized);
+    assert_eq!(result_path_single, result_direct_any_value);
+    assert_eq!(result_path_threaded, result_direct_any_value);
+}
+
+fn arrow_native_construction(samples: &ChunkedArray<BinaryType>) -> Series {
+    // Pre-allocate with estimated capacity to avoid reallocations
+    // Estimate: assume average of 2 submessages per sample
+    let estimated_capacity = samples.len() * 2;
+    let mut all_offsets = Vec::with_capacity(samples.len() + 1);
+    all_offsets.push(0i32);
+
+    // Pre-allocate buffers for string data to avoid intermediate allocations
+    let mut string_values = Vec::new();
+    let mut string_offsets = Vec::with_capacity(estimated_capacity + 1);
+    string_offsets.push(0i32);
+    let mut string_validity = Vec::with_capacity(estimated_capacity);
+
+    // Pre-allocate integer buffer
+    let mut integer_values = Vec::with_capacity(estimated_capacity);
+    let mut integer_validity = Vec::with_capacity(estimated_capacity);
+
+    // First pass: collect all data directly into buffers and compute offsets
+    for bytes in samples.into_iter() {
+        let message = SampleMessage::decode(bytes.unwrap()).unwrap();
+
+        for submessage in message.f_submessage_repeated {
+            // Collect string bytes directly into buffer
+            let str_bytes = submessage.f_string.as_bytes();
+            string_values.extend_from_slice(str_bytes);
+            string_offsets.push(string_values.len() as i32);
+            string_validity.push(true);
+
+            // Collect integer values directly into buffer
+            integer_values.push(submessage.f_integer);
+            integer_validity.push(true);
+        }
+
+        // Track offset for list array (number of structs collected so far)
+        all_offsets.push(integer_values.len() as i32);
+    }
+
+    let array_len = integer_values.len();
+
+    // Build Arrow arrays using pre-allocated buffers via try_new
+    // This avoids the intermediate Vec allocation in from_iter
+    let string_offsets_buffer = OffsetsBuffer::try_from(string_offsets).unwrap();
+    let string_array = Utf8Array::<i32>::try_new(
+        ArrowDataType::Utf8,
+        string_offsets_buffer,
+        string_values.into(),
+        Some(polars_arrow::bitmap::Bitmap::from_iter(string_validity)),
+    )
+    .unwrap();
+
+    // Build Int64Array from pre-allocated buffer
+    let integer_array = Int64Array::try_new(
+        ArrowDataType::Int64,
+        integer_values.into(),
+        Some(polars_arrow::bitmap::Bitmap::from_iter(integer_validity)),
+    )
+    .unwrap();
+
+    // Create struct array
+    let struct_data_type = ArrowDataType::Struct(vec![
+        ArrowField::new("f_string".into(), ArrowDataType::Utf8, true),
+        ArrowField::new("f_integer".into(), ArrowDataType::Int64, true),
+    ]);
+
+    let struct_array = StructArray::new(
+        struct_data_type.clone(),
+        array_len,
+        vec![
+            Box::new(string_array) as Box<dyn Array>,
+            Box::new(integer_array) as Box<dyn Array>,
+        ],
+        None,
+    );
+
+    let offsets = OffsetsBuffer::try_from(all_offsets).unwrap();
+
+    let list_field = ArrowField::new("item".into(), struct_data_type, true);
+
+    let list_array = ListArray::<i32>::new(
+        ArrowDataType::List(Box::new(list_field)),
+        offsets,
+        Box::new(struct_array),
+        None,
+    );
+
+    // Convert ListArray to Polars Series
+    let array_ref = Box::new(list_array) as Box<dyn Array>;
+    let series = Series::from_arrow("my_list".into(), array_ref).unwrap();
+    series
 }
 
 fn benchmark_f_submessage_repeated(samples: &ChunkedArray<BinaryType>) {
@@ -467,8 +558,13 @@ fn benchmark_f_submessage_repeated(samples: &ChunkedArray<BinaryType>) {
         })
         .collect::<Vec<AnyValue>>();
 
-    let result_optimized = Series::from_any_values("".into(), &any_values, true).unwrap();
+    let result_direct_any_value = Series::from_any_values("".into(), &any_values, true).unwrap();
     print_time("Time taken (any value):", t0);
+
+    // Pre-allocate vectors for better memory locality
+    let t0 = std::time::Instant::now();
+    let result_direct_arrow = arrow_native_construction(samples);
+    print_time("Time taken (arrow native construction):", t0);
 
     let t0 = std::time::Instant::now();
     let result_path_single =
@@ -480,8 +576,9 @@ fn benchmark_f_submessage_repeated(samples: &ChunkedArray<BinaryType>) {
         get_value::<SampleMessage>(&samples, "f_submessage_repeated", true).unwrap();
     print_time("Time taken (structpath multi-threaded):", t0);
 
-    assert_eq!(result_path_single, result_optimized);
-    assert_eq!(result_path_threaded, result_optimized);
+    assert_eq!(result_direct_arrow, result_direct_any_value);
+    assert_eq!(result_path_single, result_direct_any_value);
+    assert_eq!(result_path_threaded, result_direct_any_value);
 }
 
 fn main() {
