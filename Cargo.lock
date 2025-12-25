@@ -1199,6 +1199,8 @@ name = "polars_structpath_types"
 version = "0.2.1"
 dependencies = [
  "indexmap",
+ "paste",
+ "polars-arrow",
  "polars-core",
  "proc-macro2",
  "quote",

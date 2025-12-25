@@ -10,6 +10,8 @@ categories = ["data-structures", "no-std"]
 
 [dependencies]
 indexmap = { workspace = true }
+paste = { workspace = true }
+polars-arrow = { workspace = true }
 polars-core = { workspace = true, features = ["dtype-struct", "dtype-categorical"] }
 proc-macro2 = { workspace = true }
 quote = { workspace = true }

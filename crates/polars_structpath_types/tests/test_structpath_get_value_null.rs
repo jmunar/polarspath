@@ -1,98 +1,12 @@
 mod sample;
-use sample::{SampleEnum, SampleStruct, SampleSubstruct};
+use sample::{sample_struct_null, SampleEnum};
 
 use polars_core::prelude::{AnyValue, Series};
 use polars_structpath_types::{HasDataTypeWrapper, StructPath};
 
-fn sample_struct() -> SampleStruct {
-    SampleStruct {
-        req_string: "req_string".to_string(),
-        req_bytes: b"req_bytes".to_vec(),
-        req_i32: 1,
-        req_i64: 1,
-        req_u32: 1,
-        req_u64: 1,
-        req_f32: 1.0f32,
-        req_f64: 1.0,
-        req_bool: true,
-        req_struct: SampleSubstruct {
-            subf_string: "subf_string1".to_string(),
-        },
-        req_enum: SampleEnum::ITEM,
-        req_enum2: 1,
-
-        opt_string: None,
-        opt_bytes: None,
-        opt_i32: None,
-        opt_i64: None,
-        opt_u32: None,
-        opt_u64: None,
-        opt_f32: None,
-        opt_f64: None,
-        opt_bool: None,
-        opt_struct: None,
-        opt_enum: None,
-        opt_enum2: None,
-
-        req_vec_req_item_string: vec!["req_vec_req_item_string".to_string()],
-        req_vec_req_item_bytes: vec![b"req_vec_req_item_bytes".to_vec()],
-        req_vec_req_item_i32: vec![3],
-        req_vec_req_item_i64: vec![3],
-        req_vec_req_item_u32: vec![3],
-        req_vec_req_item_u64: vec![3],
-        req_vec_req_item_f32: vec![3.0f32],
-        req_vec_req_item_f64: vec![3.0],
-        req_vec_req_item_bool: vec![true],
-        req_vec_req_item_struct: vec![SampleSubstruct {
-            subf_string: "subf_string3".to_string(),
-        }],
-        req_vec_req_item_enum: vec![SampleEnum::ITEM],
-        req_vec_req_item_enum2: vec![1],
-
-        opt_vec_req_item_string: None,
-        opt_vec_req_item_bytes: None,
-        opt_vec_req_item_i32: None,
-        opt_vec_req_item_i64: None,
-        opt_vec_req_item_u32: None,
-        opt_vec_req_item_u64: None,
-        opt_vec_req_item_f32: None,
-        opt_vec_req_item_f64: None,
-        opt_vec_req_item_bool: None,
-        opt_vec_req_item_struct: None,
-        opt_vec_req_item_enum: None,
-        opt_vec_req_item_enum2: None,
-
-        req_vec_opt_item_string: vec![None],
-        req_vec_opt_item_bytes: vec![None],
-        req_vec_opt_item_i32: vec![None],
-        req_vec_opt_item_i64: vec![None],
-        req_vec_opt_item_u32: vec![None],
-        req_vec_opt_item_u64: vec![None],
-        req_vec_opt_item_f32: vec![None],
-        req_vec_opt_item_f64: vec![None],
-        req_vec_opt_item_bool: vec![None],
-        req_vec_opt_item_struct: vec![None],
-        req_vec_opt_item_enum: vec![None],
-        req_vec_opt_item_enum2: vec![None],
-
-        opt_vec_opt_item_string: Some(vec![None]),
-        opt_vec_opt_item_bytes: Some(vec![None]),
-        opt_vec_opt_item_i32: Some(vec![None]),
-        opt_vec_opt_item_i64: Some(vec![None]),
-        opt_vec_opt_item_u32: Some(vec![None]),
-        opt_vec_opt_item_u64: Some(vec![None]),
-        opt_vec_opt_item_f32: Some(vec![None]),
-        opt_vec_opt_item_f64: Some(vec![None]),
-        opt_vec_opt_item_bool: Some(vec![None]),
-        opt_vec_opt_item_struct: Some(vec![None]),
-        opt_vec_opt_item_enum: Some(vec![None]),
-        opt_vec_opt_item_enum2: Some(vec![None]),
-    }
-}
-
 #[test]
 fn test_field_to_any_value_opt_fields_null() -> Result<(), Box<dyn std::error::Error>> {
-    let sample_struct = sample_struct();
+    let sample_struct = sample_struct_null();
 
     let any_value = sample_struct.get_value("opt_string")?;
     assert_eq!(any_value, AnyValue::Null);
@@ -136,7 +50,7 @@ fn test_field_to_any_value_opt_fields_null() -> Result<(), Box<dyn std::error::E
 #[test]
 fn test_field_to_any_value_opt_vec_fields_req_items_null() -> Result<(), Box<dyn std::error::Error>>
 {
-    let sample_struct = sample_struct();
+    let sample_struct = sample_struct_null();
 
     let any_value = sample_struct.get_value("opt_vec_req_item_string")?;
     assert_eq!(any_value, AnyValue::Null);
@@ -184,7 +98,7 @@ fn test_field_to_any_value_opt_vec_fields_req_items_null() -> Result<(), Box<dyn
 #[test]
 fn test_field_to_any_value_req_vec_fields_opt_items_null() -> Result<(), Box<dyn std::error::Error>>
 {
-    let sample_struct = sample_struct();
+    let sample_struct = sample_struct_null();
 
     let any_value = sample_struct.get_value("req_vec_opt_item_string")?;
     assert_eq!(

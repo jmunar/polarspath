@@ -64,6 +64,7 @@
 //! For end-user documentation and examples, see the [polars_structpath](../polars_structpath/index.html) crate.
 
 mod any_value;
+mod arrow;
 mod data_type_wrapper;
 mod enumpath;
 mod macros_data_type;
@@ -72,6 +73,10 @@ mod path;
 mod structpath;
 
 pub use any_value::IntoAnyValueWith;
+pub use arrow::{
+    BoolBuffer, BufferAppendable, BufferVecOpt, BufferVecReq, F32Buffer, F64Buffer, I32Buffer,
+    I64Buffer, StringBuffer, U32Buffer, U64Buffer, U8Buffer,
+};
 pub use data_type_wrapper::{
     DataTypeOpt, DataTypeWrapper, DataTypeWrapperError, EnumOptInfo, HasDataTypeWrapper,
 };

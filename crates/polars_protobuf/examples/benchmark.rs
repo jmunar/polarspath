@@ -436,93 +436,259 @@ fn benchmark_f_submessage(samples: &ChunkedArray<BinaryType>) {
     assert_eq!(result_path_threaded, result_direct_any_value);
 }
 
+pub trait BufferAppendable {
+    type ElementType;
+
+    fn data_type(&self) -> &ArrowDataType;
+    fn validity(&self) -> &Vec<bool>;
+    fn new(nrows: usize) -> Self;
+    fn push(&mut self, value: impl Into<Option<Self::ElementType>>);
+    fn to_arrow(self) -> PolarsResult<Box<dyn Array>>;
+}
+
+struct StringBuffer {
+    values: Vec<u8>,
+    offsets: Vec<i32>,
+    _validity: Vec<bool>,
+    _data_type: ArrowDataType,
+}
+
+impl BufferAppendable for StringBuffer {
+    type ElementType = String;
+
+    fn data_type(&self) -> &ArrowDataType {
+        &self._data_type
+    }
+
+    fn validity(&self) -> &Vec<bool> {
+        &self._validity
+    }
+
+    fn new(nrows: usize) -> Self {
+        let mut offsets = Vec::with_capacity(nrows + 1);
+        offsets.push(0i32);
+        Self {
+            values: Vec::with_capacity(nrows),
+            offsets,
+            _validity: Vec::with_capacity(nrows),
+            _data_type: ArrowDataType::Utf8,
+        }
+    }
+
+    fn push(&mut self, value: impl Into<Option<Self::ElementType>>) {
+        match value.into() {
+            Some(value) => {
+                self.values.extend_from_slice(value.as_bytes());
+                self._validity.push(true);
+            }
+            None => {
+                self.values.push(0);
+                self._validity.push(false);
+            }
+        };
+        self.offsets.push(self.values.len() as i32);
+    }
+
+    fn to_arrow(self) -> PolarsResult<Box<dyn Array>> {
+        let data_type = self.data_type().clone();
+        let offsets = OffsetsBuffer::try_from(self.offsets)?;
+        let array = Utf8Array::<i32>::try_new(
+            data_type,
+            offsets,
+            self.values.into(),
+            Some(polars_arrow::bitmap::Bitmap::from_iter(self._validity)),
+        )?;
+        Ok(Box::new(array) as Box<dyn Array>)
+    }
+}
+
+struct I64Buffer {
+    values: Vec<i64>,
+    _validity: Vec<bool>,
+    _data_type: ArrowDataType,
+}
+
+impl BufferAppendable for I64Buffer {
+    type ElementType = i64;
+
+    fn data_type(&self) -> &ArrowDataType {
+        &self._data_type
+    }
+
+    fn validity(&self) -> &Vec<bool> {
+        &self._validity
+    }
+
+    fn new(nrows: usize) -> Self {
+        Self {
+            values: Vec::with_capacity(nrows),
+            _validity: Vec::with_capacity(nrows),
+            _data_type: ArrowDataType::Int64,
+        }
+    }
+
+    fn push(&mut self, value: impl Into<Option<Self::ElementType>>) {
+        match value.into() {
+            Some(value) => {
+                self.values.push(value);
+                self._validity.push(true);
+            }
+            None => {
+                self.values.push(0);
+                self._validity.push(false);
+            }
+        }
+    }
+
+    fn to_arrow(self) -> PolarsResult<Box<dyn Array>> {
+        let data_type = self.data_type().clone();
+        let array = Int64Array::try_new(
+            data_type,
+            self.values.into(),
+            Some(polars_arrow::bitmap::Bitmap::from_iter(self._validity)),
+        )?;
+        Ok(Box::new(array) as Box<dyn Array>)
+    }
+}
+
+struct SampleSubmessageBufferInner {
+    f_string: StringBuffer,
+    f_integer: I64Buffer,
+}
+
+struct SampleSubmessageBuffer {
+    values: SampleSubmessageBufferInner,
+    _validity: Vec<bool>,
+    _data_type: ArrowDataType,
+}
+
+impl BufferAppendable for SampleSubmessageBuffer {
+    type ElementType = SampleSubmessage;
+
+    fn data_type(&self) -> &ArrowDataType {
+        &self._data_type
+    }
+
+    fn validity(&self) -> &Vec<bool> {
+        &self._validity
+    }
+
+    fn new(nrows: usize) -> Self {
+        let buffers = SampleSubmessageBufferInner {
+            f_string: StringBuffer::new(nrows),
+            f_integer: I64Buffer::new(nrows),
+        };
+        Self {
+            values: buffers,
+            _validity: Vec::with_capacity(nrows),
+            _data_type: ArrowDataType::Struct(vec![
+                ArrowField::new("f_string".into(), ArrowDataType::Utf8, true),
+                ArrowField::new("f_integer".into(), ArrowDataType::Int64, true),
+            ]),
+        }
+    }
+
+    fn push(&mut self, value: impl Into<Option<Self::ElementType>>) {
+        match value.into() {
+            Some(value) => {
+                self.values.f_string.push(value.f_string);
+                self.values.f_integer.push(value.f_integer);
+                self._validity.push(true);
+            }
+            None => {
+                self.values.f_string.push(None);
+                self.values.f_integer.push(None);
+                self._validity.push(false);
+            }
+        }
+    }
+
+    fn to_arrow(self) -> PolarsResult<Box<dyn Array>> {
+        let data_type = self.data_type().clone();
+        let string_array = self.values.f_string.to_arrow()?;
+        let integer_array = self.values.f_integer.to_arrow()?;
+
+        let array = StructArray::try_new(
+            data_type,
+            self._validity.len(),
+            vec![string_array, integer_array],
+            Some(polars_arrow::bitmap::Bitmap::from_iter(self._validity)),
+        )?;
+        Ok(Box::new(array) as Box<dyn Array>)
+    }
+}
+
+struct BufferVec<T: BufferAppendable> {
+    subbuffer: T,
+    offsets: Vec<i32>,
+    _validity: Vec<bool>,
+    _data_type: ArrowDataType,
+}
+
+impl<T: BufferAppendable> BufferAppendable for BufferVec<T> {
+    type ElementType = Vec<T::ElementType>;
+
+    fn data_type(&self) -> &ArrowDataType {
+        &self._data_type
+    }
+
+    fn validity(&self) -> &Vec<bool> {
+        &self._validity
+    }
+
+    fn new(nrows: usize) -> Self {
+        let subbuffer = T::new(nrows);
+        let mut offsets = Vec::with_capacity(nrows + 1);
+        offsets.push(0i32);
+
+        let list_field = ArrowField::new("item".into(), subbuffer.data_type().clone(), true);
+        Self {
+            subbuffer,
+            offsets,
+            _validity: Vec::with_capacity(nrows),
+            _data_type: ArrowDataType::List(Box::new(list_field)),
+        }
+    }
+
+    fn push(&mut self, value: impl Into<Option<Self::ElementType>>) {
+        match value.into() {
+            Some(value) => {
+                for element in value {
+                    self.subbuffer.push(element);
+                }
+                self._validity.push(true);
+            }
+            None => {
+                self._validity.push(false);
+            }
+        }
+        self.offsets.push(self.subbuffer.validity().len() as i32);
+    }
+
+    fn to_arrow(self) -> PolarsResult<Box<dyn Array>> {
+        let data_type = self.data_type().clone();
+        let subarray = self.subbuffer.to_arrow()?;
+        let offsets = OffsetsBuffer::try_from(self.offsets)?;
+        let array = ListArray::try_new(
+            data_type,
+            offsets,
+            subarray,
+            Some(polars_arrow::bitmap::Bitmap::from_iter(self._validity)),
+        )?;
+        Ok(Box::new(array) as Box<dyn Array>)
+    }
+}
+
 fn arrow_native_construction(samples: &ChunkedArray<BinaryType>) -> Series {
-    // Pre-allocate with estimated capacity to avoid reallocations
-    // Estimate: assume average of 2 submessages per sample
-    let estimated_capacity = samples.len() * 2;
-    let mut all_offsets = Vec::with_capacity(samples.len() + 1);
-    all_offsets.push(0i32);
-
-    // Pre-allocate buffers for string data to avoid intermediate allocations
-    let mut string_values = Vec::new();
-    let mut string_offsets = Vec::with_capacity(estimated_capacity + 1);
-    string_offsets.push(0i32);
-    let mut string_validity = Vec::with_capacity(estimated_capacity);
-
-    // Pre-allocate integer buffer
-    let mut integer_values = Vec::with_capacity(estimated_capacity);
-    let mut integer_validity = Vec::with_capacity(estimated_capacity);
+    let mut list_buffer = BufferVec::<SampleSubmessageBuffer>::new(samples.len());
 
     // First pass: collect all data directly into buffers and compute offsets
     for bytes in samples.into_iter() {
         let message = SampleMessage::decode(bytes.unwrap()).unwrap();
-
-        for submessage in message.f_submessage_repeated {
-            // Collect string bytes directly into buffer
-            let str_bytes = submessage.f_string.as_bytes();
-            string_values.extend_from_slice(str_bytes);
-            string_offsets.push(string_values.len() as i32);
-            string_validity.push(true);
-
-            // Collect integer values directly into buffer
-            integer_values.push(submessage.f_integer);
-            integer_validity.push(true);
-        }
-
-        // Track offset for list array (number of structs collected so far)
-        all_offsets.push(integer_values.len() as i32);
+        list_buffer.push(message.f_submessage_repeated);
     }
 
-    let array_len = integer_values.len();
-
-    // Build Arrow arrays using pre-allocated buffers via try_new
-    // This avoids the intermediate Vec allocation in from_iter
-    let string_offsets_buffer = OffsetsBuffer::try_from(string_offsets).unwrap();
-    let string_array = Utf8Array::<i32>::try_new(
-        ArrowDataType::Utf8,
-        string_offsets_buffer,
-        string_values.into(),
-        Some(polars_arrow::bitmap::Bitmap::from_iter(string_validity)),
-    )
-    .unwrap();
-
-    // Build Int64Array from pre-allocated buffer
-    let integer_array = Int64Array::try_new(
-        ArrowDataType::Int64,
-        integer_values.into(),
-        Some(polars_arrow::bitmap::Bitmap::from_iter(integer_validity)),
-    )
-    .unwrap();
-
-    // Create struct array
-    let struct_data_type = ArrowDataType::Struct(vec![
-        ArrowField::new("f_string".into(), ArrowDataType::Utf8, true),
-        ArrowField::new("f_integer".into(), ArrowDataType::Int64, true),
-    ]);
-
-    let struct_array = StructArray::new(
-        struct_data_type.clone(),
-        array_len,
-        vec![
-            Box::new(string_array) as Box<dyn Array>,
-            Box::new(integer_array) as Box<dyn Array>,
-        ],
-        None,
-    );
-
-    let offsets = OffsetsBuffer::try_from(all_offsets).unwrap();
-
-    let list_field = ArrowField::new("item".into(), struct_data_type, true);
-
-    let list_array = ListArray::<i32>::new(
-        ArrowDataType::List(Box::new(list_field)),
-        offsets,
-        Box::new(struct_array),
-        None,
-    );
-
-    // Convert ListArray to Polars Series
-    let array_ref = Box::new(list_array) as Box<dyn Array>;
+    let array_ref = list_buffer.to_arrow().unwrap();
     let series = Series::from_arrow("my_list".into(), array_ref).unwrap();
     series
 }
