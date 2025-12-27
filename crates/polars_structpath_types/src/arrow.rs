@@ -1,18 +1,130 @@
-use std::marker::PhantomData;
-
 use polars_arrow::array::{Array, BooleanArray, ListArray, PrimitiveArray, Utf8Array};
 use polars_arrow::datatypes::{ArrowDataType, Field as ArrowField};
 use polars_arrow::offset::OffsetsBuffer;
 use polars_core::prelude::*;
 
-pub trait BufferAppendable {
+pub trait ArrowBuffer {
     type ElementType;
 
     fn data_type(&self) -> &ArrowDataType;
     fn validity(&self) -> &Vec<bool>;
     fn new(nrows: usize) -> Self;
-    fn push(&mut self, value: impl Into<Option<Self::ElementType>>);
+    fn push(&mut self, value: impl Into<Self::ElementType>);
+    fn push_null(&mut self);
     fn to_arrow(self) -> PolarsResult<Box<dyn Array>>;
+}
+
+pub struct ArrowBufferOption<T: ArrowBuffer>(T);
+
+impl<T: ArrowBuffer> ArrowBuffer for ArrowBufferOption<T> {
+    type ElementType = Option<T::ElementType>;
+
+    fn data_type(&self) -> &ArrowDataType {
+        self.0.data_type()
+    }
+
+    fn validity(&self) -> &Vec<bool> {
+        self.0.validity()
+    }
+
+    fn new(nrows: usize) -> Self {
+        ArrowBufferOption(T::new(nrows))
+    }
+
+    fn push(&mut self, value: impl Into<Self::ElementType>) {
+        match value.into() {
+            Some(value) => {
+                self.0.push(value);
+            }
+            None => {
+                self.0.push_null();
+            }
+        }
+    }
+
+    fn push_null(&mut self) {
+        self.0.push_null();
+    }
+
+    fn to_arrow(self) -> PolarsResult<Box<dyn Array>> {
+        self.0.to_arrow()
+    }
+}
+
+pub struct ArrowBufferVec<T: ArrowBuffer> {
+    subbuffer: T,
+    offsets: Vec<i32>,
+    _validity: Vec<bool>,
+    _data_type: ArrowDataType,
+}
+
+impl<T: ArrowBuffer> ArrowBuffer for ArrowBufferVec<T> {
+    type ElementType = Vec<T::ElementType>;
+
+    fn data_type(&self) -> &ArrowDataType {
+        &self._data_type
+    }
+
+    fn validity(&self) -> &Vec<bool> {
+        &self._validity
+    }
+
+    fn new(nrows: usize) -> Self {
+        let subbuffer = T::new(nrows);
+        let mut offsets = Vec::with_capacity(nrows + 1);
+        offsets.push(0i32);
+
+        let list_field = ArrowField::new("item".into(), subbuffer.data_type().clone(), true);
+        Self {
+            subbuffer,
+            offsets,
+            _validity: Vec::with_capacity(nrows),
+            _data_type: ArrowDataType::List(Box::new(list_field)),
+        }
+    }
+
+    fn push(&mut self, value: impl Into<Self::ElementType>) {
+        let vec = value.into();
+        for element in vec {
+            self.subbuffer.push(element);
+        }
+        self._validity.push(true);
+        self.offsets.push(self.subbuffer.validity().len() as i32);
+    }
+
+    fn push_null(&mut self) {
+        self._validity.push(false);
+        self.offsets.push(self.subbuffer.validity().len() as i32);
+    }
+
+    fn to_arrow(self) -> PolarsResult<Box<dyn Array>> {
+        let data_type = self.data_type().clone();
+        let subarray = self.subbuffer.to_arrow()?;
+        let offsets = OffsetsBuffer::try_from(self.offsets)?;
+        let array = ListArray::try_new(
+            data_type,
+            offsets,
+            subarray,
+            Some(polars_arrow::bitmap::Bitmap::from_iter(self._validity)),
+        )?;
+        Ok(Box::new(array) as Box<dyn Array>)
+    }
+}
+
+pub trait HasArrowBuffer {
+    type BufferType: ArrowBuffer;
+
+    fn new_buffer(nrows: usize) -> Self::BufferType {
+        Self::BufferType::new(nrows)
+    }
+}
+
+impl<T: HasArrowBuffer> HasArrowBuffer for Option<T> {
+    type BufferType = ArrowBufferOption<T::BufferType>;
+}
+
+impl<T: HasArrowBuffer> HasArrowBuffer for Vec<T> {
+    type BufferType = ArrowBufferVec<T::BufferType>;
 }
 
 pub struct StringBuffer {
@@ -22,7 +134,7 @@ pub struct StringBuffer {
     _data_type: ArrowDataType,
 }
 
-impl BufferAppendable for StringBuffer {
+impl ArrowBuffer for StringBuffer {
     type ElementType = String;
 
     fn data_type(&self) -> &ArrowDataType {
@@ -44,17 +156,16 @@ impl BufferAppendable for StringBuffer {
         }
     }
 
-    fn push(&mut self, value: impl Into<Option<Self::ElementType>>) {
-        match value.into() {
-            Some(value) => {
-                self.values.extend_from_slice(value.as_bytes());
-                self._validity.push(true);
-            }
-            None => {
-                self.values.push(0);
-                self._validity.push(false);
-            }
-        };
+    fn push(&mut self, value: impl Into<Self::ElementType>) {
+        let value = value.into();
+        self.values.extend_from_slice(value.as_bytes());
+        self._validity.push(true);
+        self.offsets.push(self.values.len() as i32);
+    }
+
+    fn push_null(&mut self) {
+        self.values.push(0);
+        self._validity.push(false);
         self.offsets.push(self.values.len() as i32);
     }
 
@@ -69,6 +180,10 @@ impl BufferAppendable for StringBuffer {
         )?;
         Ok(Box::new(array) as Box<dyn Array>)
     }
+}
+
+impl HasArrowBuffer for String {
+    type BufferType = StringBuffer;
 }
 
 /// Macro to generate buffer structs and trait implementations for numeric and boolean types.
@@ -86,7 +201,7 @@ macro_rules! impl_scalar_buffer {
             _data_type: ArrowDataType,
         }
 
-        impl BufferAppendable for $buffer_name {
+        impl ArrowBuffer for $buffer_name {
             type ElementType = $element_type;
 
             fn data_type(&self) -> &ArrowDataType {
@@ -105,17 +220,15 @@ macro_rules! impl_scalar_buffer {
                 }
             }
 
-            fn push(&mut self, value: impl Into<Option<Self::ElementType>>) {
-                match value.into() {
-                    Some(value) => {
-                        self.values.push(value);
-                        self._validity.push(true);
-                    }
-                    None => {
-                        self.values.push($default_value);
-                        self._validity.push(false);
-                    }
-                }
+            fn push(&mut self, value: impl Into<Self::ElementType>) {
+                let value = value.into();
+                self.values.push(value);
+                self._validity.push(true);
+            }
+
+            fn push_null(&mut self) {
+                self.values.push($default_value);
+                self._validity.push(false);
             }
 
             fn to_arrow(self) -> PolarsResult<Box<dyn Array>> {
@@ -127,6 +240,10 @@ macro_rules! impl_scalar_buffer {
                 )?;
                 Ok(Box::new(array) as Box<dyn Array>)
             }
+        }
+
+        impl HasArrowBuffer for $element_type {
+            type BufferType = $buffer_name;
         }
     };
 }
@@ -183,12 +300,26 @@ impl_scalar_buffer!(
     false
 );
 
+#[macro_export]
+#[doc(hidden)]
+macro_rules! impl_struct_field_buffer_type {
+    ( Option<$inner:ty> ) => {
+        $crate::ArrowBufferOption<$crate::impl_struct_field_buffer_type!($inner)>
+    };
+
+    ( Vec<$inner:ty> ) => {
+        $crate::ArrowBufferVec<$crate::impl_struct_field_buffer_type!($inner)>
+    };
+    ( $other:ty ) => {
+        <$other as $crate::HasArrowBuffer>::BufferType
+    }
+}
+
 /// Macro to generate struct buffer inner, buffer struct, and trait implementation.
 ///
 /// Usage:
 /// ```rust
 /// use polars_structpath_types::impl_struct_buffer;
-/// use polars_structpath_types::StringBuffer;
 ///
 /// pub struct SampleSubstruct {
 ///     subf_string: String,
@@ -196,30 +327,31 @@ impl_scalar_buffer!(
 ///
 /// impl_struct_buffer!(
 ///     SampleSubstruct,
-///     [(subf_string, StringBuffer)]
+///     [(subf_string, String)]
 /// );
 /// ```
 ///
 /// This generates:
 /// - `SampleSubstructBuffer` struct
-/// - `impl BufferAppendable for SampleSubstructBuffer`
+/// - `impl ArrowBuffer for SampleSubstructBuffer`
 #[macro_export]
 macro_rules! impl_struct_buffer {
     (
-        $element_type:ident,
-        [$(($field_name:ident, $buffer_type:ty)),* $(,)?]
+        $struct_type:ty,
+        [$(($field_name:ident, $field_type:ty)),* $(,)?]
     ) => {
         paste::paste! {
-            pub struct [<$element_type Buffer>] {
+
+            pub struct [<$struct_type Buffer>] {
                 $(
-                    [<buffer_ $field_name>]: $buffer_type,
+                    [<buffer_ $field_name>]: $crate::impl_struct_field_buffer_type!($field_type),
                 )*
                 _validity: Vec<bool>,
                 _data_type: polars_arrow::datatypes::ArrowDataType,
             }
 
-            impl polars_structpath_types::BufferAppendable for [<$element_type Buffer>] {
-                type ElementType = $element_type;
+            impl polars_structpath_types::ArrowBuffer for [<$struct_type Buffer>] {
+                type ElementType = $struct_type;
 
                 fn data_type(&self) -> &polars_arrow::datatypes::ArrowDataType {
                     &self._data_type
@@ -231,7 +363,7 @@ macro_rules! impl_struct_buffer {
 
                 fn new(nrows: usize) -> Self {
                     $(
-                        let [<buffer_ $field_name>]: $buffer_type = $buffer_type::new(nrows);
+                        let [<buffer_ $field_name>] = <$crate::impl_struct_field_buffer_type!($field_type)>::new(nrows);
                     )*
 
                     let fields = vec![
@@ -253,21 +385,19 @@ macro_rules! impl_struct_buffer {
                     }
                 }
 
-                fn push(&mut self, value: impl Into<Option<Self::ElementType>>) {
-                    match value.into() {
-                        Some(value) => {
-                            $(
-                                self.[<buffer_ $field_name>].push(value.$field_name);
-                            )*
-                            self._validity.push(true);
-                        }
-                        None => {
-                            $(
-                                self.[<buffer_ $field_name>].push(None);
-                            )*
-                            self._validity.push(false);
-                        }
-                    }
+                fn push(&mut self, value: impl Into<Self::ElementType>) {
+                    let value = value.into();
+                    $(
+                        self.[<buffer_ $field_name>].push(value.$field_name);
+                    )*
+                    self._validity.push(true);
+                }
+
+                fn push_null(&mut self) {
+                    $(
+                        self.[<buffer_ $field_name>].push_null();
+                    )*
+                    self._validity.push(false);
                 }
 
                 fn to_arrow(self) -> polars_core::prelude::PolarsResult<Box<dyn polars_arrow::array::Array>> {
@@ -286,6 +416,10 @@ macro_rules! impl_struct_buffer {
                     )?;
                     Ok(Box::new(array) as Box<dyn polars_arrow::array::Array>)
                 }
+            }
+
+            impl polars_structpath_types::HasArrowBuffer for $struct_type {
+                type BufferType = [<$struct_type Buffer>];
             }
         }
     };
@@ -306,7 +440,7 @@ macro_rules! impl_struct_buffer {
 ///
 /// This generates:
 /// - `SampleEnumBuffer` struct
-/// - `impl BufferAppendable for SampleEnumBuffer`
+/// - `impl ArrowBuffer for SampleEnumBuffer`
 #[macro_export]
 macro_rules! impl_enum_buffer {
     (
@@ -322,7 +456,7 @@ macro_rules! impl_enum_buffer {
                 _data_type: polars_arrow::datatypes::ArrowDataType,
             }
 
-            impl polars_structpath_types::BufferAppendable for [<$element_type Buffer>] {
+            impl polars_structpath_types::ArrowBuffer for [<$element_type Buffer>] {
                 type ElementType = $element_type;
 
                 fn data_type(&self) -> &polars_arrow::datatypes::ArrowDataType {
@@ -357,17 +491,15 @@ macro_rules! impl_enum_buffer {
                     }
                 }
 
-                fn push(&mut self, value: impl Into<Option<Self::ElementType>>) {
-                    match value.into() {
-                        Some(value) => {
-                            self.values.push(Some(self.idx.get(&(value as u32)).unwrap().clone()));
-                            self._validity.push(true);
-                        }
-                        None => {
-                            self.values.push(None);
-                            self._validity.push(false);
-                        }
-                    };
+                fn push(&mut self, value: impl Into<Self::ElementType>) {
+                    let value = value.into();
+                    self.values.push(Some(self.idx.get(&(value as u32)).unwrap().clone()));
+                    self._validity.push(true);
+                }
+
+                fn push_null(&mut self) {
+                    self.values.push(None);
+                    self._validity.push(false);
                 }
 
                 fn to_arrow(self) -> polars_core::prelude::PolarsResult<Box<dyn polars_arrow::array::Array>> {
@@ -379,77 +511,10 @@ macro_rules! impl_enum_buffer {
                     Ok(Box::new(array) as Box<dyn polars_arrow::array::Array>)
                 }
             }
+
+            impl polars_structpath_types::HasArrowBuffer for $element_type {
+                type BufferType = [<$element_type Buffer>];
+            }
         }
     };
 }
-
-pub struct BufferVecInner<T: BufferAppendable, E: Into<Option<T::ElementType>>> {
-    subbuffer: T,
-    offsets: Vec<i32>,
-    _validity: Vec<bool>,
-    _data_type: ArrowDataType,
-    // PhantomData<E> is needed because E is a type parameter that isn't stored in any field,
-    //but is required for type-level behavior.
-    _phantom: PhantomData<E>,
-}
-
-impl<T: BufferAppendable, E: Into<Option<T::ElementType>>> BufferAppendable
-    for BufferVecInner<T, E>
-{
-    type ElementType = Vec<E>;
-
-    fn data_type(&self) -> &ArrowDataType {
-        &self._data_type
-    }
-
-    fn validity(&self) -> &Vec<bool> {
-        &self._validity
-    }
-
-    fn new(nrows: usize) -> Self {
-        let subbuffer = T::new(nrows);
-        let mut offsets = Vec::with_capacity(nrows + 1);
-        offsets.push(0i32);
-
-        let list_field = ArrowField::new("item".into(), subbuffer.data_type().clone(), true);
-        Self {
-            subbuffer,
-            offsets,
-            _validity: Vec::with_capacity(nrows),
-            _data_type: ArrowDataType::List(Box::new(list_field)),
-            _phantom: PhantomData,
-        }
-    }
-
-    fn push(&mut self, value: impl Into<Option<Self::ElementType>>) {
-        match value.into() {
-            Some(value) => {
-                for element in value {
-                    self.subbuffer.push(element);
-                }
-                self._validity.push(true);
-            }
-            None => {
-                self._validity.push(false);
-            }
-        }
-        self.offsets.push(self.subbuffer.validity().len() as i32);
-    }
-
-    fn to_arrow(self) -> PolarsResult<Box<dyn Array>> {
-        let data_type = self.data_type().clone();
-        let subarray = self.subbuffer.to_arrow()?;
-        let offsets = OffsetsBuffer::try_from(self.offsets)?;
-        let array = ListArray::try_new(
-            data_type,
-            offsets,
-            subarray,
-            Some(polars_arrow::bitmap::Bitmap::from_iter(self._validity)),
-        )?;
-        Ok(Box::new(array) as Box<dyn Array>)
-    }
-}
-
-// Public type aliases for backward compatibility
-pub type BufferVecReq<T> = BufferVecInner<T, <T as BufferAppendable>::ElementType>;
-pub type BufferVecOpt<T> = BufferVecInner<T, Option<<T as BufferAppendable>::ElementType>>;
