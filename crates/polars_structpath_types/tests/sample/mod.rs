@@ -1,9 +1,5 @@
-mod any_value;
 mod arrow;
 mod base;
-mod data_type_wrapper;
-mod enumpath;
-mod structpath;
 mod test;
 
 pub use base::{SampleEnum, SampleStruct, SampleSubstruct};
