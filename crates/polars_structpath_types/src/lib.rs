@@ -73,10 +73,7 @@ mod path;
 mod structpath;
 
 pub use any_value::IntoAnyValueWith;
-pub use arrow::{
-    ArrowBuffer, ArrowBufferOption, ArrowBufferVec, BoolBuffer, F32Buffer, F64Buffer,
-    HasArrowBuffer, I32Buffer, I64Buffer, StringBuffer, U32Buffer, U64Buffer, U8Buffer,
-};
+pub use arrow::{ArrowBuffer, ArrowBufferOption, ArrowBufferVec, HasArrowBuffer};
 pub use data_type_wrapper::{
     DataTypeOpt, DataTypeWrapper, DataTypeWrapperError, EnumOptInfo, HasDataTypeWrapper,
 };
