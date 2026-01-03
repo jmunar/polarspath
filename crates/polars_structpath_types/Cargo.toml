@@ -9,7 +9,6 @@ keywords = ["polars_structpath", "polars", "dataframe", "path", "access"]
 categories = ["data-structures", "no-std"]
 
 [dependencies]
-indexmap = { workspace = true }
 paste = { workspace = true }
 polars-arrow = { workspace = true }
 polars-core = { workspace = true, features = ["dtype-struct", "dtype-categorical"] }

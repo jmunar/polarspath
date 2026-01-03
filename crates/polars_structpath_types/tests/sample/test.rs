@@ -15,6 +15,7 @@ pub fn sample_struct() -> SampleStruct {
             subf_string: "subf_string1".to_string(),
         },
         req_enum: SampleEnum::ITEM,
+        req_enum_int: 1,
 
         opt_string: Some("opt_string".to_string()),
         opt_bytes: Some(b"opt_bytes".to_vec()),
@@ -29,6 +30,7 @@ pub fn sample_struct() -> SampleStruct {
             subf_string: "subf_string2".to_string(),
         }),
         opt_enum: Some(SampleEnum::ITEM),
+        opt_enum_int: Some(1),
 
         req_vec_req_item_string: vec!["req_vec_req_item_string".to_string()],
         req_vec_req_item_bytes: vec![b"req_vec_req_item_bytes".to_vec()],
@@ -43,6 +45,7 @@ pub fn sample_struct() -> SampleStruct {
             subf_string: "subf_string3".to_string(),
         }],
         req_vec_req_item_enum: vec![SampleEnum::ITEM],
+        req_vec_req_item_enum_int: vec![1],
 
         opt_vec_req_item_string: Some(vec!["opt_vec_req_item_string".to_string()]),
         opt_vec_req_item_bytes: Some(vec![b"opt_vec_req_item_bytes".to_vec()]),
@@ -57,6 +60,7 @@ pub fn sample_struct() -> SampleStruct {
             subf_string: "subf_string4".to_string(),
         }]),
         opt_vec_req_item_enum: Some(vec![SampleEnum::ITEM]),
+        opt_vec_req_item_enum_int: Some(vec![1]),
 
         req_vec_opt_item_string: vec![Some("req_vec_opt_item_string".to_string())],
         req_vec_opt_item_bytes: vec![Some(b"req_vec_opt_item_bytes".to_vec())],
@@ -71,6 +75,7 @@ pub fn sample_struct() -> SampleStruct {
             subf_string: "subf_string5".to_string(),
         })],
         req_vec_opt_item_enum: vec![Some(SampleEnum::ITEM)],
+        req_vec_opt_item_enum_int: vec![Some(1)],
 
         opt_vec_opt_item_string: Some(vec![Some("opt_vec_opt_item_string".to_string())]),
         opt_vec_opt_item_bytes: Some(vec![Some(b"opt_vec_opt_item_bytes".to_vec())]),
@@ -85,6 +90,7 @@ pub fn sample_struct() -> SampleStruct {
             subf_string: "subf_string6".to_string(),
         })]),
         opt_vec_opt_item_enum: Some(vec![Some(SampleEnum::ITEM)]),
+        opt_vec_opt_item_enum_int: Some(vec![Some(1)]),
     }
 }
 
@@ -103,6 +109,7 @@ pub fn sample_struct_null() -> SampleStruct {
             subf_string: "subf_string1".to_string(),
         },
         req_enum: SampleEnum::ITEM,
+        req_enum_int: 1,
 
         opt_string: None,
         opt_bytes: None,
@@ -115,6 +122,7 @@ pub fn sample_struct_null() -> SampleStruct {
         opt_bool: None,
         opt_struct: None,
         opt_enum: None,
+        opt_enum_int: None,
 
         req_vec_req_item_string: vec!["req_vec_req_item_string".to_string()],
         req_vec_req_item_bytes: vec![b"req_vec_req_item_bytes".to_vec()],
@@ -129,6 +137,7 @@ pub fn sample_struct_null() -> SampleStruct {
             subf_string: "subf_string3".to_string(),
         }],
         req_vec_req_item_enum: vec![SampleEnum::ITEM],
+        req_vec_req_item_enum_int: vec![1],
 
         opt_vec_req_item_string: None,
         opt_vec_req_item_bytes: None,
@@ -141,6 +150,7 @@ pub fn sample_struct_null() -> SampleStruct {
         opt_vec_req_item_bool: None,
         opt_vec_req_item_struct: None,
         opt_vec_req_item_enum: None,
+        opt_vec_req_item_enum_int: None,
 
         req_vec_opt_item_string: vec![None],
         req_vec_opt_item_bytes: vec![None],
@@ -153,6 +163,7 @@ pub fn sample_struct_null() -> SampleStruct {
         req_vec_opt_item_bool: vec![None],
         req_vec_opt_item_struct: vec![None],
         req_vec_opt_item_enum: vec![None],
+        req_vec_opt_item_enum_int: vec![None],
 
         opt_vec_opt_item_string: Some(vec![None]),
         opt_vec_opt_item_bytes: Some(vec![None]),
@@ -165,5 +176,6 @@ pub fn sample_struct_null() -> SampleStruct {
         opt_vec_opt_item_bool: Some(vec![None]),
         opt_vec_opt_item_struct: Some(vec![None]),
         opt_vec_opt_item_enum: Some(vec![None]),
+        opt_vec_opt_item_enum_int: Some(vec![None]),
     }
 }

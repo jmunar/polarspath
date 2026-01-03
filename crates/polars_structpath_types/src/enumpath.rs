@@ -1,3 +1,40 @@
+#[macro_export]
+macro_rules! rust_idx_to_arrow_idx {
+    ($rust_idx:expr, [$($rust_idx_val:expr),*]) => {
+        $crate::rust_idx_to_arrow_idx!(@match $rust_idx, 0, $($rust_idx_val),*)
+    };
+
+    (@match $rust_idx:expr, $arrow_idx:expr, $head:expr $(, $tail:expr)*) => {
+        match $rust_idx {
+            $head => $arrow_idx,
+            _ => $crate::rust_idx_to_arrow_idx!(@match $rust_idx, $arrow_idx + 1, $($tail),*),
+        }
+    };
+
+    (@match $rust_idx:expr, $_arrow_idx:expr,) => {
+        panic!("Invalid rust index: {}", $rust_idx)
+    };
+}
+
+#[macro_export]
+macro_rules! arrow_idx_to_rust_idx {
+    ($arrow_idx:expr, [$($rust_idx_val:expr),*]) => {
+        $crate::arrow_idx_to_rust_idx!(@match $arrow_idx, 0, $($rust_idx_val),*)
+    };
+
+    (@match $arrow_idx:expr, $pos:expr, $head:expr $(, $tail:expr)*) => {
+        if $arrow_idx == $pos {
+            $head
+        } else {
+            $crate::arrow_idx_to_rust_idx!(@match $arrow_idx, $pos + 1, $($tail),*)
+        }
+    };
+
+    (@match $arrow_idx:expr, $_pos:expr,) => {
+        panic!("Invalid arrow index: {}", $arrow_idx)
+    };
+}
+
 /// Macro to generate enum buffer struct and trait implementation.
 ///
 /// Usage:
@@ -8,7 +45,7 @@
 ///     ITEM = 1,
 /// }
 ///
-/// impl_enum_buffer!(SampleEnum, [("ITEM", 1)]);
+/// impl_enum_buffer!(SampleEnum, [(ITEM, 1)]);
 /// ```
 ///
 /// This generates:
@@ -18,21 +55,43 @@
 macro_rules! impl_enum_buffer {
     (
         $element_type:ident,
-        [$(($label:literal, $index:expr)),* $(,)?]
+        [$(($identifier:ident, $index:expr)),* $(,)?]
     ) => {
-        paste::paste! {
+        $crate::paste::paste! {
+
+            impl $element_type {
+
+                fn _from_rust_idx(rust_idx: u32) -> Self {
+                    match rust_idx {
+                        $($index => Self::$identifier,)*
+                        _ => panic!("Invalid rust index: {}", rust_idx),
+                    }
+                }
+
+                pub fn from_arrow_idx(arrow_idx: u32) -> Self {
+                    Self::_from_rust_idx(Self::_arrow_idx_to_rust_idx(arrow_idx))
+                }
+
+                pub fn rust_idx_to_arrow_idx(rust_idx: u32) -> u32 {
+                    $crate::rust_idx_to_arrow_idx!(rust_idx, [$($index),*])
+                }
+
+                fn _arrow_idx_to_rust_idx(arrow_idx: u32) -> u32 {
+                    $crate::arrow_idx_to_rust_idx!(arrow_idx, [$($index),*])
+                }
+            }
+
             pub struct [<$element_type Buffer>] {
                 values: Vec<Option<u32>>,
-                idx: $crate::indexmap::IndexMap<u32, u32>,
-                labels: polars_arrow::array::Utf8Array<i32>,
                 _validity: Vec<bool>,
-                _data_type: polars_arrow::datatypes::ArrowDataType,
+                _data_type: $crate::polars_arrow::datatypes::ArrowDataType,
             }
 
             impl $crate::ArrowBuffer for [<$element_type Buffer>] {
-                type ElementType = $element_type;
+                type Element = $element_type;
+                type Arrow = $crate::polars_arrow::array::DictionaryArray<u32>;
 
-                fn data_type(&self) -> &polars_arrow::datatypes::ArrowDataType {
+                fn data_type(&self) -> &$crate::polars_arrow::datatypes::ArrowDataType {
                     &self._data_type
                 }
 
@@ -41,33 +100,21 @@ macro_rules! impl_enum_buffer {
                 }
 
                 fn new(nrows: usize) -> Self {
-                    let mut idx = $crate::indexmap::IndexMap::new();
-                    let mut labels_vec = Vec::new();
-                    let mut dict_index = 0u32;
-                    $(
-                        idx.insert($index as u32, dict_index);
-                        labels_vec.push(Some($label));
-                        dict_index += 1;
-                    )*
-                    let _ = dict_index; // Suppress unused assignment warning (value used in macro expansion)
-                    let labels = polars_arrow::array::Utf8Array::<i32>::from(labels_vec);
-                    let dictionary_data_type = polars_arrow::datatypes::ArrowDataType::Dictionary(
-                        polars_arrow::datatypes::IntegerType::UInt32,
-                        Box::new(polars_arrow::datatypes::ArrowDataType::Utf8),
+                    let dictionary_data_type = $crate::polars_arrow::datatypes::ArrowDataType::Dictionary(
+                        $crate::polars_arrow::datatypes::IntegerType::UInt32,
+                        Box::new($crate::polars_arrow::datatypes::ArrowDataType::Utf8),
                         false, // ordered
                     );
                     Self {
                         values: Vec::with_capacity(nrows),
-                        idx,
-                        labels,
                         _validity: Vec::with_capacity(nrows),
                         _data_type: dictionary_data_type,
                     }
                 }
 
-                fn push(&mut self, value: impl Into<Self::ElementType>) {
+                fn push(&mut self, value: impl Into<Self::Element>) {
                     let value = value.into();
-                    self.values.push(Some(self.idx.get(&(value as u32)).unwrap().clone()));
+                    self.values.push(Some(value as u32));
                     self._validity.push(true);
                 }
 
@@ -76,18 +123,36 @@ macro_rules! impl_enum_buffer {
                     self._validity.push(false);
                 }
 
-                fn to_arrow(self) -> polars_core::prelude::PolarsResult<Box<dyn polars_arrow::array::Array>> {
-                    let array = polars_arrow::array::DictionaryArray::<u32>::try_new(
+                fn to_arrow(self) -> $crate::polars_core::prelude::PolarsResult<Self::Arrow> {
+                    let mapped_values: Vec<Option<u32>> = self.values
+                        .into_iter()
+                        .map(|opt| opt.map(Self::Element::rust_idx_to_arrow_idx))
+                        .collect();
+                    $crate::polars_arrow::array::DictionaryArray::<u32>::try_new(
                         self._data_type,
-                        polars_arrow::array::PrimitiveArray::<u32>::from(self.values),
-                        Box::new(self.labels)
-                    ).unwrap();
-                    Ok(Box::new(array) as Box<dyn polars_arrow::array::Array>)
+                        $crate::polars_arrow::array::PrimitiveArray::<u32>::from(mapped_values),
+                        Box::new($crate::polars_arrow::array::Utf8Array::<i32>::from(
+                            vec![$(Some(stringify!($identifier))),*],
+                        ))
+                    )
                 }
             }
 
-            impl $crate::HasArrowBuffer for $element_type {
-                type BufferType = [<$element_type Buffer>];
+            impl $crate::IntoArrow for $element_type {
+                type Buffer = [<$element_type Buffer>];
+            }
+
+            impl $crate::FromArrow for $element_type {
+
+                fn from_arrow(array: Box<dyn $crate::polars_arrow::array::Array>) -> Vec<Self> {
+                    let dict_array = array.as_any().downcast_ref::<$crate::polars_arrow::array::DictionaryArray<u32>>().unwrap();
+                    dict_array.keys().iter().map(|opt| $element_type::from_arrow_idx(*opt.unwrap_or(&0))).collect()
+                }
+
+                fn from_arrow_opt(array: Box<dyn $crate::polars_arrow::array::Array>) -> Vec<Option<Self>> {
+                    let dict_array = array.as_any().downcast_ref::<$crate::polars_arrow::array::DictionaryArray<u32>>().unwrap();
+                    dict_array.keys().iter().map(|opt| opt.copied().map(|k| $element_type::from_arrow_idx(k))).collect()
+                }
             }
         }
     };
@@ -95,8 +160,8 @@ macro_rules! impl_enum_buffer {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ArrowBuffer, HasArrowBuffer};
-    use polars_arrow::array::{DictionaryArray, Utf8Array};
+    use crate::{ArrowBuffer, IntoArrow};
+    use polars_arrow::array::Utf8Array;
 
     #[test]
     fn test_impl_enum_buffer() {
@@ -104,18 +169,14 @@ mod tests {
             ITEM1 = 1,
             ITEM2 = 2,
         }
-        impl_enum_buffer!(SampleEnum, [("ITEM1", 1), ("ITEM2", 2)]);
+        impl_enum_buffer!(SampleEnum, [(ITEM1, 1), (ITEM2, 2)]);
         let mut buffer = SampleEnum::new_buffer(1);
         buffer.push(SampleEnum::ITEM1);
         buffer.push(SampleEnum::ITEM2);
         buffer.push_null();
-        let array = buffer.to_arrow().unwrap();
-        assert_eq!(array.len(), 3);
+        let dict_array = buffer.to_arrow().unwrap();
+        assert_eq!(dict_array.len(), 3);
 
-        let dict_array = array
-            .as_any()
-            .downcast_ref::<DictionaryArray<u32>>()
-            .unwrap();
         let keys: Vec<Option<u32>> = dict_array.keys().iter().map(|opt| opt.copied()).collect();
         assert_eq!(keys, vec![Some(0), Some(1), None]);
 

@@ -1,5 +1,6 @@
-mod arrow;
 mod base;
+mod enumpath;
+mod structpath;
 mod test;
 
 pub use base::{SampleEnum, SampleStruct, SampleSubstruct};
