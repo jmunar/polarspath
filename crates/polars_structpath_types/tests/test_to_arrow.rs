@@ -8,7 +8,7 @@ use sample::{sample_struct, sample_struct_null, SampleStruct};
 #[test]
 fn test_req_struct_to_arrow_roundtrip() -> Result<(), Box<dyn std::error::Error>> {
     let vals_in = vec![sample_struct(), sample_struct_null(), sample_struct()];
-    let mut buffer = Option::<SampleStruct>::new_buffer(1);
+    let mut buffer = Option::<SampleStruct>::new_buffer(3);
     for val in &vals_in {
         buffer.push(val.clone());
     }
@@ -23,28 +23,28 @@ fn test_req_struct_to_arrow_roundtrip() -> Result<(), Box<dyn std::error::Error>
     Ok(())
 }
 
-// #[test]
-// fn test_opt_struct_to_arrow_roundtrip() -> Result<(), Box<dyn std::error::Error>> {
-//     let vals_in = vec![
-//         Some(sample_struct()),
-//         Some(sample_struct_null()),
-//         None,
-//         Some(sample_struct()),
-//     ];
-//     let mut buffer = Option::<SampleStruct>::new_buffer(1);
-//     for val in &vals_in {
-//         buffer.push(val.clone());
-//     }
-//     let array_ref = Box::new(buffer.to_arrow().unwrap());
-//     let vals_out = Option::<SampleStruct>::from_arrow(array_ref);
+#[test]
+fn test_opt_struct_to_arrow_roundtrip() -> Result<(), Box<dyn std::error::Error>> {
+    let vals_in = vec![
+        Some(sample_struct()),
+        Some(sample_struct_null()),
+        None,
+        Some(sample_struct()),
+    ];
+    let mut buffer = Option::<SampleStruct>::new_buffer(4);
+    for val in &vals_in {
+        buffer.push(val.clone());
+    }
+    let array_ref = Box::new(buffer.to_arrow().unwrap());
+    let vals_out = Option::<SampleStruct>::from_arrow(array_ref);
 
-//     assert_eq!(vals_in.len(), vals_out.len());
-//     for (val_in, val_out) in vals_in.iter().zip(vals_out.iter()) {
-//         assert_eq!(val_in, val_out);
-//     }
+    assert_eq!(vals_in.len(), vals_out.len());
+    for (val_in, val_out) in vals_in.iter().zip(vals_out.iter()) {
+        assert_eq!(val_in, val_out);
+    }
 
-//     Ok(())
-// }
+    Ok(())
+}
 
 #[test]
 fn test_to_arrow_rows() -> Result<(), Box<dyn std::error::Error>> {
@@ -147,15 +147,15 @@ fn test_to_arrow_rows() -> Result<(), Box<dyn std::error::Error>> {
 
     // Extract by field
     let series: Series = Series::from_arrow("sample_struct".into(), Box::new(array_ref)).unwrap();
-    let field_series = series
+    let _field_series = series
         .struct_()
         .unwrap()
         .field_by_name("req_string")
         .unwrap();
-    // assert_eq!(field_series.get(0)?.extract_str(), Some("req_string"));
-    // assert_eq!(field_series.get(1)?.extract_str(), Some("req_string"));
-    // assert_eq!(field_series.get(2)?.extract_str(), None);
-    // assert_eq!(field_series.get(3)?.extract_str(), Some("req_string"));
+    // assert_eq!(_field_series.get(0)?.extract_str(), Some("req_string"));
+    // assert_eq!(_field_series.get(1)?.extract_str(), Some("req_string"));
+    // assert_eq!(_field_series.get(2)?.extract_str(), None);
+    // assert_eq!(_field_series.get(3)?.extract_str(), Some("req_string"));
 
     Ok(())
 }

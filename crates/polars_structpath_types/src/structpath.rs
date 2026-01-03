@@ -13,25 +13,73 @@ macro_rules! impl_struct_field_buffer_type {
     }
 }
 
-/// Macro to generate struct buffer inner, buffer struct, and trait implementation.
+/// Macro to generate struct buffer implementation and trait implementations.
 ///
-/// Usage:
+/// This macro generates a complete Arrow buffer implementation for Rust structs, converting
+/// them to Arrow `StructArray` with fields corresponding to the struct's fields.
+///
+/// # Usage
+///
 /// ```rust
 /// use polars_structpath_types::impl_struct_buffer;
 ///
-/// pub struct SampleSubstruct {
-///     subf_string: String,
+/// pub struct Person {
+///     name: String,
+///     age: i32,
 /// }
 ///
 /// impl_struct_buffer!(
-///     SampleSubstruct,
-///     [(subf_string, String)]
+///     Person,
+///     [(name, String), (age, i32)]
 /// );
 /// ```
 ///
-/// This generates:
-/// - `SampleSubstructBuffer` struct
-/// - `impl ArrowBuffer for SampleSubstructBuffer`
+/// # Generated Code
+///
+/// This macro generates:
+/// - `PersonBuffer` struct implementing `ArrowBuffer`
+/// - `IntoArrow` implementation for `Person`
+/// - `FromArrow` implementation for `Person`
+///
+/// # Parameters
+///
+/// - `$struct_type`: The struct type name
+/// - `[($field_name, $field_type), ...]`: List of struct fields with their types
+///
+/// # Supported Field Types
+///
+/// - Primitive types: `i32`, `i64`, `f32`, `f64`, `bool`, `String`
+/// - Optional types: `Option<T>`
+/// - Vectors: `Vec<T>`
+/// - Nested combinations: `Option<Vec<T>>`, `Vec<Option<T>>`, etc.
+/// - Custom structs: Any struct that implements `IntoArrow` and `FromArrow`
+///
+/// # Example with Nested Types
+///
+/// ```rust
+/// use polars_structpath_types::impl_struct_buffer;
+///
+/// pub struct Address {
+///     street: String,
+/// }
+///
+/// impl_struct_buffer!(Address, [(street, String)]);
+///
+/// pub struct Person {
+///     name: String,
+///     age: Option<i32>,
+///     addresses: Vec<Address>,
+/// }
+///
+/// impl_struct_buffer!(
+///     Person,
+///     [
+///         (name, String),
+///         (age, Option<i32>),
+///         (addresses, Vec<Address>)
+///     ]
+/// );
+/// ```
 #[macro_export]
 macro_rules! impl_struct_buffer {
     (

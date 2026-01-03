@@ -1,4 +1,9 @@
+/// Internal macro for converting Rust enum discriminant indices to Arrow dictionary indices.
+///
+/// This macro is used internally by `impl_enum_buffer!` to handle the mapping between
+/// Rust enum discriminants (which may have gaps) and Arrow dictionary indices (which are dense).
 #[macro_export]
+#[doc(hidden)]
 macro_rules! rust_idx_to_arrow_idx {
     ($rust_idx:expr, [$($rust_idx_val:expr),*]) => {
         $crate::rust_idx_to_arrow_idx!(@match $rust_idx, 0, $($rust_idx_val),*)
@@ -16,7 +21,12 @@ macro_rules! rust_idx_to_arrow_idx {
     };
 }
 
+/// Internal macro for converting Arrow dictionary indices back to Rust enum discriminant indices.
+///
+/// This macro is used internally by `impl_enum_buffer!` to handle the reverse mapping from
+/// Arrow dictionary indices to Rust enum discriminants.
 #[macro_export]
+#[doc(hidden)]
 macro_rules! arrow_idx_to_rust_idx {
     ($arrow_idx:expr, [$($rust_idx_val:expr),*]) => {
         $crate::arrow_idx_to_rust_idx!(@match $arrow_idx, 0, $($rust_idx_val),*)
@@ -37,20 +47,40 @@ macro_rules! arrow_idx_to_rust_idx {
 
 /// Macro to generate enum buffer struct and trait implementation.
 ///
-/// Usage:
+/// This macro generates a complete Arrow buffer implementation for Rust enums, converting
+/// them to Arrow `DictionaryArray` with UTF-8 string keys representing enum variant names.
+///
+/// # Usage
+///
 /// ```rust
 /// use polars_structpath_types::impl_enum_buffer;
 ///
-/// pub enum SampleEnum {
-///     ITEM = 1,
+/// pub enum Status {
+///     Active = 1,
+///     Inactive = 2,
 /// }
 ///
-/// impl_enum_buffer!(SampleEnum, [(ITEM, 1)]);
+/// impl_enum_buffer!(Status, [(Active, 1), (Inactive, 2)]);
 /// ```
 ///
-/// This generates:
-/// - `SampleEnumBuffer` struct
-/// - `impl ArrowBuffer for SampleEnumBuffer`
+/// # Generated Code
+///
+/// This macro generates:
+/// - `StatusBuffer` struct implementing `ArrowBuffer`
+/// - Helper methods: `from_arrow_idx()`, `rust_idx_to_arrow_idx()`
+/// - `IntoArrow` implementation for `Status`
+/// - `FromArrow` implementation for `Status`
+///
+/// # Parameters
+///
+/// - `$element_type`: The enum type name
+/// - `[($identifier, $index), ...]`: List of enum variants with their discriminant values
+///
+/// # Notes
+///
+/// - Enum discriminants can have gaps (e.g., `ITEM1 = 1, ITEM3 = 3`)
+/// - The macro handles mapping between Rust discriminants and dense Arrow dictionary indices
+/// - Enum variant names are used as dictionary keys in the Arrow array
 #[macro_export]
 macro_rules! impl_enum_buffer {
     (

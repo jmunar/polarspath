@@ -3,6 +3,22 @@ use polars_arrow::array::{Array, BooleanArray, ListArray, PrimitiveArray, Utf8Ar
 use polars_arrow::datatypes::{ArrowDataType, Field as ArrowField};
 use polars_arrow::offset::OffsetsBuffer;
 use polars_core::prelude::*;
+
+/// Buffer wrapper for `Option<T>` types.
+///
+/// `ArrowBufferOption` wraps any `ArrowBuffer` implementation to add support for nullable values.
+/// It handles the conversion between Rust's `Option<T>` and Arrow's nullable arrays.
+///
+/// # Example
+///
+/// ```rust
+/// use polars_structpath_types::{ArrowBuffer, IntoArrow};
+///
+/// let mut buffer = Option::<String>::new_buffer(2);
+/// buffer.push(Some("hello".to_string()));
+/// buffer.push(None);
+/// let array = buffer.to_arrow().unwrap();
+/// ```
 pub struct ArrowBufferOption<T: ArrowBuffer>(T);
 
 impl<T: ArrowBuffer> ArrowBuffer for ArrowBufferOption<T> {
@@ -41,6 +57,21 @@ impl<T: ArrowBuffer> ArrowBuffer for ArrowBufferOption<T> {
     }
 }
 
+/// Buffer for `Vec<T>` types.
+///
+/// `ArrowBufferVec` accumulates vectors of elements and converts them to Arrow `ListArray`.
+/// It maintains offsets to track the boundaries between individual vectors in the buffer.
+///
+/// # Example
+///
+/// ```rust
+/// use polars_structpath_types::{ArrowBuffer, IntoArrow};
+///
+/// let mut buffer = Vec::<i32>::new_buffer(2);
+/// buffer.push(vec![1, 2, 3]);
+/// buffer.push(vec![4, 5]);
+/// let array = buffer.to_arrow().unwrap();
+/// ```
 pub struct ArrowBufferVec<T: ArrowBuffer> {
     subbuffer: T,
     offsets: Vec<i32>,
@@ -126,7 +157,7 @@ impl<T: FromArrow> FromArrow for Vec<T> {
             .downcast_ref::<ListArray<i32>>()
             .unwrap()
             .iter()
-            .map(|opt| T::from_arrow(opt.unwrap()))
+            .map(|opt| opt.map(|arr| T::from_arrow(arr)).unwrap_or_default())
             .collect()
     }
 
@@ -141,6 +172,10 @@ impl<T: FromArrow> FromArrow for Vec<T> {
     }
 }
 
+/// Buffer implementation for `String` types.
+///
+/// `StringBuffer` accumulates UTF-8 strings and converts them to Arrow `Utf8Array`.
+/// It stores string data as bytes with offsets to track string boundaries.
 pub struct StringBuffer {
     values: Vec<u8>,
     offsets: Vec<i32>,
@@ -223,6 +258,21 @@ impl FromArrow for String {
 }
 
 /// Macro to generate buffer structs and trait implementations for numeric and boolean types.
+///
+/// This macro generates:
+/// - A buffer struct (e.g., `Int32Buffer` for `i32`)
+/// - `ArrowBuffer` implementation for the buffer
+/// - `IntoArrow` implementation for the element type
+/// - `FromArrow` implementation for the element type
+///
+/// # Example
+///
+/// The macro is used internally to generate implementations for:
+/// - `i32` → `Int32Buffer`
+/// - `i64` → `Int64Buffer`
+/// - `f32` → `Float32Buffer`
+/// - `bool` → `BoolBuffer`
+/// - And other primitive types
 macro_rules! impl_primitive_buffer {
     (
         $element_type:ty,
@@ -315,6 +365,9 @@ impl_primitive_buffer!(u64, UInt64);
 impl_primitive_buffer!(f32, Float32);
 impl_primitive_buffer!(f64, Float64);
 
+/// Buffer implementation for `bool` types.
+///
+/// `BoolBuffer` accumulates boolean values and converts them to Arrow `BooleanArray`.
 pub struct BoolBuffer {
     values: Vec<bool>,
     _validity: Vec<bool>,
