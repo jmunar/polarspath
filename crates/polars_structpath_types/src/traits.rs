@@ -16,7 +16,7 @@ use polars_core::prelude::*;
 /// # Example
 ///
 /// ```rust
-/// use polars_structpath_types::ArrowBuffer;
+/// use polars_structpath_types::{ArrowBuffer, IntoArrow};
 ///
 /// let mut buffer = i32::new_buffer(3);
 /// buffer.push(1);

@@ -59,12 +59,14 @@ macro_rules! impl_struct_field_buffer_type {
 /// ```rust
 /// use polars_structpath_types::impl_struct_buffer;
 ///
+/// #[derive(Debug, Clone, PartialEq)]
 /// pub struct Address {
 ///     street: String,
 /// }
 ///
 /// impl_struct_buffer!(Address, [(street, String)]);
 ///
+/// #[derive(Debug, Clone, PartialEq)]
 /// pub struct Person {
 ///     name: String,
 ///     age: Option<i32>,
