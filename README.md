@@ -17,7 +17,7 @@ This repository contains several interconnected crates:
 ### Core Libraries
 
 - **`polars_structpath`** ([README](./crates/polars_structpath/README.md)): Main library providing the
-  `StructPath` trait and path-based access functionality. It's a wrapper for the 2 cargos below
+  `StructPath` trait and all related functionality. It's a wrapper for the 2 cargos below
 - **`polars_structpath_types`**: Helper library for `polars_structpath`, defining and implementing all
   types and traits
 - **`polars_structpath_derive`**: Helper library for `polars_structpath`, implementing the derive macros

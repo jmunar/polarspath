@@ -1,6 +1,6 @@
+use example_protobuf::example_protobuf;
 use polars_structpath::polars_core::prelude::{AnyValue, DataType};
 use polars_structpath::{data_type_wrapper, HasDataTypeWrapper, StructPath};
-use example_protobuf::example_protobuf;
 
 #[test]
 fn test_get_type_person() -> Result<(), Box<dyn std::error::Error>> {

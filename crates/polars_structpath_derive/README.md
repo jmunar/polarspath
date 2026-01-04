@@ -1,13 +1,13 @@
 # polars_structpath_derive
 
-This crate provides procedural derive macros for the `polars_structpath` ecosystem. It automatically generates implementations of the `StructPath` and `EnumPath` traits, enabling dynamic path-based access to nested Rust structures.
+This crate provides procedural derive macros for the `polars_structpath` ecosystem. It automatically generates Arrow buffer implementations for Rust structs and enums, enabling seamless conversion to and from Apache Arrow arrays for Polars integration.
 
 ## Purpose
 
 `polars_structpath_derive` is a procedural macro crate that generates code for:
 
-- **StructPath derive macro**: Automatically implements the `StructPath` trait for structs, enabling path-based field access
-- **EnumPath derive macro**: Automatically implements the `EnumPath` trait for enums, enabling path-based enum value access with case conversion support
+- **StructPath derive macro**: Automatically generates Arrow buffer implementations for structs using `impl_struct_buffer!` from `polars_structpath_types`
+- **EnumPath derive macro**: Automatically generates Arrow buffer implementations for enums using `impl_enum_buffer!` from `polars_structpath_types`
 
 This crate is used by:
 - `polars_structpath`: The main user-facing library that re-exports these derive macros
@@ -15,45 +15,7 @@ This crate is used by:
 
 ## Usage
 
-### StructPath
-
-Apply the `#[derive(StructPath)]` attribute to structs with named fields:
-
-```rust
-use polars_structpath::StructPath;
-
-#[derive(StructPath)]
-struct User {
-    name: String,
-    age: i64,
-    #[type_hint("struct")]
-    parent: Option<Parent>,
-}
-
-#[derive(StructPath)]
-struct Parent {
-    name: String,
-}
-```
-
-The `#[type_hint]` attribute can be used to provide type information for complex types like nested structs, enums, or collections.
-
-### EnumPath
-
-Apply the `#[derive(EnumPath)]` attribute to enums:
-
-```rust
-use polars_structpath::EnumPath;
-
-#[derive(EnumPath)]
-#[enum_path(camel_case_to_upper_snake_case)]
-enum Status {
-    Active,
-    Inactive,
-}
-```
-
-The `#[enum_path]` attribute supports case conversion functions for mapping enum variant names to string representations.
+For usage examples, see [polars_structpath](../polars_structpath/README.md).
 
 ## See Also
 

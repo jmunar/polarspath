@@ -238,9 +238,9 @@ if [[ "$CREATE_SAMPLE_TESTS" =~ ^[Yy]$ ]]; then
 
     if [[ "$CREATE_SAMPLE_PROTO" =~ ^[Yy]$ ]]; then
         cat > tests/test_person.rs <<EOF
+use ${PROJECT_NAME}::$PACKAGE_NAME;
 use polars_structpath::polars_core::prelude::{AnyValue, DataType};
 use polars_structpath::{data_type_wrapper, HasDataTypeWrapper, StructPath};
-use ${PROJECT_NAME}::$PACKAGE_NAME;
 
 #[test]
 fn test_get_type_person() -> Result<(), Box<dyn std::error::Error>> {

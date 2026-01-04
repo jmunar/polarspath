@@ -23,7 +23,7 @@ This crate provides the core types and traits for converting Rust types to and f
 
 The main trait for types that can accumulate values and convert them to Arrow arrays:
 
-```rust
+```rust,ignore
 pub trait ArrowBuffer {
     type Element;
     type Arrow: Array;
@@ -39,7 +39,7 @@ pub trait ArrowBuffer {
 
 Marks types that can be converted to Arrow arrays. Provides a convenience method `new_buffer()`:
 
-```rust
+```rust,ignore
 pub trait IntoArrow: Sized {
     type Buffer: ArrowBuffer;
     
@@ -51,7 +51,7 @@ pub trait IntoArrow: Sized {
 
 Enables conversion from Arrow arrays back to Rust types:
 
-```rust
+```rust,ignore
 pub trait FromArrow where Self: Sized {
     fn from_arrow(array: Box<dyn Array>) -> Vec<Self>;
     fn from_arrow_opt(array: Box<dyn Array>) -> Vec<Option<Self>>;
@@ -85,7 +85,7 @@ let values: Vec<i32> = i32::from_arrow(Box::new(array));
 Use the `impl_struct_buffer!` macro to generate buffer code for your structs:
 
 ```rust
-use polars_structpath_types::impl_struct_buffer;
+use polars_structpath_types::{ArrowBuffer, IntoArrow, impl_struct_buffer};
 
 pub struct Person {
     name: String,
@@ -111,7 +111,7 @@ let array = buffer.to_arrow().unwrap();
 Use the `impl_enum_buffer!` macro for enums:
 
 ```rust
-use polars_structpath_types::impl_enum_buffer;
+use polars_structpath_types::{ArrowBuffer, IntoArrow, impl_enum_buffer};
 
 pub enum Status {
     Active = 1,
@@ -132,6 +132,8 @@ let array = buffer.to_arrow().unwrap();
 The crate fully supports nested `Option` and `Vec` types:
 
 ```rust
+use polars_structpath_types::{ArrowBuffer, IntoArrow};
+
 // Option<String>
 let mut buffer = Option::<String>::new_buffer(2);
 buffer.push(Some("hello".to_string()));
@@ -154,7 +156,7 @@ The Arrow arrays produced by this crate are fully compatible with Polars DataFra
 
 ```rust
 use polars_core::prelude::*;
-use polars_structpath_types::{IntoArrow, FromArrow};
+use polars_structpath_types::{ArrowBuffer, IntoArrow, FromArrow};
 
 let mut buffer = String::new_buffer(3);
 buffer.push("Alice");
@@ -163,7 +165,7 @@ buffer.push("Charlie");
 
 let array = buffer.to_arrow().unwrap();
 let series = Series::from_arrow("names".into(), Box::new(array)).unwrap();
-let df = DataFrame::new(vec![series]).unwrap();
+let df = DataFrame::new(vec![series.into()]).unwrap();
 ```
 
 ## This crate is used by:
