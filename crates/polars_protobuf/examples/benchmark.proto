@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package benchmark;
+
+enum SampleEnum {
+    UNKNOWN = 0;
+    VARIANT_10 = 10;
+}
+
+message SampleSubmessage {
+    string f_string = 1;
+    int64 f_integer = 2;
+}
+
+message SampleMessage {
+    string f_string = 1;
+    int64 f_integer = 2;
+    double f_double = 3;
+    bool f_boolean = 4;
+
+    optional int64 f_integer_optional = 5;
+    optional string f_string_optional = 6;
+
+    repeated int64 f_integer_repeated = 7;
+    repeated string f_string_repeated = 8;
+
+    SampleEnum f_enum = 9;
+    repeated SampleEnum f_enum_repeated = 10;
+
+    SampleSubmessage f_submessage = 11;
+    repeated SampleSubmessage f_submessage_repeated = 12;
+}

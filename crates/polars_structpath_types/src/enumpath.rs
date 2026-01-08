@@ -91,7 +91,7 @@ macro_rules! impl_enum_buffer {
 
             impl $element_type {
 
-                fn _from_rust_idx(rust_idx: u32) -> Self {
+                pub fn from_rust_idx(rust_idx: i32) -> Self {
                     match rust_idx {
                         $($index => Self::$identifier,)*
                         _ => panic!("Invalid rust index: {}", rust_idx),
@@ -99,20 +99,20 @@ macro_rules! impl_enum_buffer {
                 }
 
                 pub fn from_arrow_idx(arrow_idx: u32) -> Self {
-                    Self::_from_rust_idx(Self::_arrow_idx_to_rust_idx(arrow_idx))
+                    Self::from_rust_idx(Self::arrow_idx_to_rust_idx(arrow_idx))
                 }
 
-                pub fn rust_idx_to_arrow_idx(rust_idx: u32) -> u32 {
+                pub fn rust_idx_to_arrow_idx(rust_idx: i32) -> u32 {
                     $crate::rust_idx_to_arrow_idx!(rust_idx, [$($index),*])
                 }
 
-                fn _arrow_idx_to_rust_idx(arrow_idx: u32) -> u32 {
+                pub fn arrow_idx_to_rust_idx(arrow_idx: u32) -> i32 {
                     $crate::arrow_idx_to_rust_idx!(arrow_idx, [$($index),*])
                 }
             }
 
             pub struct [<$element_type Buffer>] {
-                values: Vec<Option<u32>>,
+                values: Vec<Option<i32>>,
                 _validity: Vec<bool>,
                 _data_type: $crate::polars_arrow::datatypes::ArrowDataType,
             }
@@ -144,7 +144,7 @@ macro_rules! impl_enum_buffer {
 
                 fn push(&mut self, value: impl Into<Self::Element>) {
                     let value = value.into();
-                    self.values.push(Some(value as u32));
+                    self.values.push(Some(value as i32));
                     self._validity.push(true);
                 }
 
@@ -196,10 +196,10 @@ mod tests {
     #[test]
     fn test_impl_enum_buffer() {
         pub enum SampleEnum {
-            ITEM1 = 1,
+            ITEM1 = -1,
             ITEM2 = 2,
         }
-        impl_enum_buffer!(SampleEnum, [(ITEM1, 1), (ITEM2, 2)]);
+        impl_enum_buffer!(SampleEnum, [(ITEM1, -1), (ITEM2, 2)]);
         let mut buffer = SampleEnum::new_buffer(1);
         buffer.push(SampleEnum::ITEM1);
         buffer.push(SampleEnum::ITEM2);

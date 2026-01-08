@@ -22,7 +22,6 @@ pub struct SampleStruct {
     pub req_bool: bool,
     pub req_struct: SampleSubstruct,
     pub req_enum: SampleEnum,
-    pub req_enum_int: i32,
 
     pub opt_string: Option<String>,
     pub opt_bytes: Option<Vec<u8>>,
@@ -35,7 +34,6 @@ pub struct SampleStruct {
     pub opt_bool: Option<bool>,
     pub opt_struct: Option<SampleSubstruct>,
     pub opt_enum: Option<SampleEnum>,
-    pub opt_enum_int: Option<i32>,
 
     pub req_vec_req_item_string: Vec<String>,
     pub req_vec_req_item_bytes: Vec<Vec<u8>>,
@@ -48,7 +46,6 @@ pub struct SampleStruct {
     pub req_vec_req_item_bool: Vec<bool>,
     pub req_vec_req_item_struct: Vec<SampleSubstruct>,
     pub req_vec_req_item_enum: Vec<SampleEnum>,
-    pub req_vec_req_item_enum_int: Vec<i32>,
 
     pub opt_vec_req_item_string: Option<Vec<String>>,
     pub opt_vec_req_item_bytes: Option<Vec<Vec<u8>>>,
@@ -61,7 +58,6 @@ pub struct SampleStruct {
     pub opt_vec_req_item_bool: Option<Vec<bool>>,
     pub opt_vec_req_item_struct: Option<Vec<SampleSubstruct>>,
     pub opt_vec_req_item_enum: Option<Vec<SampleEnum>>,
-    pub opt_vec_req_item_enum_int: Option<Vec<i32>>,
 
     pub req_vec_opt_item_string: Vec<Option<String>>,
     pub req_vec_opt_item_bytes: Vec<Option<Vec<u8>>>,
@@ -74,7 +70,6 @@ pub struct SampleStruct {
     pub req_vec_opt_item_bool: Vec<Option<bool>>,
     pub req_vec_opt_item_struct: Vec<Option<SampleSubstruct>>,
     pub req_vec_opt_item_enum: Vec<Option<SampleEnum>>,
-    pub req_vec_opt_item_enum_int: Vec<Option<i32>>,
 
     pub opt_vec_opt_item_string: Option<Vec<Option<String>>>,
     pub opt_vec_opt_item_bytes: Option<Vec<Option<Vec<u8>>>>,
@@ -87,5 +82,4 @@ pub struct SampleStruct {
     pub opt_vec_opt_item_bool: Option<Vec<Option<bool>>>,
     pub opt_vec_opt_item_struct: Option<Vec<Option<SampleSubstruct>>>,
     pub opt_vec_opt_item_enum: Option<Vec<Option<SampleEnum>>>,
-    pub opt_vec_opt_item_enum_int: Option<Vec<Option<i32>>>,
 }

@@ -17,7 +17,6 @@ impl_struct_buffer!(
         (req_bool, bool),
         (req_struct, SampleSubstruct),
         (req_enum, SampleEnum),
-        (req_enum_int, i32),
 
         (opt_string, Option<String>),
         (opt_bytes, Option<Vec<u8>>),
@@ -30,7 +29,6 @@ impl_struct_buffer!(
         (opt_bool, Option<bool>),
         (opt_struct, Option<SampleSubstruct>),
         (opt_enum, Option<SampleEnum>),
-        (opt_enum_int, Option<i32>),
 
         (req_vec_req_item_string, Vec<String>),
         (req_vec_req_item_bytes, Vec<Vec<u8>>),
@@ -43,7 +41,6 @@ impl_struct_buffer!(
         (req_vec_req_item_bool, Vec<bool>),
         (req_vec_req_item_struct, Vec<SampleSubstruct>),
         (req_vec_req_item_enum, Vec<SampleEnum>),
-        (req_vec_req_item_enum_int, Vec<i32>),
 
         (opt_vec_req_item_string, Option<Vec<String>>),
         (opt_vec_req_item_bytes, Option<Vec<Vec<u8>>>),
@@ -56,7 +53,6 @@ impl_struct_buffer!(
         (opt_vec_req_item_bool, Option<Vec<bool>>),
         (opt_vec_req_item_struct, Option<Vec<SampleSubstruct>>),
         (opt_vec_req_item_enum, Option<Vec<SampleEnum>>),
-        (opt_vec_req_item_enum_int, Option<Vec<i32>>),
 
         (req_vec_opt_item_string, Vec<Option<String>>),
         (req_vec_opt_item_bytes, Vec<Option<Vec<u8>>>),
@@ -69,7 +65,6 @@ impl_struct_buffer!(
         (req_vec_opt_item_bool, Vec<Option<bool>>),
         (req_vec_opt_item_struct, Vec<Option<SampleSubstruct>>),
         (req_vec_opt_item_enum, Vec<Option<SampleEnum>>),
-        (req_vec_opt_item_enum_int, Vec<Option<i32>>),
 
         (opt_vec_opt_item_string, Option<Vec<Option<String>>>),
         (opt_vec_opt_item_bytes, Option<Vec<Option<Vec<u8>>>>),
@@ -82,6 +77,5 @@ impl_struct_buffer!(
         (opt_vec_opt_item_bool, Option<Vec<Option<bool>>>),
         (opt_vec_opt_item_struct, Option<Vec<Option<SampleSubstruct>>>),
         (opt_vec_opt_item_enum, Option<Vec<Option<SampleEnum>>>),
-        (opt_vec_opt_item_enum_int, Option<Vec<Option<i32>>>),
     ]
 );
