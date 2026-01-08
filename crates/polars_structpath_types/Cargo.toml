@@ -1,5 +1,5 @@
 [package]
-name = "polars_structpath_types"
+name = "polars-structpath-types"
 edition.workspace = true
 version.workspace = true
 license.workspace = true

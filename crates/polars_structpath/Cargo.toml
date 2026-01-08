@@ -1,5 +1,5 @@
 [package]
-name = "polars_structpath"
+name = "polars-structpath"
 edition.workspace = true
 version.workspace = true
 license.workspace = true
@@ -9,15 +9,15 @@ keywords = ["polars_structpath", "polars", "dataframe", "path", "nested"]
 categories = ["data-structures"]
 
 [dependencies]
-polars_structpath_derive = { workspace = true, optional = true }
-polars_structpath_types = { workspace = true }
+polars-structpath-derive = { workspace = true, optional = true }
+polars-structpath-types = { workspace = true }
 polars-core = { workspace = true, features = ["dtype-struct"] }
 
 [dev-dependencies]
-polars_structpath_derive = { workspace = true }
+polars-structpath-derive = { workspace = true }
 trybuild = { workspace = true }
 
 [features]
 default = ["std", "derive"]
-derive = ["polars_structpath_derive"]
+derive = ["polars-structpath-derive"]
 std = []

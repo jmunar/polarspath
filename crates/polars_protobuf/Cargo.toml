@@ -1,5 +1,5 @@
 [package]
-name = "polars_protobuf"
+name = "polars-protobuf"
 edition.workspace = true
 version.workspace = true
 license.workspace = true
@@ -12,10 +12,14 @@ categories = ["data-structures", "encoding"]
 default = []
 build = ["prost-build", "prost-types"]
 
+[build-dependencies]
+prost-build = { workspace = true }
+
 [dependencies]
 polars-arrow = { workspace = true }
 polars-core = { workspace = true, features = ["dtype-array", "dtype-struct"] }
 prost = { workspace = true }
-polars_structpath = { workspace = true, features = ["derive"] }
+polars-structpath = { workspace = true, features = ["derive"] }
+polars-structpath-types = { workspace = true }
 prost-build = { workspace = true, optional = true }
 prost-types = { workspace = true, optional = true }
