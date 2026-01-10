@@ -3,9 +3,9 @@ name = "polars-protobuf"
 edition.workspace = true
 version.workspace = true
 license.workspace = true
-description = "Automatic polars_structpath implementations for Protocol Buffer messages"
+description = "Automatic polars-structpath implementations for Protocol Buffer messages"
 repository = "https://github.com/jmunar/polarspath"
-keywords = ["polars_structpath", "protobuf", "protocol-buffers", "polars", "prost"]
+keywords = ["polars-structpath", "protobuf", "protocol-buffers", "polars", "prost"]
 categories = ["data-structures", "encoding"]
 
 [features]

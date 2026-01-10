@@ -14,7 +14,7 @@ build-rust:
 build-python:
 	@echo "Re-creating example_protobuf..."
 	@rm -rf examples/example_protobuf
-	@cd examples && ../crates/polars_protobuf/create_polars_protobuf_project.sh --project-name example_protobuf -p -t -w
+	@cd examples && ../crates/polars-protobuf/create_polars_protobuf_project.sh --project-name example_protobuf -p -t -w
 	@echo "Building Python example_protobuf package..."
 	@cd examples/example_protobuf && make build
 
@@ -47,8 +47,8 @@ update-deps:
 test-rust:
 	@echo "Running tests for Rust workspace..."
 	@cargo test --workspace
-	@echo "Running tests for polars_structpath with derive feature..."
-	@cargo test -p polars_structpath --features derive
+	@echo "Running tests for polars-structpath with derive feature..."
+	@cargo test -p polars-structpath --features derive
 
 test: test-rust
 

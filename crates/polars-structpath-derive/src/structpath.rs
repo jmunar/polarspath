@@ -4,7 +4,7 @@ use quote::quote;
 /// Implementation function for the `StructPath` derive macro.
 ///
 /// This function processes a struct definition and generates code that calls
-/// `impl_struct_buffer!` from `polars_structpath_types` to create Arrow buffer
+/// `impl_struct_buffer!` from `polars-structpath-types` to create Arrow buffer
 /// implementations for the struct.
 ///
 /// # Panics

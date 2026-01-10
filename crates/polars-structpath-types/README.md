@@ -1,10 +1,10 @@
-# polars_structpath_types
+# polars-structpath-types
 
-This crate provides the core types and traits for converting Rust types to and from Apache Arrow arrays, forming the foundation of the `polars_structpath` ecosystem. It enables seamless bidirectional conversion between Rust data structures and Polars-compatible Arrow arrays.
+This crate provides the core types and traits for converting Rust types to and from Apache Arrow arrays, forming the foundation of the `polars-structpath` ecosystem. It enables seamless bidirectional conversion between Rust data structures and Polars-compatible Arrow arrays.
 
 ## Purpose
 
-`polars_structpath_types` is a foundational library that provides:
+`polars-structpath-types` is a foundational library that provides:
 
 - **Arrow Buffer Traits**: Core traits (`ArrowBuffer`, `IntoArrow`, `FromArrow`) for converting Rust types to Arrow arrays
 - **Buffer Implementations**: Ready-to-use buffer implementations for:
@@ -170,14 +170,14 @@ let df = DataFrame::new(vec![series.into()]).unwrap();
 
 ## This crate is used by:
 
-- `polars_structpath`: The main user-facing library that re-exports these types
-- `polars_structpath_derive`: The derive macro implementation that generates code using these types
-- `polars_protobuf`: Protocol Buffers integration that leverages these types
+- `polars-structpath`: The main user-facing library that re-exports these types
+- `polars-structpath-derive`: The derive macro implementation that generates code using these types
+- `polars-protobuf`: Protocol Buffers integration that leverages these types
 
 ## See Also
 
-- [Main README](../../README.md) - Overview of the entire polars_structpath ecosystem
-- [polars_structpath](../polars_structpath/README.md) - User-facing API documentation
-- [polars_structpath_derive](../polars_structpath_derive/) - Derive macro implementation
-- [polars_protobuf](../polars_protobuf/README.md) - Protocol Buffers integration
+- [Main README](../../README.md) - Overview of the entire `polarspath` ecosystem
+- [polars-structpath](../polars-structpath/README.md) - User-facing API documentation
+- [polars-structpath-derive](../polars-structpath-derive/) - Derive macro implementation
+- [polars-protobuf](../polars-protobuf/README.md) - Protocol Buffers integration
 

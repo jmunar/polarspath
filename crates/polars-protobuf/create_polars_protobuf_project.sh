@@ -79,7 +79,7 @@ if [[ ! "$PROJECT_NAME" =~ ^[a-z][a-z0-9_]*$ ]]; then
     exit 1
 fi
 
-echo -e "${GREEN}polars_protobuf Project Generator${NC}"
+echo -e "${GREEN}polars-protobuf Project Generator${NC}"
 echo "=================================="
 echo ""
 
@@ -113,7 +113,7 @@ if [ "$USE_WORKSPACE" = true ]; then
 [package]
 name = "$PROJECT_NAME"
 edition.workspace = true
-description = "Protocol Buffer messages with polars_structpath support"
+description = "Protocol Buffer messages with polars-structpath support"
 license = "MIT OR Apache-2.0"
 
 [lib]
@@ -125,7 +125,7 @@ extension-module = ["pyo3", "pyo3/extension-module", "pyo3-polars", "serde"]
 
 [dependencies]
 prost = { workspace = true }
-polars_structpath = { workspace = true, features = ["derive"] }
+polars-structpath = { workspace = true, features = ["derive"] }
 polars-protobuf = { workspace = true }
 pyo3 = { workspace = true, optional = true }
 pyo3-polars = { workspace = true, optional = true }
@@ -141,7 +141,7 @@ else
 [package]
 name = "$PROJECT_NAME"
 edition = "2021"
-description = "Protocol Buffer messages with polars_structpath support"
+description = "Protocol Buffer messages with polars-structpath support"
 license = "MIT OR Apache-2.0"
 
 [lib]
@@ -153,7 +153,7 @@ extension-module = ["pyo3", "pyo3/extension-module", "pyo3-polars", "serde"]
 
 [dependencies]
 prost = "*"
-polars_structpath = { version = "*", features = ["derive"] }
+polars-structpath = { version = "*", features = ["derive"] }
 polars-protobuf = { version = "*" }
 pyo3 = { version = "*", optional = true, features = ["abi3-py38"] }
 pyo3-polars = { version = "*", optional = true, features = ["derive"] }

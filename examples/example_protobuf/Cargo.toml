@@ -1,7 +1,7 @@
 [package]
 name = "example_protobuf"
 edition.workspace = true
-description = "Protocol Buffer messages with polars_structpath support"
+description = "Protocol Buffer messages with polars-structpath support"
 license = "MIT OR Apache-2.0"
 
 [lib]
@@ -13,7 +13,7 @@ extension-module = ["pyo3", "pyo3/extension-module", "pyo3-polars", "serde"]
 
 [dependencies]
 prost = { workspace = true }
-polars_structpath = { workspace = true, features = ["derive"] }
+polars-structpath = { workspace = true, features = ["derive"] }
 polars-protobuf = { workspace = true }
 pyo3 = { workspace = true, optional = true }
 pyo3-polars = { workspace = true, optional = true }

@@ -3,9 +3,9 @@ name = "polars-structpath-derive"
 edition.workspace = true
 version.workspace = true
 license.workspace = true
-description = "Derive macros for polars_structpath"
+description = "Derive macros for polars-structpath"
 repository = "https://github.com/jmunar/polarspath"
-keywords = ["polars_structpath", "derive", "macro", "proc-macro"]
+keywords = ["polars-structpath", "derive", "macro", "proc-macro"]
 categories = ["development-tools"]
 
 [lib]

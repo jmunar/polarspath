@@ -3,9 +3,9 @@ name = "polars-structpath-types"
 edition.workspace = true
 version.workspace = true
 license.workspace = true
-description = "Common objects for polars_structpath and polars_structpath_derive"
+description = "Common objects for polars-structpath and polars-structpath-derive"
 repository = "https://github.com/jmunar/polarspath"
-keywords = ["polars_structpath", "polars", "dataframe", "path", "access"]
+keywords = ["polars-structpath", "polars", "dataframe", "path", "access"]
 categories = ["data-structures", "no-std"]
 
 [dependencies]

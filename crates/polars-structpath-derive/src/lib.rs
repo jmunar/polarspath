@@ -12,7 +12,7 @@ use structpath::derive_struct_path_impl;
 /// Derive macro for generating Arrow buffer implementations for structs.
 ///
 /// This macro automatically generates code that calls `impl_struct_buffer!` from
-/// `polars_structpath_types`, which creates:
+/// `polars-structpath-types`, which creates:
 ///
 /// - A buffer struct (e.g., `UserBuffer`) implementing `ArrowBuffer`
 /// - `IntoArrow` implementation for the struct
@@ -21,7 +21,7 @@ use structpath::derive_struct_path_impl;
 /// # Requirements
 ///
 /// - The struct must have named fields (not tuple structs or unit structs)
-/// - All field types must implement `IntoArrow` and `FromArrow` from `polars_structpath_types`
+/// - All field types must implement `IntoArrow` and `FromArrow` from `polars-structpath-types`
 ///
 /// # Attributes
 ///
@@ -56,7 +56,7 @@ pub fn derive_struct_path(input: TokenStream) -> TokenStream {
 /// Derive macro for generating Arrow buffer implementations for enums.
 ///
 /// This macro automatically generates code that calls `impl_enum_buffer!` from
-/// `polars_structpath_types`, which creates:
+/// `polars-structpath-types`, which creates:
 ///
 /// - A buffer struct (e.g., `StatusBuffer`) implementing `ArrowBuffer`
 /// - Helper methods for index conversion (`from_arrow_idx`, `rust_idx_to_arrow_idx`)

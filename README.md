@@ -16,17 +16,17 @@ This repository contains several interconnected crates:
 
 ### Core Libraries
 
-- **`polars_structpath`** ([README](./crates/polars_structpath/README.md)): Main library providing the
+- **`polars-structpath`** ([README](./crates/polars-structpath/README.md)): Main library providing the
   `StructPath` trait and all related functionality. It's a wrapper for the 2 cargos below
-- **`polars_structpath_types`**: Helper library for `polars_structpath`, defining and implementing all
+- **`polars-structpath-types`**: Helper library for `polars-structpath`, defining and implementing all
   types and traits
-- **`polars_structpath_derive`**: Helper library for `polars_structpath`, implementing the derive macros
+- **`polars-structpath-derive`**: Helper library for `polars-structpath`, implementing the derive macros
   `StructPath` and `EnumPath`
 
 ### Protobuf cargo
 
-- **`polars_protobuf`** ([README](./crates/polars_protobuf/README.md)): Library for automatically
-  generating polars_structpath implementations for Protocol Buffer messages
+- **`polars-protobuf`** ([README](./crates/polars-protobuf/README.md)): Library for automatically
+  generating polars-structpath implementations for Protocol Buffer messages
 
 ## Development
 

@@ -1,6 +1,6 @@
 /*
 This example benchmarks the direct access to the protobuf fields vs the use of the
-`polars_protobuf` library.
+`polars-protobuf` library.
 */
 
 use polars_core::prelude::*;

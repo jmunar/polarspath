@@ -1,11 +1,11 @@
-# polars_protobuf
+# polars-protobuf
 
-A Rust library that automatically generates [polars_structpath](https://github.com/jmunar/polarspath)
+A Rust library that automatically generates [polars-structpath](https://github.com/jmunar/polarspath)
 implementations for Protocol Buffer messages, enabling type-safe field access and Polars integration.
 
 ## Purpose
 
-`polars_protobuf` provides seamless integration between Protocol Buffers and the `polars_structpath` ecosystem. It enables:
+`polars-protobuf` provides seamless integration between Protocol Buffers and the `polars-structpath` ecosystem. It enables:
 
 - **Automatic Code Generation**: Automatically applies `StructPath` and `EnumPath` derives to protobuf messages and enums during build time
 - **Type-Safe Field Access**: Extract fields from binary protobuf columns in Polars DataFrames using path notation
@@ -18,10 +18,10 @@ This crate is used by:
 
 ## Quick Start
 
-To create a new project using `polars_protobuf`, you can download and run the project generator script:
+To create a new project using `polars-protobuf`, you can download and run the project generator script:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/jmunar/polarspath/main/crates/polars_protobuf/create_polars_protobuf_project.sh | bash -s -- --project-name my_project -p -t
+curl -sSL https://raw.githubusercontent.com/jmunar/polarspath/main/crates/polars-protobuf/create_polars_protobuf_project.sh | bash -s -- --project-name my_project -p -t
 ```
 
 The script will:
@@ -46,7 +46,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [build-dependencies]
-polars_protobuf = { version = "*", features = ["build"] }
+polars-protobuf = { version = "*", features = ["build"] }
 ```
 
 Then in your `build.rs`:
@@ -117,13 +117,13 @@ let field = get_type::<Person>(&[], "name")?;
 
 ### Build Module (feature = "build")
 
-- **`build_protobuf`**: Main function to build protobuf files with polars_structpath support
+- **`build_protobuf`**: Main function to build protobuf files with polars-structpath support
 - **`BuildConfig`**: Configuration for the build process
 - **`ExtensionConfig`**: Configuration for generating Python extension modules
 
 ## Benchmark versus static extraction of nested fields
 
-In order to compare the performance of using the `polars_structpath` backend versus using
+In order to compare the performance of using the `polars-structpath` backend versus using
 `prost` directly, we have built a benchmark in the `examples` folder. You can run it using
 
 ```shell
@@ -183,6 +183,6 @@ Extracting f_submessage_repeated
 
 ## See Also
 
-- [polars_structpath](../polars_structpath/README.md) - Core polars_structpath library
-- [polars_structpath_types](../polars_structpath_types/README.md) - Core types and traits
+- [polars-structpath](../polars-structpath/README.md) - Core polars-structpath library
+- [polars-structpath-types](../polars-structpath-types/README.md) - Core types and traits
 - [example_protobuf](../../examples/example_protobuf/) - Complete working example
