@@ -1,3 +1,5 @@
+use polars_protobuf::ArrowMessage;
+
 pub mod sample {
     include!(concat!(env!("OUT_DIR"), "/tests/sample.rs"));
 }

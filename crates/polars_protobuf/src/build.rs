@@ -189,33 +189,19 @@ pub struct {message_name} {{
 {field_definitions}
 }}
 
-impl {message_name} {{
-    pub fn from_prost(message: prost::{message_name}) -> Self {{
+impl ::polars_protobuf::ArrowMessage for {message_name} {{
+    type ProstMessage = prost::{message_name};
+
+    fn from_prost(message: Self::ProstMessage) -> Self {{
         Self {{
 {from_prost_fields}
         }}
     }}
 
-    pub fn to_prost(self) -> prost::{message_name} {{
-        prost::{message_name} {{
+    fn to_prost(self) -> Self::ProstMessage {{
+        Self::ProstMessage {{
 {to_prost_fields}
         }}
-    }}
-
-    pub fn decode<B>(buf: B) -> Result<Self, ::prost::DecodeError>
-    where
-        B: ::bytes::buf::Buf,
-    {{
-        let prost_message = <prost::{message_name} as ::prost::Message>::decode(buf)?;
-        Ok(Self::from_prost(prost_message))
-    }}
-
-    pub fn encode_to_vec(&self) -> Vec<u8>
-    where
-        Self: Sized,
-    {{
-        let prost_message = self.clone().to_prost();
-        <prost::{message_name} as ::prost::Message>::encode_to_vec(&prost_message)
     }}
 }}
 "#,

@@ -4,6 +4,7 @@ This example benchmarks the direct access to the protobuf fields vs the use of t
 */
 
 use polars_core::prelude::*;
+use polars_protobuf::ArrowMessage;
 use polars_structpath::{ArrowBuffer, FromArrow, IntoArrow};
 use prost::Message;
 
@@ -72,7 +73,7 @@ fn main() {
     let t0 = std::time::Instant::now();
     let messages_transf = messages_in
         .into_iter()
-        .map(benchmark::SampleMessage::from_prost)
+        .map(<benchmark::SampleMessage as ArrowMessage>::from_prost)
         .collect::<Vec<benchmark::SampleMessage>>();
     print_time("Message transform time:", t0);
 
