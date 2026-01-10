@@ -12,8 +12,7 @@ pub trait ArrowMessage: Sized + Clone {
         Ok(Self::from_prost(prost_message))
     }
 
-    fn encode_to_vec(&self) -> Vec<u8>
-    {
+    fn encode_to_vec(&self) -> Vec<u8> {
         let prost_message = self.clone().to_prost();
         <Self::ProstMessage as Message>::encode_to_vec(&prost_message)
     }

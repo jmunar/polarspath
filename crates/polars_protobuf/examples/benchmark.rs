@@ -4,7 +4,7 @@ This example benchmarks the direct access to the protobuf fields vs the use of t
 */
 
 use polars_core::prelude::*;
-use polars_protobuf::ArrowMessage;
+use polars_protobuf::{ArrowMessage, decode, encode};
 use polars_structpath::{ArrowBuffer, FromArrow, IntoArrow};
 use prost::Message;
 
@@ -55,14 +55,13 @@ fn print_time(label: &str, t0: std::time::Instant) {
     println!("    {:<42} {:>10.4} s", label, (t1 - t0).as_secs_f64());
 }
 
-fn main() {
-    let messages_in_bytes_raw = benchmark::prost::SampleMessage::gen_seq(100000);
-    let messages_in_bytes = ChunkedArray::from_iter(messages_in_bytes_raw.clone());
+fn roundtrip_stepwise(messages_in_bytes: Vec<Vec<u8>>) {
 
-    println!("Prost decode and arrow roundtrip time");
+    println!("Prost->Polars stepwise roundtrip");
+    let messages_in_bytes_chunked = ChunkedArray::from_iter(messages_in_bytes.clone());
 
     let t0 = std::time::Instant::now();
-    let messages_in = messages_in_bytes
+    let messages_in = messages_in_bytes_chunked
         .into_iter()
         .map(|sample| benchmark::prost::SampleMessage::decode(sample.unwrap()).unwrap())
         .collect::<Vec<benchmark::prost::SampleMessage>>();
@@ -78,7 +77,7 @@ fn main() {
     print_time("Message transform time:", t0);
 
     let t0 = std::time::Instant::now();
-    let mut buffer = benchmark::SampleMessage::new_buffer(messages_in_bytes.len());
+    let mut buffer = benchmark::SampleMessage::new_buffer(messages_in_bytes_chunked.len());
     for message in messages_transf {
         buffer.push(message);
     }
@@ -106,5 +105,37 @@ fn main() {
         .collect::<Vec<Vec<u8>>>();
     print_time("Messages to prost bytes time:", t0);
 
-    assert_eq!(messages_in_bytes_raw, messages_out_bytes);
+    assert_eq!(messages_in_bytes, messages_out_bytes);
+}
+
+fn roundtrip_direct(messages_in_bytes: Vec<Vec<u8>>) {
+    println!("Prost->Polars direct parallel roundtrip");
+    let messages_in_bytes_chunked = ChunkedArray::from_iter(messages_in_bytes.clone());
+
+    let t0 = std::time::Instant::now();
+    let messages_in = decode::<benchmark::SampleMessage>(&messages_in_bytes_chunked, false).unwrap();
+    print_time("Decode time:", t0);
+
+    let t0 = std::time::Instant::now();
+    let messages_out = encode::<benchmark::SampleMessage>(&messages_in, false).unwrap();
+    print_time("Encode time:", t0);
+
+    // assert_eq!(messages_in_bytes, messages_out);
+}
+
+fn roundtrip_direct_threaded(messages_in_bytes: Vec<Vec<u8>>) {
+    println!("Prost->Polars direct threaded roundtrip");
+    let messages_in_bytes_chunked = ChunkedArray::from_iter(messages_in_bytes.clone());
+
+    let t0 = std::time::Instant::now();
+    let messages_in = decode::<benchmark::SampleMessage>(&messages_in_bytes_chunked, true).unwrap();
+    print_time("Decode time:", t0);
+}
+
+fn main() {
+    let messages_in_bytes = benchmark::prost::SampleMessage::gen_seq(100000);
+
+    roundtrip_stepwise(messages_in_bytes.clone());
+    roundtrip_direct(messages_in_bytes.clone());
+    roundtrip_direct_threaded(messages_in_bytes);
 }

@@ -126,13 +126,13 @@ extension-module = ["pyo3", "pyo3/extension-module", "pyo3-polars", "serde"]
 [dependencies]
 prost = { workspace = true }
 polars_structpath = { workspace = true, features = ["derive"] }
-polars_protobuf = { workspace = true }
+polars-protobuf = { workspace = true }
 pyo3 = { workspace = true, optional = true }
 pyo3-polars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 
 [build-dependencies]
-polars_protobuf = { workspace = true, features = ["build"] }
+polars-protobuf = { workspace = true, features = ["build"] }
 prost-build = { workspace = true }
 prost-types = { workspace = true }
 EOF
@@ -154,13 +154,13 @@ extension-module = ["pyo3", "pyo3/extension-module", "pyo3-polars", "serde"]
 [dependencies]
 prost = "*"
 polars_structpath = { version = "*", features = ["derive"] }
-polars_protobuf = { version = "*" }
+polars-protobuf = { version = "*" }
 pyo3 = { version = "*", optional = true, features = ["abi3-py38"] }
 pyo3-polars = { version = "*", optional = true, features = ["derive"] }
 serde = { version = "*", optional = true, features = ["derive"] }
 
 [build-dependencies]
-polars_protobuf = { version = "*", features = ["build"] }
+polars-protobuf = { version = "*", features = ["build"] }
 prost-build = "*"
 prost-types = "*"
 EOF
@@ -458,7 +458,7 @@ echo "  2. Run 'cargo build' to build the Rust project"
 echo "  3. Run 'make build-python' to build the Python package"
 echo "  4. Run 'cargo test' to run tests"
 echo ""
-echo -e "${YELLOW}Note: Make sure to add polars_protobuf dependencies to your Cargo.toml${NC}"
+echo -e "${YELLOW}Note: Make sure to add polars-protobuf dependencies to your Cargo.toml${NC}"
 echo "      You may need to use path dependencies or publish to crates.io"
 echo ""
 

@@ -14,12 +14,12 @@ extension-module = ["pyo3", "pyo3/extension-module", "pyo3-polars", "serde"]
 [dependencies]
 prost = { workspace = true }
 polars_structpath = { workspace = true, features = ["derive"] }
-polars_protobuf = { workspace = true }
+polars-protobuf = { workspace = true }
 pyo3 = { workspace = true, optional = true }
 pyo3-polars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 
 [build-dependencies]
-polars_protobuf = { workspace = true, features = ["build"] }
+polars-protobuf = { workspace = true, features = ["build"] }
 prost-build = { workspace = true }
 prost-types = { workspace = true }
