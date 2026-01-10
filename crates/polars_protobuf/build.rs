@@ -1,9 +1,16 @@
-use std::io::Result;
+use std::io::{Error, Result};
+use std::path::Path;
+
+mod build {
+    include!("src/build.rs");
+}
 
 fn main() -> Result<()> {
+    let base_dir_str = std::env::var("OUT_DIR").map_err(Error::other)?;
+    let base_dir = Path::new(&base_dir_str);
 
-    let mut prost_config = prost_build::Config::new();
-    prost_config.compile_protos(
+    build::build(
+        base_dir.join("tests"),
         &[
             "tests/sample/empty.proto",
             "tests/sample/enum.proto",
@@ -11,14 +18,11 @@ fn main() -> Result<()> {
         ],
         &["tests/sample/"],
     )?;
-    println!("cargo:rerun-if-changed=tests/sample");
-
-    let mut prost_config = prost_build::Config::new();
-    prost_config.compile_protos(
+    build::build(
+        base_dir.join("examples"),
         &["examples/benchmark.proto"],
         &["examples/"],
     )?;
-    println!("cargo:rerun-if-changed=examples/benchmark.proto");
 
     Ok(())
 }

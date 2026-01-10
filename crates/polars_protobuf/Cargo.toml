@@ -14,8 +14,10 @@ build = ["prost-build", "prost-types"]
 
 [build-dependencies]
 prost-build = { workspace = true }
+prost-types = { workspace = true }
 
 [dependencies]
+bytes = { workspace = true }
 polars-arrow = { workspace = true }
 polars-core = { workspace = true, features = ["dtype-array", "dtype-struct"] }
 prost = { workspace = true }

@@ -1,9 +1,7 @@
 // mod base;
 
 // Build module is available when the "build" feature is enabled
-// #[cfg(feature = "build")]
-// pub mod build;
-// #[cfg(feature = "build")]
-// mod string;
+#[cfg(feature = "build")]
+pub mod build;
 
-// pub use base::{get_type, get_value};
+// pub use base::encode;
