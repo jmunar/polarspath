@@ -118,7 +118,7 @@ impl<'a> FieldDescriptorWrapper<'a> {
                     )
                 } else if self.is_message() {
                     format!(
-                        "message.{}.map(|submessage| {}::from_prost(submessage))",
+                        "message.{}.map({}::from_prost)",
                         self.name(),
                         self.type_name()
                     )
@@ -129,13 +129,13 @@ impl<'a> FieldDescriptorWrapper<'a> {
             true => {
                 if self.is_enum() {
                     format!(
-                        "message.{}.into_iter().map(|value| {}::from_rust_idx(value)).collect()",
+                        "message.{}.into_iter().map({}::from_rust_idx).collect()",
                         self.name(),
                         self.type_name()
                     )
                 } else if self.is_message() {
                     format!(
-                        "message.{}.into_iter().map(|value| {}::from_prost(value)).collect()",
+                        "message.{}.into_iter().map({}::from_prost).collect()",
                         self.name(),
                         self.type_name()
                     )
@@ -182,6 +182,13 @@ struct MessageDescriptorWrapper<'a>(&'a ::prost_types::DescriptorProto);
 
 impl<'a> MessageDescriptorWrapper<'a> {
     fn build(&self) -> String {
+        // Use _message if there are no fields to avoid unused variable warning
+        let message_param = if self.0.field.is_empty() {
+            "_message"
+        } else {
+            "message"
+        };
+
         format!(
             r#"
 #[derive(::polars_structpath::StructPath, Debug, Clone, PartialEq)]
@@ -192,7 +199,7 @@ pub struct {message_name} {{
 impl ::polars_protobuf::ArrowMessage for {message_name} {{
     type ProstMessage = prost::{message_name};
 
-    fn from_prost(message: Self::ProstMessage) -> Self {{
+    fn from_prost({message_param}: Self::ProstMessage) -> Self {{
         Self {{
 {from_prost_fields}
         }}
@@ -206,6 +213,7 @@ impl ::polars_protobuf::ArrowMessage for {message_name} {{
 }}
 "#,
             message_name = self.0.name.as_ref().unwrap(),
+            message_param = message_param,
             field_definitions = self
                 .0
                 .field

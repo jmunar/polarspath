@@ -338,10 +338,12 @@ macro_rules! impl_enum_buffer {
                     }
                 }
 
+                #[allow(dead_code)]
                 pub fn from_arrow_idx(arrow_idx: u32) -> Self {
                     Self::from_rust_idx(Self::arrow_idx_to_rust_idx(arrow_idx))
                 }
 
+                #[allow(dead_code)]
                 pub fn from_name(name: &str) -> Self {
                     match name {
                         $(stringify!($identifier) => Self::$identifier,)*
@@ -349,10 +351,12 @@ macro_rules! impl_enum_buffer {
                     }
                 }
 
+                #[allow(dead_code)]
                 pub fn rust_idx_to_arrow_idx(rust_idx: i32) -> u32 {
                     $crate::rust_idx_to_arrow_idx!(rust_idx, [$($index),*])
                 }
 
+                #[allow(dead_code)]
                 pub fn arrow_idx_to_rust_idx(arrow_idx: u32) -> i32 {
                     $crate::arrow_idx_to_rust_idx!(arrow_idx, [$($index),*])
                 }

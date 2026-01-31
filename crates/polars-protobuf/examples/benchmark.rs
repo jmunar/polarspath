@@ -152,7 +152,10 @@ fn roundtrip_lazy_api(input_series: &Series) -> PolarsResult<Series> {
 
     // Step 4: Extract output Series
     let t0 = std::time::Instant::now();
-    let output_series = decoded_df.column(name.as_str())?.as_materialized_series().clone();
+    let output_series = decoded_df
+        .column(name.as_str())?
+        .as_materialized_series()
+        .clone();
     total += print_time("4. Extract Series (DataFrame -> Series)", t0);
 
     print_total(total);
@@ -175,10 +178,12 @@ fn roundtrip_parallel(input_series: &Series) -> PolarsResult<Series> {
 
     // Step 2: Encode each message to protobuf bytes (PARALLEL via POOL)
     let t0 = std::time::Instant::now();
-    let encoded_bytes: Vec<Vec<u8>> = POOL.install(|| {
-        messages.par_iter().map(|msg| msg.encode_to_vec()).collect()
-    });
-    total += print_time("2. Encode to bytes (Vec<Message> -> Vec<bytes>) [parallel]", t0);
+    let encoded_bytes: Vec<Vec<u8>> =
+        POOL.install(|| messages.par_iter().map(|msg| msg.encode_to_vec()).collect());
+    total += print_time(
+        "2. Encode to bytes (Vec<Message> -> Vec<bytes>) [parallel]",
+        t0,
+    );
 
     // Step 3: Convert bytes to Series
     let t0 = std::time::Instant::now();
@@ -201,7 +206,10 @@ fn roundtrip_parallel(input_series: &Series) -> PolarsResult<Series> {
             .collect()
     });
     drop(bytes_series); // Ensure we used it
-    total += print_time("4. Decode from bytes (Vec<bytes> -> Vec<Message>) [parallel]", t0);
+    total += print_time(
+        "4. Decode from bytes (Vec<bytes> -> Vec<Message>) [parallel]",
+        t0,
+    );
 
     // Step 5: Convert messages back to Series
     let t0 = std::time::Instant::now();
@@ -228,7 +236,11 @@ fn verify_roundtrip(input: &Series, output: &Series, method_name: &str) {
         println!("    ✓ {} roundtrip verified\n", method_name);
     } else {
         println!("    ✗ {} roundtrip FAILED\n", method_name);
-        for (i, (a, b)) in input_messages.iter().zip(output_messages.iter()).enumerate() {
+        for (i, (a, b)) in input_messages
+            .iter()
+            .zip(output_messages.iter())
+            .enumerate()
+        {
             if a != b {
                 println!("      Mismatch at index {}", i);
                 println!("        Input:  {:?}", a);

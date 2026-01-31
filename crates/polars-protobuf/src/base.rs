@@ -52,7 +52,9 @@ where
         byte_slices
             .into_par_iter()
             .map(|opt_bytes| {
-                opt_bytes.map(|bytes| T::decode(bytes.as_slice()).expect("Failed to decode protobuf message"))
+                opt_bytes.map(|bytes| {
+                    T::decode(bytes.as_slice()).expect("Failed to decode protobuf message")
+                })
             })
             .collect()
     });

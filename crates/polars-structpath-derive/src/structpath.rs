@@ -16,7 +16,7 @@ use quote::quote;
 ///
 /// The function generates code in the form:
 /// ```rust,ignore
-/// polars_structpath_types::impl_struct_buffer!(StructName, [
+/// ::polars_structpath::polars_structpath_types::impl_struct_buffer!(StructName, [
 ///     (field1, Type1),
 ///     (field2, Type2),
 ///     ...
@@ -45,7 +45,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
     }
 
     quote! {
-        polars_structpath_types::impl_struct_buffer!(#struct_name, [#(#field_entries),*]);
+        ::polars_structpath::polars_structpath_types::impl_struct_buffer!(#struct_name, [#(#field_entries),*]);
     }
 }
 
@@ -83,7 +83,7 @@ mod tests {
         let output = derive_struct_path_impl(input);
         assert_eq!(
             output.to_string(),
-            "polars_structpath_types :: impl_struct_buffer ! (TestStruct , [(field1 , i32)]) ;"
+            ":: polars_structpath :: polars_structpath_types :: impl_struct_buffer ! (TestStruct , [(field1 , i32)]) ;"
         );
     }
 }
