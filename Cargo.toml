@@ -48,4 +48,5 @@ serde = { version = "1.0.228", features = ["derive"] }
 
 # Dev dependencies
 trybuild = "1.0"
+rayon = "1.10"
 
