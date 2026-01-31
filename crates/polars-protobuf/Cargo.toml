@@ -26,6 +26,4 @@ polars-structpath = { workspace = true, features = ["derive"] }
 polars-structpath-types = { workspace = true }
 prost-build = { workspace = true, optional = true }
 prost-types = { workspace = true, optional = true }
-
-[dev-dependencies]
 rayon = { workspace = true }

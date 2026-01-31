@@ -8,7 +8,7 @@ All methods perform the same roundtrip:
   Series (struct) -> encode -> Series (bytes) -> decode -> Series (struct)
 */
 
-use polars_core::prelude::*;
+use polars_core::{prelude::*, POOL};
 use polars_lazy::prelude::*;
 use polars_protobuf::{decode_expr, encode_expr, messages_to_series, ArrowMessage};
 use polars_structpath::{ArrowBuffer, FromArrow, IntoArrow};
@@ -159,10 +159,10 @@ fn roundtrip_lazy_api(input_series: &Series) -> PolarsResult<Series> {
     Ok(output_series)
 }
 
-/// Parallel roundtrip with Rayon: explicitly parallelizes encode/decode steps
+/// Parallel roundtrip using Polars' POOL: explicitly parallelizes encode/decode steps
 fn roundtrip_parallel(input_series: &Series) -> PolarsResult<Series> {
     println!(
-        "=== Parallel Roundtrip (Rayon, {} threads) ===",
+        "=== Parallel Roundtrip (Polars POOL, {} threads) ===",
         rayon::current_num_threads()
     );
     let mut total = 0.0;
@@ -173,9 +173,11 @@ fn roundtrip_parallel(input_series: &Series) -> PolarsResult<Series> {
     let messages = benchmark::SampleMessage::from_arrow(chunks[0].clone());
     total += print_time("1. Extract messages (Series -> Vec<Message>)", t0);
 
-    // Step 2: Encode each message to protobuf bytes (PARALLEL)
+    // Step 2: Encode each message to protobuf bytes (PARALLEL via POOL)
     let t0 = std::time::Instant::now();
-    let encoded_bytes: Vec<Vec<u8>> = messages.par_iter().map(|msg| msg.encode_to_vec()).collect();
+    let encoded_bytes: Vec<Vec<u8>> = POOL.install(|| {
+        messages.par_iter().map(|msg| msg.encode_to_vec()).collect()
+    });
     total += print_time("2. Encode to bytes (Vec<Message> -> Vec<bytes>) [parallel]", t0);
 
     // Step 3: Convert bytes to Series
@@ -190,12 +192,14 @@ fn roundtrip_parallel(input_series: &Series) -> PolarsResult<Series> {
     };
     total += print_time("3. Bytes to Series (Vec<bytes> -> Series)", t0);
 
-    // Step 4: Decode from bytes (PARALLEL)
+    // Step 4: Decode from bytes (PARALLEL via POOL)
     let t0 = std::time::Instant::now();
-    let decoded_messages: Vec<benchmark::SampleMessage> = encoded_bytes
-        .par_iter()
-        .map(|bytes| benchmark::SampleMessage::decode(bytes.as_slice()).unwrap())
-        .collect();
+    let decoded_messages: Vec<benchmark::SampleMessage> = POOL.install(|| {
+        encoded_bytes
+            .par_iter()
+            .map(|bytes| benchmark::SampleMessage::decode(bytes.as_slice()).unwrap())
+            .collect()
+    });
     drop(bytes_series); // Ensure we used it
     total += print_time("4. Decode from bytes (Vec<bytes> -> Vec<Message>) [parallel]", t0);
 

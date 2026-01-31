@@ -2,6 +2,9 @@
 //!
 //! This module provides `encode_expr` and `decode_expr` functions that work with
 //! Polars' lazy API, enabling streaming-compatible protobuf serialization.
+//!
+//! The encoding and decoding operations are parallelized using Polars' internal
+//! thread pool (POOL) for better performance on multi-core systems.
 
 use crate::ArrowMessage;
 
@@ -9,9 +12,10 @@ use polars_arrow::{
     array::{Array, ListArray},
     offset::Offset,
 };
-use polars_core::prelude::*;
+use polars_core::{prelude::*, POOL};
 use polars_lazy::prelude::*;
 use polars_structpath::{ArrowBuffer, FromArrow, IntoArrow};
+use rayon::prelude::*;
 
 /// Decodes a ListArray of encoded protobuf messages back into Arrow structs.
 ///
@@ -21,30 +25,43 @@ use polars_structpath::{ArrowBuffer, FromArrow, IntoArrow};
 ///
 /// This function is generic over the offset type `O` (i32 or i64) to handle both
 /// `ListArray<i32>` (standard Arrow) and `ListArray<i64>` (Polars internal).
-fn decode_inner<O: Offset, T: ArrowMessage + IntoArrow>(
+///
+/// Decoding is parallelized using Polars' internal thread pool for better performance.
+fn decode_inner<O: Offset, T: ArrowMessage + IntoArrow + Send>(
     array: &ListArray<O>,
 ) -> PolarsResult<Box<dyn Array>>
 where
     <T as IntoArrow>::Buffer: ArrowBuffer<Element = T>,
 {
-    let mut buffer = T::new_buffer(array.len());
-
-    for opt_array in array.iter() {
-        match opt_array {
-            Some(byte_array) => {
-                // Extract bytes from the primitive array
+    // Extract bytes from each list element (this part must be sequential due to array iteration)
+    let byte_slices: Vec<Option<Vec<u8>>> = array
+        .iter()
+        .map(|opt_array| {
+            opt_array.map(|byte_array| {
                 let primitive_array = byte_array
                     .as_any()
                     .downcast_ref::<polars_arrow::array::PrimitiveArray<u8>>()
-                    .ok_or_else(|| {
-                        PolarsError::ComputeError("Expected PrimitiveArray<u8>".into())
-                    })?;
-                let bytes = primitive_array.values().as_slice();
+                    .expect("Expected PrimitiveArray<u8>");
+                primitive_array.values().as_slice().to_vec()
+            })
+        })
+        .collect();
 
-                let message = T::decode(bytes)
-                    .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
-                buffer.push(message)
-            }
+    // Decode messages in parallel using Polars' thread pool
+    let decoded: Vec<Option<T>> = POOL.install(|| {
+        byte_slices
+            .into_par_iter()
+            .map(|opt_bytes| {
+                opt_bytes.map(|bytes| T::decode(bytes.as_slice()).expect("Failed to decode protobuf message"))
+            })
+            .collect()
+    });
+
+    // Build the output buffer (sequential, but fast)
+    let mut buffer = T::new_buffer(decoded.len());
+    for message in decoded {
+        match message {
+            Some(msg) => buffer.push(msg),
             None => buffer.push_null(),
         }
     }
@@ -56,21 +73,30 @@ where
 ///
 /// Takes a boxed Arrow array containing struct data and encodes each element
 /// as a protobuf message, returning a `ListArray<i32>` of bytes.
-fn encode_inner<T: ArrowMessage + FromArrow + IntoArrow>(
+///
+/// Encoding is parallelized using Polars' internal thread pool for better performance.
+fn encode_inner<T: ArrowMessage + FromArrow + IntoArrow + Send>(
     array: Box<dyn Array>,
 ) -> PolarsResult<Box<dyn Array>>
 where
     <T as IntoArrow>::Buffer: ArrowBuffer<Element = T>,
 {
-    let mut buffer = <Vec<u8>>::new_buffer(array.len());
-
+    // Extract messages from array (sequential)
     let messages = T::from_arrow_opt(array);
-    for message in messages {
-        match message {
-            Some(message) => {
-                let bytes = message.encode_to_vec();
-                buffer.push(bytes)
-            }
+
+    // Encode messages to bytes in parallel using Polars' thread pool
+    let encoded: Vec<Option<Vec<u8>>> = POOL.install(|| {
+        messages
+            .into_par_iter()
+            .map(|opt_msg| opt_msg.map(|msg| msg.encode_to_vec()))
+            .collect()
+    });
+
+    // Build the output buffer (sequential, but fast)
+    let mut buffer = <Vec<u8>>::new_buffer(encoded.len());
+    for bytes in encoded {
+        match bytes {
+            Some(b) => buffer.push(b),
             None => buffer.push_null(),
         }
     }
@@ -106,7 +132,7 @@ where
 ///     .select([encode_expr::<MyMessage>(col("messages")).alias("encoded")])
 ///     .collect()?;
 /// ```
-pub fn encode_expr<T: ArrowMessage + FromArrow + IntoArrow + 'static>(expr_in: Expr) -> Expr
+pub fn encode_expr<T: ArrowMessage + FromArrow + IntoArrow + Send + 'static>(expr_in: Expr) -> Expr
 where
     <T as IntoArrow>::Buffer: ArrowBuffer<Element = T>,
 {
@@ -160,7 +186,7 @@ where
 ///     .select([decode_expr::<MyMessage>(col("encoded"), struct_dtype).alias("decoded")])
 ///     .collect()?;
 /// ```
-pub fn decode_expr<T: ArrowMessage + IntoArrow + 'static>(
+pub fn decode_expr<T: ArrowMessage + IntoArrow + Send + 'static>(
     expr_in: Expr,
     output_dtype: DataType,
 ) -> Expr
