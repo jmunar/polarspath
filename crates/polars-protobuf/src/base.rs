@@ -5,18 +5,25 @@
 
 use crate::ArrowMessage;
 
-use polars_arrow::array::{Array, ListArray};
-use polars_arrow::datatypes::ArrowDataType;
+use polars_arrow::{
+    array::{Array, ListArray},
+    offset::Offset,
+};
 use polars_core::prelude::*;
 use polars_lazy::prelude::*;
 use polars_structpath::{ArrowBuffer, FromArrow, IntoArrow};
 
 /// Decodes a ListArray of encoded protobuf messages back into Arrow structs.
 ///
-/// The input is a `ListArray<i32>` where each element is a byte array (`Vec<u8>`)
+/// The input is a `ListArray<O>` where each element is a byte array (`Vec<u8>`)
 /// containing an encoded protobuf message. The output is an Arrow array containing
 /// the decoded messages as structs.
-fn decode_inner<T: ArrowMessage + IntoArrow>(array: &ListArray<i32>) -> PolarsResult<Box<dyn Array>>
+///
+/// This function is generic over the offset type `O` (i32 or i64) to handle both
+/// `ListArray<i32>` (standard Arrow) and `ListArray<i64>` (Polars internal).
+fn decode_inner<O: Offset, T: ArrowMessage + IntoArrow>(
+    array: &ListArray<O>,
+) -> PolarsResult<Box<dyn Array>>
 where
     <T as IntoArrow>::Buffer: ArrowBuffer<Element = T>,
 {
@@ -171,34 +178,11 @@ where
                 .map(|chunk| {
                     // Try ListArray<i32> first (what encode_inner produces)
                     if let Some(list_array) = chunk.as_any().downcast_ref::<ListArray<i32>>() {
-                        return decode_inner::<T>(list_array);
+                        return decode_inner::<i32, T>(list_array);
                     }
                     // Try ListArray<i64> (polars may use this internally)
                     if let Some(list_array) = chunk.as_any().downcast_ref::<ListArray<i64>>() {
-                        // Convert to i32 offsets for decode_inner
-                        let offsets_i32: Vec<i32> = list_array
-                            .offsets()
-                            .as_slice()
-                            .iter()
-                            .map(|&o| o as i32)
-                            .collect();
-                        let offsets_buffer =
-                            polars_arrow::offset::OffsetsBuffer::try_from(offsets_i32)
-                                .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
-                        let inner_field = polars_arrow::datatypes::Field::new(
-                            "item".into(),
-                            ArrowDataType::UInt8,
-                            true,
-                        );
-                        let list_dtype = ArrowDataType::List(Box::new(inner_field));
-                        let list_array_i32 = ListArray::try_new(
-                            list_dtype,
-                            offsets_buffer,
-                            list_array.values().clone(),
-                            list_array.validity().cloned(),
-                        )
-                        .map_err(|e| PolarsError::ComputeError(e.to_string().into()))?;
-                        return decode_inner::<T>(&list_array_i32);
+                        return decode_inner::<i64, T>(list_array);
                     }
                     Err(PolarsError::ComputeError(
                         format!("Expected ListArray, got {:?}", chunk.dtype()).into(),
