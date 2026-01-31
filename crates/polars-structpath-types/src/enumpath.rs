@@ -1,3 +1,238 @@
+use polars_arrow::array::{Array, DictionaryArray, PrimitiveArray};
+
+/// Helper trait for extracting keys from dictionary arrays with different key types.
+/// This allows us to handle DictionaryArray<u8>, DictionaryArray<u16>, and DictionaryArray<u32>.
+pub trait DictionaryKeyExtractor {
+    /// Extract keys as u32 values (the common denominator for all key types)
+    fn extract_keys(array: &dyn Array) -> Option<Vec<Option<u32>>>;
+}
+
+impl DictionaryKeyExtractor for u8 {
+    fn extract_keys(array: &dyn Array) -> Option<Vec<Option<u32>>> {
+        array
+            .as_any()
+            .downcast_ref::<DictionaryArray<u8>>()
+            .map(|dict| {
+                dict.keys()
+                    .iter()
+                    .map(|opt| opt.map(|k| *k as u32))
+                    .collect()
+            })
+    }
+}
+
+impl DictionaryKeyExtractor for u16 {
+    fn extract_keys(array: &dyn Array) -> Option<Vec<Option<u32>>> {
+        array
+            .as_any()
+            .downcast_ref::<DictionaryArray<u16>>()
+            .map(|dict| {
+                dict.keys()
+                    .iter()
+                    .map(|opt| opt.map(|k| *k as u32))
+                    .collect()
+            })
+    }
+}
+
+impl DictionaryKeyExtractor for u32 {
+    fn extract_keys(array: &dyn Array) -> Option<Vec<Option<u32>>> {
+        array
+            .as_any()
+            .downcast_ref::<DictionaryArray<u32>>()
+            .map(|dict| dict.keys().iter().map(|opt| opt.copied()).collect())
+    }
+}
+
+/// Extract dictionary keys from an array, trying different key types (u8, u16, u32).
+/// Returns the keys as Vec<Option<u32>> for uniform handling.
+pub fn extract_dictionary_keys(array: &dyn Array) -> Vec<Option<u32>> {
+    // Try u32 first (most common)
+    if let Some(keys) = <u32 as DictionaryKeyExtractor>::extract_keys(array) {
+        return keys;
+    }
+    // Try u8
+    if let Some(keys) = <u8 as DictionaryKeyExtractor>::extract_keys(array) {
+        return keys;
+    }
+    // Try u16
+    if let Some(keys) = <u16 as DictionaryKeyExtractor>::extract_keys(array) {
+        return keys;
+    }
+    // Also try PrimitiveArray<u32> directly (polars might return just the keys)
+    if let Some(prim_array) = array.as_any().downcast_ref::<PrimitiveArray<u32>>() {
+        return prim_array.iter().map(|opt| opt.copied()).collect();
+    }
+    if let Some(prim_array) = array.as_any().downcast_ref::<PrimitiveArray<u8>>() {
+        return prim_array
+            .iter()
+            .map(|opt| opt.map(|k| *k as u32))
+            .collect();
+    }
+    if let Some(prim_array) = array.as_any().downcast_ref::<PrimitiveArray<u16>>() {
+        return prim_array
+            .iter()
+            .map(|opt| opt.map(|k| *k as u32))
+            .collect();
+    }
+    panic!(
+        "Unsupported dictionary array type: {:?}. Expected DictionaryArray<u8/u16/u32> or PrimitiveArray<u8/u16/u32>",
+        array.dtype()
+    );
+}
+
+/// Try to extract dictionary string values from an array, resolving keys to their string representations.
+/// This function handles Polars' categorical encoding which may re-index dictionary keys.
+/// Returns Some(Vec<Option<String>>) if successful, None if the array is not a dictionary.
+pub fn try_extract_dictionary_values(array: &dyn Array) -> Option<Vec<Option<String>>> {
+    use polars_arrow::array::Utf8Array;
+    use polars_arrow::array::Utf8ViewArray;
+
+    // Helper to resolve keys to strings for u32 keys
+    fn resolve_u32_keys_to_strings(dict: &DictionaryArray<u32>) -> Option<Vec<Option<String>>> {
+        let values = dict.values();
+
+        // Try Utf8Array<i32> first
+        if let Some(utf8_arr) = values.as_any().downcast_ref::<Utf8Array<i32>>() {
+            return Some(
+                dict.keys()
+                    .iter()
+                    .map(|opt_key| {
+                        opt_key.and_then(|k| utf8_arr.get(*k as usize).map(|s| s.to_string()))
+                    })
+                    .collect(),
+            );
+        }
+
+        // Try Utf8Array<i64>
+        if let Some(utf8_arr) = values.as_any().downcast_ref::<Utf8Array<i64>>() {
+            return Some(
+                dict.keys()
+                    .iter()
+                    .map(|opt_key| {
+                        opt_key.and_then(|k| utf8_arr.get(*k as usize).map(|s| s.to_string()))
+                    })
+                    .collect(),
+            );
+        }
+
+        // Try Utf8ViewArray (polars internal)
+        if let Some(utf8_arr) = values.as_any().downcast_ref::<Utf8ViewArray>() {
+            return Some(
+                dict.keys()
+                    .iter()
+                    .map(|opt_key| {
+                        opt_key.and_then(|k| utf8_arr.get(*k as usize).map(|s| s.to_string()))
+                    })
+                    .collect(),
+            );
+        }
+
+        None
+    }
+
+    fn resolve_u8_keys_to_strings(dict: &DictionaryArray<u8>) -> Option<Vec<Option<String>>> {
+        let values = dict.values();
+
+        if let Some(utf8_arr) = values.as_any().downcast_ref::<Utf8Array<i32>>() {
+            return Some(
+                dict.keys()
+                    .iter()
+                    .map(|opt_key| {
+                        opt_key.and_then(|k| utf8_arr.get(*k as usize).map(|s| s.to_string()))
+                    })
+                    .collect(),
+            );
+        }
+        if let Some(utf8_arr) = values.as_any().downcast_ref::<Utf8Array<i64>>() {
+            return Some(
+                dict.keys()
+                    .iter()
+                    .map(|opt_key| {
+                        opt_key.and_then(|k| utf8_arr.get(*k as usize).map(|s| s.to_string()))
+                    })
+                    .collect(),
+            );
+        }
+        if let Some(utf8_arr) = values.as_any().downcast_ref::<Utf8ViewArray>() {
+            return Some(
+                dict.keys()
+                    .iter()
+                    .map(|opt_key| {
+                        opt_key.and_then(|k| utf8_arr.get(*k as usize).map(|s| s.to_string()))
+                    })
+                    .collect(),
+            );
+        }
+        None
+    }
+
+    fn resolve_u16_keys_to_strings(dict: &DictionaryArray<u16>) -> Option<Vec<Option<String>>> {
+        let values = dict.values();
+
+        if let Some(utf8_arr) = values.as_any().downcast_ref::<Utf8Array<i32>>() {
+            return Some(
+                dict.keys()
+                    .iter()
+                    .map(|opt_key| {
+                        opt_key.and_then(|k| utf8_arr.get(*k as usize).map(|s| s.to_string()))
+                    })
+                    .collect(),
+            );
+        }
+        if let Some(utf8_arr) = values.as_any().downcast_ref::<Utf8Array<i64>>() {
+            return Some(
+                dict.keys()
+                    .iter()
+                    .map(|opt_key| {
+                        opt_key.and_then(|k| utf8_arr.get(*k as usize).map(|s| s.to_string()))
+                    })
+                    .collect(),
+            );
+        }
+        if let Some(utf8_arr) = values.as_any().downcast_ref::<Utf8ViewArray>() {
+            return Some(
+                dict.keys()
+                    .iter()
+                    .map(|opt_key| {
+                        opt_key.and_then(|k| utf8_arr.get(*k as usize).map(|s| s.to_string()))
+                    })
+                    .collect(),
+            );
+        }
+        None
+    }
+
+    // Try DictionaryArray<u32>
+    if let Some(dict) = array.as_any().downcast_ref::<DictionaryArray<u32>>() {
+        return resolve_u32_keys_to_strings(dict);
+    }
+    // Try DictionaryArray<u8>
+    if let Some(dict) = array.as_any().downcast_ref::<DictionaryArray<u8>>() {
+        return resolve_u8_keys_to_strings(dict);
+    }
+    // Try DictionaryArray<u16>
+    if let Some(dict) = array.as_any().downcast_ref::<DictionaryArray<u16>>() {
+        return resolve_u16_keys_to_strings(dict);
+    }
+
+    // Not a dictionary array
+    None
+}
+
+/// Extract dictionary string values from an array, resolving keys to their string representations.
+/// This function handles Polars' categorical encoding which may re-index dictionary keys.
+/// Returns Vec<Option<String>> where each element is the string value for that row.
+/// Panics if the array is not a dictionary type.
+pub fn extract_dictionary_values(array: &dyn Array) -> Vec<Option<String>> {
+    try_extract_dictionary_values(array).unwrap_or_else(|| {
+        panic!(
+            "Unsupported array type for dictionary value extraction: {:?}",
+            array.dtype()
+        )
+    })
+}
+
 /// Internal macro for converting Rust enum discriminant indices to Arrow dictionary indices.
 ///
 /// This macro is used internally by `impl_enum_buffer!` to handle the mapping between
@@ -90,6 +325,11 @@ macro_rules! impl_enum_buffer {
         $crate::paste::paste! {
 
             impl $element_type {
+                // First variant's discriminant, used as default for null values
+                const FIRST_VARIANT_IDX: i32 = {
+                    let discriminants: &[i32] = &[$($index),*];
+                    discriminants[0]
+                };
 
                 pub fn from_rust_idx(rust_idx: i32) -> Self {
                     match rust_idx {
@@ -100,6 +340,13 @@ macro_rules! impl_enum_buffer {
 
                 pub fn from_arrow_idx(arrow_idx: u32) -> Self {
                     Self::from_rust_idx(Self::arrow_idx_to_rust_idx(arrow_idx))
+                }
+
+                pub fn from_name(name: &str) -> Self {
+                    match name {
+                        $(stringify!($identifier) => Self::$identifier,)*
+                        _ => panic!("Invalid enum variant name: {}", name),
+                    }
                 }
 
                 pub fn rust_idx_to_arrow_idx(rust_idx: i32) -> u32 {
@@ -119,7 +366,9 @@ macro_rules! impl_enum_buffer {
 
             impl $crate::ArrowBuffer for [<$element_type Buffer>] {
                 type Element = $element_type;
-                type Arrow = $crate::polars_arrow::array::DictionaryArray<u32>;
+                // Use PrimitiveArray<i32> to store rust discriminant directly
+                // This avoids Polars Categorical re-indexing issues
+                type Arrow = $crate::polars_arrow::array::PrimitiveArray<i32>;
 
                 fn data_type(&self) -> &$crate::polars_arrow::datatypes::ArrowDataType {
                     &self._data_type
@@ -130,20 +379,16 @@ macro_rules! impl_enum_buffer {
                 }
 
                 fn new(nrows: usize) -> Self {
-                    let dictionary_data_type = $crate::polars_arrow::datatypes::ArrowDataType::Dictionary(
-                        $crate::polars_arrow::datatypes::IntegerType::UInt32,
-                        Box::new($crate::polars_arrow::datatypes::ArrowDataType::Utf8),
-                        false, // ordered
-                    );
                     Self {
                         values: Vec::with_capacity(nrows),
                         _validity: Vec::with_capacity(nrows),
-                        _data_type: dictionary_data_type,
+                        _data_type: $crate::polars_arrow::datatypes::ArrowDataType::Int32,
                     }
                 }
 
                 fn push(&mut self, value: impl Into<Self::Element>) {
                     let value = value.into();
+                    // Store the rust discriminant directly
                     self.values.push(Some(value as i32));
                     self._validity.push(true);
                 }
@@ -154,17 +399,8 @@ macro_rules! impl_enum_buffer {
                 }
 
                 fn to_arrow(self) -> $crate::polars_core::prelude::PolarsResult<Self::Arrow> {
-                    let mapped_values: Vec<Option<u32>> = self.values
-                        .into_iter()
-                        .map(|opt| opt.map(Self::Element::rust_idx_to_arrow_idx))
-                        .collect();
-                    $crate::polars_arrow::array::DictionaryArray::<u32>::try_new(
-                        self._data_type,
-                        $crate::polars_arrow::array::PrimitiveArray::<u32>::from(mapped_values),
-                        Box::new($crate::polars_arrow::array::Utf8Array::<i32>::from(
-                            vec![$(Some(stringify!($identifier))),*],
-                        ))
-                    )
+                    // Return PrimitiveArray<i32> with rust discriminant values
+                    Ok($crate::polars_arrow::array::PrimitiveArray::<i32>::from(self.values))
                 }
             }
 
@@ -175,13 +411,52 @@ macro_rules! impl_enum_buffer {
             impl $crate::FromArrow for $element_type {
 
                 fn from_arrow(array: Box<dyn $crate::polars_arrow::array::Array>) -> Vec<Self> {
-                    let dict_array = array.as_any().downcast_ref::<$crate::polars_arrow::array::DictionaryArray<u32>>().unwrap();
-                    dict_array.keys().iter().map(|opt| $element_type::from_arrow_idx(*opt.unwrap_or(&0))).collect()
+                    // Extract i32 values (rust discriminants)
+                    if let Some(prim) = array.as_any().downcast_ref::<$crate::polars_arrow::array::PrimitiveArray<i32>>() {
+                        return prim.iter()
+                            .map(|opt| $element_type::from_rust_idx(opt.copied().unwrap_or($element_type::FIRST_VARIANT_IDX)))
+                            .collect();
+                    }
+                    // Also try u32 (Polars may convert i32 to u32)
+                    if let Some(prim) = array.as_any().downcast_ref::<$crate::polars_arrow::array::PrimitiveArray<u32>>() {
+                        return prim.iter()
+                            .map(|opt| $element_type::from_rust_idx(opt.copied().unwrap_or($element_type::FIRST_VARIANT_IDX as u32) as i32))
+                            .collect();
+                    }
+                    // Fall back to dictionary string values for backwards compatibility
+                    if let Some(values) = $crate::try_extract_dictionary_values(array.as_ref()) {
+                        return values.into_iter()
+                            .map(|opt| {
+                                match opt {
+                                    Some(name) => $element_type::from_name(&name),
+                                    None => $element_type::from_rust_idx($element_type::FIRST_VARIANT_IDX),
+                                }
+                            })
+                            .collect();
+                    }
+                    panic!("Unsupported array type for enum: {:?}", array.dtype());
                 }
 
                 fn from_arrow_opt(array: Box<dyn $crate::polars_arrow::array::Array>) -> Vec<Option<Self>> {
-                    let dict_array = array.as_any().downcast_ref::<$crate::polars_arrow::array::DictionaryArray<u32>>().unwrap();
-                    dict_array.keys().iter().map(|opt| opt.copied().map(|k| $element_type::from_arrow_idx(k))).collect()
+                    // Extract i32 values (rust discriminants)
+                    if let Some(prim) = array.as_any().downcast_ref::<$crate::polars_arrow::array::PrimitiveArray<i32>>() {
+                        return prim.iter()
+                            .map(|opt| opt.map(|v| $element_type::from_rust_idx(*v)))
+                            .collect();
+                    }
+                    // Also try u32 (Polars may convert i32 to u32)
+                    if let Some(prim) = array.as_any().downcast_ref::<$crate::polars_arrow::array::PrimitiveArray<u32>>() {
+                        return prim.iter()
+                            .map(|opt| opt.map(|v| $element_type::from_rust_idx(*v as i32)))
+                            .collect();
+                    }
+                    // Fall back to dictionary string values for backwards compatibility
+                    if let Some(values) = $crate::try_extract_dictionary_values(array.as_ref()) {
+                        return values.into_iter()
+                            .map(|opt| opt.map(|name| $element_type::from_name(&name)))
+                            .collect();
+                    }
+                    panic!("Unsupported array type for enum: {:?}", array.dtype());
                 }
             }
         }
@@ -190,32 +465,36 @@ macro_rules! impl_enum_buffer {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ArrowBuffer, IntoArrow};
-    use polars_arrow::array::Utf8Array;
+    use crate::{ArrowBuffer, FromArrow, IntoArrow};
 
     #[test]
     fn test_impl_enum_buffer() {
+        #[derive(Debug, Clone, Copy, PartialEq)]
         pub enum SampleEnum {
             ITEM1 = -1,
             ITEM2 = 2,
         }
         impl_enum_buffer!(SampleEnum, [(ITEM1, -1), (ITEM2, 2)]);
-        let mut buffer = SampleEnum::new_buffer(1);
+
+        // Test buffer creation and push
+        let mut buffer = SampleEnum::new_buffer(3);
         buffer.push(SampleEnum::ITEM1);
         buffer.push(SampleEnum::ITEM2);
         buffer.push_null();
-        let dict_array = buffer.to_arrow().unwrap();
-        assert_eq!(dict_array.len(), 3);
 
-        let keys: Vec<Option<u32>> = dict_array.keys().iter().map(|opt| opt.copied()).collect();
-        assert_eq!(keys, vec![Some(0), Some(1), None]);
+        // Convert to arrow array (now PrimitiveArray<i32>)
+        let prim_array = buffer.to_arrow().unwrap();
+        assert_eq!(prim_array.len(), 3);
 
-        let values = dict_array
-            .values()
-            .as_any()
-            .downcast_ref::<Utf8Array<i32>>()
-            .unwrap();
-        let values_vec: Vec<String> = values.iter().map(|opt| opt.unwrap().to_string()).collect();
-        assert_eq!(values_vec, vec!["ITEM1".to_string(), "ITEM2".to_string()]);
+        // Verify the values are the rust discriminants
+        let values: Vec<Option<i32>> = prim_array.iter().map(|opt| opt.copied()).collect();
+        assert_eq!(values, vec![Some(-1), Some(2), None]);
+
+        // Test roundtrip via FromArrow
+        let recovered = SampleEnum::from_arrow_opt(Box::new(prim_array));
+        assert_eq!(
+            recovered,
+            vec![Some(SampleEnum::ITEM1), Some(SampleEnum::ITEM2), None]
+        );
     }
 }

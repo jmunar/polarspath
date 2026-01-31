@@ -20,6 +20,7 @@ prost-types = { workspace = true }
 bytes = { workspace = true }
 polars-arrow = { workspace = true }
 polars-core = { workspace = true, features = ["dtype-array", "dtype-struct"] }
+polars-lazy = { workspace = true }
 prost = { workspace = true }
 polars-structpath = { workspace = true, features = ["derive"] }
 polars-structpath-types = { workspace = true }

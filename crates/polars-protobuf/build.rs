@@ -20,7 +20,7 @@ fn main() -> Result<()> {
     )?;
     build::build(
         base_dir.join("examples"),
-        &["examples/benchmark.proto"],
+        &["examples/benchmark.proto", "examples/round_trip.proto"],
         &["examples/"],
     )?;
 

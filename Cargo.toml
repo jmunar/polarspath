@@ -32,6 +32,7 @@ syn = { version = "2.0.111", features = ["full"] }
 # Polars dependencies
 polars-core = { version = "0.52.0", default-features = false }
 polars-arrow = { version = "0.52.0", default-features = false }
+polars-lazy = { version = "0.52.0", default-features = false }
 
 # Protocol Buffers
 prost = "0.14.1"

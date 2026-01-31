@@ -6,6 +6,9 @@ mod structpath;
 mod traits;
 
 pub use base::{ArrowBufferOption, ArrowBufferVec};
+pub use enumpath::{
+    extract_dictionary_keys, extract_dictionary_values, try_extract_dictionary_values,
+};
 pub use traits::{ArrowBuffer, FromArrow, IntoArrow};
 
 // Re-export crates so macros can use them

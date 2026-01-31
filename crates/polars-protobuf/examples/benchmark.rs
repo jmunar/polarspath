@@ -1,10 +1,10 @@
 /*
-This example benchmarks the direct access to the protobuf fields vs the use of the
-`polars-protobuf` library.
+This example benchmarks the protobuf encode/decode operations using the Polars lazy API.
 */
 
 use polars_core::prelude::*;
-use polars_protobuf::{ArrowMessage, decode, encode};
+use polars_lazy::prelude::*;
+use polars_protobuf::{decode_expr, encode_expr, messages_to_series, ArrowMessage};
 use polars_structpath::{ArrowBuffer, FromArrow, IntoArrow};
 use prost::Message;
 
@@ -56,7 +56,6 @@ fn print_time(label: &str, t0: std::time::Instant) {
 }
 
 fn roundtrip_stepwise(messages_in_bytes: Vec<Vec<u8>>) {
-
     println!("Prost->Polars stepwise roundtrip");
     let messages_in_bytes_chunked = ChunkedArray::from_iter(messages_in_bytes.clone());
 
@@ -66,8 +65,6 @@ fn roundtrip_stepwise(messages_in_bytes: Vec<Vec<u8>>) {
         .map(|sample| benchmark::prost::SampleMessage::decode(sample.unwrap()).unwrap())
         .collect::<Vec<benchmark::prost::SampleMessage>>();
     print_time("Prost decode time:", t0);
-
-    // let messages_in_copy: Vec<_> = messages_in.clone();
 
     let t0 = std::time::Instant::now();
     let messages_transf = messages_in
@@ -108,34 +105,76 @@ fn roundtrip_stepwise(messages_in_bytes: Vec<Vec<u8>>) {
     assert_eq!(messages_in_bytes, messages_out_bytes);
 }
 
-fn roundtrip_direct(messages_in_bytes: Vec<Vec<u8>>) {
-    println!("Prost->Polars direct parallel roundtrip");
-    let messages_in_bytes_chunked = ChunkedArray::from_iter(messages_in_bytes.clone());
+fn lazy_api_roundtrip(messages_in_bytes: Vec<Vec<u8>>) -> PolarsResult<()> {
+    println!("Prost->Polars lazy API roundtrip");
 
+    // Step 1: Decode prost bytes to ArrowMessage structs
     let t0 = std::time::Instant::now();
-    let messages_in = decode::<benchmark::SampleMessage>(&messages_in_bytes_chunked, false).unwrap();
-    print_time("Decode time:", t0);
+    let messages: Vec<benchmark::SampleMessage> = messages_in_bytes
+        .iter()
+        .map(|bytes| {
+            let prost_msg = benchmark::prost::SampleMessage::decode(bytes.as_slice()).unwrap();
+            benchmark::SampleMessage::from_prost(prost_msg)
+        })
+        .collect();
+    print_time("Prost decode + transform time:", t0);
 
+    // Step 2: Convert to Polars Series
     let t0 = std::time::Instant::now();
-    let messages_out = encode::<benchmark::SampleMessage>(&messages_in, false).unwrap();
-    print_time("Encode time:", t0);
+    let struct_series = messages_to_series(messages, "messages")?;
+    let struct_dtype = struct_series.dtype().clone();
+    print_time("Messages to series time:", t0);
 
-    // assert_eq!(messages_in_bytes, messages_out);
+    // Step 3: Create DataFrame
+    let df = DataFrame::new(vec![struct_series.into()])?;
+
+    // Step 4: Encode using lazy API
+    let t0 = std::time::Instant::now();
+    let encoded_df = df
+        .clone()
+        .lazy()
+        .select([encode_expr::<benchmark::SampleMessage>(col("messages")).alias("encoded")])
+        .collect()?;
+    print_time("Lazy encode time:", t0);
+
+    // Step 5: Decode using lazy API
+    let t0 = std::time::Instant::now();
+    let decoded_df = encoded_df
+        .lazy()
+        .select([
+            decode_expr::<benchmark::SampleMessage>(col("encoded"), struct_dtype).alias("decoded"),
+        ])
+        .collect()?;
+    print_time("Lazy decode time:", t0);
+
+    // Step 6: Extract messages from decoded DataFrame
+    let t0 = std::time::Instant::now();
+    let decoded_chunks = decoded_df
+        .column("decoded")?
+        .as_materialized_series()
+        .clone()
+        .into_chunks();
+    let decoded_messages = benchmark::SampleMessage::from_arrow(decoded_chunks[0].clone());
+    print_time("Arrow to messages time:", t0);
+
+    // Step 7: Convert back to prost bytes
+    let t0 = std::time::Instant::now();
+    let messages_out_bytes: Vec<Vec<u8>> = decoded_messages
+        .into_iter()
+        .map(|msg| msg.to_prost().encode_to_vec())
+        .collect();
+    print_time("Messages to prost bytes time:", t0);
+
+    assert_eq!(messages_in_bytes, messages_out_bytes);
+    Ok(())
 }
 
-fn roundtrip_direct_threaded(messages_in_bytes: Vec<Vec<u8>>) {
-    println!("Prost->Polars direct threaded roundtrip");
-    let messages_in_bytes_chunked = ChunkedArray::from_iter(messages_in_bytes.clone());
-
-    let t0 = std::time::Instant::now();
-    let messages_in = decode::<benchmark::SampleMessage>(&messages_in_bytes_chunked, true).unwrap();
-    print_time("Decode time:", t0);
-}
-
-fn main() {
+fn main() -> PolarsResult<()> {
     let messages_in_bytes = benchmark::prost::SampleMessage::gen_seq(100000);
 
     roundtrip_stepwise(messages_in_bytes.clone());
-    roundtrip_direct(messages_in_bytes.clone());
-    roundtrip_direct_threaded(messages_in_bytes);
+    println!();
+    lazy_api_roundtrip(messages_in_bytes)?;
+
+    Ok(())
 }

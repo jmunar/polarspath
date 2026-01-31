@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package round_trip;
+
+// A message with strings but no enums (to test string handling)
+message StringMessage {
+    string name = 1;
+    int64 value = 2;
+    optional string description = 3;
+}

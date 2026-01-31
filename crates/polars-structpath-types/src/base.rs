@@ -1,5 +1,7 @@
 use crate::traits::{ArrowBuffer, FromArrow, IntoArrow};
-use polars_arrow::array::{Array, BooleanArray, ListArray, PrimitiveArray, Utf8Array};
+use polars_arrow::array::{
+    Array, BooleanArray, ListArray, PrimitiveArray, Utf8Array, Utf8ViewArray,
+};
 use polars_arrow::datatypes::{ArrowDataType, Field as ArrowField};
 use polars_arrow::offset::OffsetsBuffer;
 use polars_core::prelude::*;
@@ -152,23 +154,45 @@ impl<T: IntoArrow> IntoArrow for Vec<T> {
 
 impl<T: FromArrow> FromArrow for Vec<T> {
     fn from_arrow(array: Box<dyn Array>) -> Vec<Vec<T>> {
-        array
-            .as_any()
-            .downcast_ref::<ListArray<i32>>()
-            .unwrap()
-            .iter()
-            .map(|opt| opt.map(|arr| T::from_arrow(arr)).unwrap_or_default())
-            .collect()
+        // Try ListArray<i32> first
+        if let Some(arr) = array.as_any().downcast_ref::<ListArray<i32>>() {
+            return arr
+                .iter()
+                .map(|opt| opt.map(|arr| T::from_arrow(arr)).unwrap_or_default())
+                .collect();
+        }
+        // Try ListArray<i64> (LargeList)
+        if let Some(arr) = array.as_any().downcast_ref::<ListArray<i64>>() {
+            return arr
+                .iter()
+                .map(|opt| opt.map(|arr| T::from_arrow(arr)).unwrap_or_default())
+                .collect();
+        }
+        panic!(
+            "Unsupported list array type: {:?}. Expected ListArray<i32> or ListArray<i64>",
+            array.dtype()
+        );
     }
 
     fn from_arrow_opt(array: Box<dyn Array>) -> Vec<Option<Self>> {
-        array
-            .as_any()
-            .downcast_ref::<ListArray<i32>>()
-            .unwrap()
-            .iter()
-            .map(|opt| opt.map(|vec| T::from_arrow(vec)))
-            .collect()
+        // Try ListArray<i32> first
+        if let Some(arr) = array.as_any().downcast_ref::<ListArray<i32>>() {
+            return arr
+                .iter()
+                .map(|opt| opt.map(|arr| T::from_arrow(arr)))
+                .collect();
+        }
+        // Try ListArray<i64> (LargeList)
+        if let Some(arr) = array.as_any().downcast_ref::<ListArray<i64>>() {
+            return arr
+                .iter()
+                .map(|opt| opt.map(|arr| T::from_arrow(arr)))
+                .collect();
+        }
+        panic!(
+            "Unsupported list array type: {:?}. Expected ListArray<i32> or ListArray<i64>",
+            array.dtype()
+        );
     }
 }
 
@@ -237,23 +261,50 @@ impl IntoArrow for String {
 
 impl FromArrow for String {
     fn from_arrow(array: Box<dyn Array>) -> Vec<Self> {
-        array
-            .as_any()
-            .downcast_ref::<Utf8Array<i32>>()
-            .unwrap()
-            .iter()
-            .map(|opt| opt.unwrap_or_default().to_string())
-            .collect()
+        // Try Utf8ViewArray first (used by polars internally)
+        if let Some(arr) = array.as_any().downcast_ref::<Utf8ViewArray>() {
+            return arr
+                .iter()
+                .map(|opt| opt.unwrap_or_default().to_string())
+                .collect();
+        }
+        // Try Utf8Array<i32> (standard Arrow Utf8)
+        if let Some(arr) = array.as_any().downcast_ref::<Utf8Array<i32>>() {
+            return arr
+                .iter()
+                .map(|opt| opt.unwrap_or_default().to_string())
+                .collect();
+        }
+        // Try Utf8Array<i64> (LargeUtf8)
+        if let Some(arr) = array.as_any().downcast_ref::<Utf8Array<i64>>() {
+            return arr
+                .iter()
+                .map(|opt| opt.unwrap_or_default().to_string())
+                .collect();
+        }
+        panic!(
+            "Unsupported string array type: {:?}. Expected Utf8ViewArray, Utf8Array<i32>, or Utf8Array<i64>",
+            array.dtype()
+        );
     }
 
     fn from_arrow_opt(array: Box<dyn Array>) -> Vec<Option<Self>> {
-        array
-            .as_any()
-            .downcast_ref::<Utf8Array<i32>>()
-            .unwrap()
-            .iter()
-            .map(|opt| opt.map(|s| s.to_string()))
-            .collect()
+        // Try Utf8ViewArray first (used by polars internally)
+        if let Some(arr) = array.as_any().downcast_ref::<Utf8ViewArray>() {
+            return arr.iter().map(|opt| opt.map(|s| s.to_string())).collect();
+        }
+        // Try Utf8Array<i32> (standard Arrow Utf8)
+        if let Some(arr) = array.as_any().downcast_ref::<Utf8Array<i32>>() {
+            return arr.iter().map(|opt| opt.map(|s| s.to_string())).collect();
+        }
+        // Try Utf8Array<i64> (LargeUtf8)
+        if let Some(arr) = array.as_any().downcast_ref::<Utf8Array<i64>>() {
+            return arr.iter().map(|opt| opt.map(|s| s.to_string())).collect();
+        }
+        panic!(
+            "Unsupported string array type: {:?}. Expected Utf8ViewArray, Utf8Array<i32>, or Utf8Array<i64>",
+            array.dtype()
+        );
     }
 }
 
