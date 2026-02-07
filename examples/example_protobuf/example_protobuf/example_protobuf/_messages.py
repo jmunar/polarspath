@@ -14,7 +14,7 @@ _LIB = Path(__file__).resolve().parents[1]
 class Address:
     """
     Polars expression plugins for Address protobuf message.
-    
+
     Example:
         >>> import polars as pl
         >>> # Decode binary protobuf to struct
@@ -32,10 +32,10 @@ class Address:
     def encode(cls, expr: pl.Expr) -> pl.Expr:
         """
         Encode a struct column to binary protobuf.
-        
+
         Args:
             expr: Expression selecting a struct column matching Address schema.
-        
+
         Returns:
             Expression producing List[UInt8] with encoded protobuf bytes.
         """
@@ -50,10 +50,10 @@ class Address:
     def decode(cls, expr: pl.Expr) -> pl.Expr:
         """
         Decode binary protobuf to a struct column.
-        
+
         Args:
             expr: Expression selecting a List[UInt8] column with protobuf bytes.
-        
+
         Returns:
             Expression producing struct column matching Address schema.
         """
@@ -68,7 +68,7 @@ class Address:
 class Person:
     """
     Polars expression plugins for Person protobuf message.
-    
+
     Example:
         >>> import polars as pl
         >>> # Decode binary protobuf to struct
@@ -86,10 +86,10 @@ class Person:
     def encode(cls, expr: pl.Expr) -> pl.Expr:
         """
         Encode a struct column to binary protobuf.
-        
+
         Args:
             expr: Expression selecting a struct column matching Person schema.
-        
+
         Returns:
             Expression producing List[UInt8] with encoded protobuf bytes.
         """
@@ -104,10 +104,10 @@ class Person:
     def decode(cls, expr: pl.Expr) -> pl.Expr:
         """
         Decode binary protobuf to a struct column.
-        
+
         Args:
             expr: Expression selecting a List[UInt8] column with protobuf bytes.
-        
+
         Returns:
             Expression producing struct column matching Person schema.
         """
@@ -117,4 +117,3 @@ class Person:
             args=[expr],
             is_elementwise=True,
         )
-

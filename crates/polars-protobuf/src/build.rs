@@ -510,7 +510,7 @@ fn write_message_class(f: &mut File, msg: &MessageInfo) -> Result<()> {
     writeln!(f, "class {}:", msg.name)?;
     writeln!(f, "    \"\"\"")?;
     writeln!(f, "    Polars expression plugins for {} protobuf message.", msg.name)?;
-    writeln!(f, "    ")?;
+    writeln!(f)?;
     writeln!(f, "    Example:")?;
     writeln!(f, "        >>> import polars as pl")?;
     writeln!(f, "        >>> # Decode binary protobuf to struct")?;
@@ -528,10 +528,10 @@ fn write_message_class(f: &mut File, msg: &MessageInfo) -> Result<()> {
     writeln!(f, "    def encode(cls, expr: pl.Expr) -> pl.Expr:")?;
     writeln!(f, "        \"\"\"")?;
     writeln!(f, "        Encode a struct column to binary protobuf.")?;
-    writeln!(f, "        ")?;
+    writeln!(f)?;
     writeln!(f, "        Args:")?;
     writeln!(f, "            expr: Expression selecting a struct column matching {} schema.", msg.name)?;
-    writeln!(f, "        ")?;
+    writeln!(f)?;
     writeln!(f, "        Returns:")?;
     writeln!(f, "            Expression producing List[UInt8] with encoded protobuf bytes.")?;
     writeln!(f, "        \"\"\"")?;
@@ -546,10 +546,10 @@ fn write_message_class(f: &mut File, msg: &MessageInfo) -> Result<()> {
     writeln!(f, "    def decode(cls, expr: pl.Expr) -> pl.Expr:")?;
     writeln!(f, "        \"\"\"")?;
     writeln!(f, "        Decode binary protobuf to a struct column.")?;
-    writeln!(f, "        ")?;
+    writeln!(f)?;
     writeln!(f, "        Args:")?;
     writeln!(f, "            expr: Expression selecting a List[UInt8] column with protobuf bytes.")?;
-    writeln!(f, "        ")?;
+    writeln!(f)?;
     writeln!(f, "        Returns:")?;
     writeln!(f, "            Expression producing struct column matching {} schema.", msg.name)?;
     writeln!(f, "        \"\"\"")?;
