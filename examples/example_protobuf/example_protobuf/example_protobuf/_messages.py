@@ -4,25 +4,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import polars as pl
 from polars.plugins import register_plugin_function
 
-if TYPE_CHECKING:
-    pass
-
-def _get_lib_path() -> Path:
-    """Find the compiled Rust extension library."""
-    import _example_protobuf_rust  # noqa: F401
-    import importlib.util
-    spec = importlib.util.find_spec("_example_protobuf_rust")
-    if spec is None or spec.origin is None:
-        raise ImportError("Could not find _example_protobuf_rust module")
-    return Path(spec.origin).parent
-
-
-_LIB = _get_lib_path()
+_LIB = Path(__file__).resolve().parents[1]
 
 
 class Address:

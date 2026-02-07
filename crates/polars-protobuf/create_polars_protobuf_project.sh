@@ -391,10 +391,11 @@ fi
 echo "Creating Python package structure..."
 mkdir -p "$PYTHON_PACKAGE_NAME"
 
-# Create __init__.py for the Python package
+# Create __init__.py placeholder for the Python package
+# This will be overwritten by build.rs during cargo build
 cat > "$PYTHON_PACKAGE_NAME/__init__.py" <<EOF
 # Auto-generated Python package initialization
-from ._${PYTHON_PACKAGE_NAME}_rust import *
+# This file is regenerated during cargo build
 EOF
 
 # Create pyproject.toml

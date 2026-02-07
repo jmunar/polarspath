@@ -421,14 +421,13 @@ impl MessageInfo {
 /// Generate Python modules for all protobuf packages.
 pub fn generate_python_package(
     python_package_path: &std::path::Path,
-    rust_lib_name: &str,
     packages: &HashMap<String, Vec<MessageInfo>>,
 ) -> Result<()> {
     std::fs::create_dir_all(python_package_path)?;
 
     // Generate package modules for each protobuf package
     for (package_name, messages) in packages {
-        generate_package_module(python_package_path, rust_lib_name, package_name, messages)?;
+        generate_package_module(python_package_path, package_name, messages)?;
     }
 
     // Generate root __init__.py that imports all packages
@@ -439,12 +438,12 @@ pub fn generate_python_package(
 
 fn generate_package_module(
     python_package_path: &std::path::Path,
-    rust_lib_name: &str,
     package_name: &str,
     messages: &[MessageInfo],
 ) -> Result<()> {
     // Create package directory (e.g., example_protobuf/example_protobuf/)
     let package_parts: Vec<&str> = package_name.split('.').collect();
+    let depth = package_parts.len();
     let mut current_dir = python_package_path.to_path_buf();
 
     for (i, part) in package_parts.iter().enumerate() {
@@ -463,7 +462,7 @@ fn generate_package_module(
     let messages_file = current_dir.join("_messages.py");
     let mut f = File::create(&messages_file)?;
 
-    write_messages_module(&mut f, rust_lib_name, messages)?;
+    write_messages_module(&mut f, depth, messages)?;
 
     // Generate __init__.py that exports message classes
     let init_file = current_dir.join("__init__.py");
@@ -476,7 +475,7 @@ fn generate_package_module(
 #[rustfmt::skip]
 fn write_messages_module(
     f: &mut File,
-    rust_lib_name: &str,
+    depth: usize,
     messages: &[MessageInfo],
 ) -> Result<()> {
     writeln!(f, "# Auto-generated Python bindings for protobuf messages")?;
@@ -485,27 +484,14 @@ fn write_messages_module(
     writeln!(f, "from __future__ import annotations")?;
     writeln!(f)?;
     writeln!(f, "from pathlib import Path")?;
-    writeln!(f, "from typing import TYPE_CHECKING")?;
     writeln!(f)?;
     writeln!(f, "import polars as pl")?;
     writeln!(f, "from polars.plugins import register_plugin_function")?;
     writeln!(f)?;
-    writeln!(f, "if TYPE_CHECKING:")?;
-    writeln!(f, "    pass")?;
-    writeln!(f)?;
 
-    // Generate library path finder
-    writeln!(f, "def _get_lib_path() -> Path:")?;
-    writeln!(f, "    \"\"\"Find the compiled Rust extension library.\"\"\"")?;
-    writeln!(f, "    import {}  # noqa: F401", rust_lib_name)?;
-    writeln!(f, "    import importlib.util")?;
-    writeln!(f, "    spec = importlib.util.find_spec(\"{}\")", rust_lib_name)?;
-    writeln!(f, "    if spec is None or spec.origin is None:")?;
-    writeln!(f, "        raise ImportError(\"Could not find {} module\")", rust_lib_name)?;
-    writeln!(f, "    return Path(spec.origin).parent")?;
-    writeln!(f)?;
-    writeln!(f)?;
-    writeln!(f, "_LIB = _get_lib_path()")?;
+    // Generate library path finder using __file__ relative path
+    // depth = number of package levels between _messages.py and the .so directory
+    writeln!(f, "_LIB = Path(__file__).resolve().parents[{}]", depth)?;
     writeln!(f)?;
 
     // Generate message classes
@@ -751,7 +737,7 @@ impl BuildConfig {
         if let (Some(python_path), Some(lib_name)) =
             (&self.python_package_path, &self.rust_lib_name)
         {
-            generate_python_package(python_path, lib_name, &python_messages)?;
+            generate_python_package(python_path, &python_messages)?;
         }
 
         Ok(())
