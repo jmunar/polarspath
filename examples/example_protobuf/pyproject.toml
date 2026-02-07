@@ -40,3 +40,4 @@ build-backend = "maturin"
 [tool.maturin]
 bindings = "pyo3"
 features = ["extension-module"]
+module-name = "example_protobuf._example_protobuf_rust"

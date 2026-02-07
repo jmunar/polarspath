@@ -1,0 +1,30 @@
+[package]
+name = "polars-protobuf"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+description = "Automatic polars-structpath implementations for Protocol Buffer messages"
+repository = "https://github.com/jmunar/polarspath"
+keywords = ["polars-structpath", "protobuf", "protocol-buffers", "polars", "prost"]
+categories = ["data-structures", "encoding"]
+
+[features]
+default = []
+build = ["prost-build", "prost-types"]
+
+[build-dependencies]
+prost-build = { workspace = true }
+prost-types = { workspace = true }
+
+[dependencies]
+bytes = { workspace = true }
+polars-arrow = { workspace = true }
+polars-core = { workspace = true, features = ["dtype-array", "dtype-struct"] }
+polars-lazy = { workspace = true }
+polars-structpath = { workspace = true, features = ["derive"] }
+polars-structpath-types = { workspace = true }
+prost = { workspace = true }
+prost-build = { workspace = true, optional = true }
+prost-types = { workspace = true, optional = true }
+pyo3-polars = { workspace = true, features = ["derive", "lazy"] }
+rayon = { workspace = true }

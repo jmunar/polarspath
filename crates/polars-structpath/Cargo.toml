@@ -1,0 +1,23 @@
+[package]
+name = "polars-structpath"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+description = "A library for dynamically accessing nested Rust structures using path notation"
+repository = "https://github.com/jmunar/polarspath"
+keywords = ["polars-structpath", "polars", "dataframe", "path", "nested"]
+categories = ["data-structures"]
+
+[dependencies]
+polars-structpath-derive = { workspace = true, optional = true }
+polars-structpath-types = { workspace = true }
+polars-core = { workspace = true, features = ["dtype-struct"] }
+
+[dev-dependencies]
+polars-structpath-derive = { workspace = true }
+trybuild = { workspace = true }
+
+[features]
+default = ["std", "derive"]
+derive = ["polars-structpath-derive"]
+std = []

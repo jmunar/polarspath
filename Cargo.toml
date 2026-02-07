@@ -1,28 +1,29 @@
 [workspace]
 members = [
-    "crates/polars_structpath_types",
-    "crates/polars_structpath_derive",
-    "crates/polars_structpath",
-    "crates/polars_protobuf",
+    "crates/polars-structpath-types",
+    "crates/polars-structpath-derive",
+    "crates/polars-structpath",
+    "crates/polars-protobuf",
     "examples/example_protobuf"
 ]
 
 resolver = "2"
 
 [workspace.package]
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
 
 [workspace.dependencies]
 # Internal dependencies
-polars_structpath_types = { version = "0.2.1", path = "crates/polars_structpath_types" }
-polars_structpath_derive = { version = "0.2.1", path = "crates/polars_structpath_derive" }
-polars_structpath = { version = "0.2.1", path = "crates/polars_structpath" }
-polars_protobuf = { version = "0.2.1", path = "crates/polars_protobuf" }
+polars-structpath-types = { version = "0.3.0", path = "crates/polars-structpath-types" }
+polars-structpath-derive = { version = "0.3.0", path = "crates/polars-structpath-derive" }
+polars-structpath = { version = "0.3.0", path = "crates/polars-structpath" }
+polars-protobuf = { version = "0.3.0", path = "crates/polars-protobuf" }
 
 # Common dependencies
-indexmap = "2.12.1"
+bytes = "1.10.1"
+paste = "1.0"
 proc-macro2 = "1.0.103"
 quote = "1.0.42"
 thiserror = "1.0.69"
@@ -31,6 +32,7 @@ syn = { version = "2.0.111", features = ["full"] }
 # Polars dependencies
 polars-core = { version = "0.52.0", default-features = false }
 polars-arrow = { version = "0.52.0", default-features = false }
+polars-lazy = { version = "0.52.0", default-features = false }
 
 # Protocol Buffers
 prost = "0.14.1"
@@ -46,4 +48,5 @@ serde = { version = "1.0.228", features = ["derive"] }
 
 # Dev dependencies
 trybuild = "1.0"
+rayon = "1.10"
 

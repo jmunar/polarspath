@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package sample;
+
+enum Enum {
+    UNKNOWN = 0;
+    KNOWN = 10;
+}
+
+message EnumMessage {
+    Enum f_enum = 1;
+}
