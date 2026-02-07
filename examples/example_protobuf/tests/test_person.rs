@@ -1,4 +1,4 @@
-use example_protobuf::example_protobuf::{Person, Address, Status};
+use example_protobuf::example_protobuf::{Address, Person, Status};
 use polars_structpath::{ArrowBuffer, IntoArrow};
 
 #[test]
@@ -58,13 +58,11 @@ fn test_person_roundtrip() {
             address: None,
             tags: vec![],
             status: Status::INACTIVE,
-            previous_addresses: vec![
-                Address {
-                    street: "Old St".to_string(),
-                    city: "Oldtown".to_string(),
-                    zip_code: 11111,
-                },
-            ],
+            previous_addresses: vec![Address {
+                street: "Old St".to_string(),
+                city: "Oldtown".to_string(),
+                zip_code: 11111,
+            }],
         },
     ];
 

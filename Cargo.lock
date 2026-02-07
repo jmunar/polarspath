@@ -1774,7 +1774,7 @@ dependencies = [
 
 [[package]]
 name = "polars-protobuf"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "bytes",
  "polars-arrow",
@@ -1860,7 +1860,7 @@ dependencies = [
 
 [[package]]
 name = "polars-structpath"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "polars-core",
  "polars-structpath-derive",
@@ -1870,7 +1870,7 @@ dependencies = [
 
 [[package]]
 name = "polars-structpath-derive"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "polars-structpath-types",
  "proc-macro2",
@@ -1881,7 +1881,7 @@ dependencies = [
 
 [[package]]
 name = "polars-structpath-types"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "paste",
  "polars-arrow",

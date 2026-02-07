@@ -201,7 +201,9 @@ cat >> build.rs <<'BUILDRS'
     let build_config = polars_protobuf::build::BuildConfig::new(out_dir, &protos, includes);
 BUILDRS
 cat >> build.rs <<EOF
-    build_config.with_python(PathBuf::from("$PACKAGE_NAME"), "_${PACKAGE_NAME}_rust").build()?;
+    build_config
+        .with_python(PathBuf::from("$PACKAGE_NAME"), "_${PACKAGE_NAME}_rust")
+        .build()?;
 EOF
 cat >> build.rs <<'BUILDRS'
 
@@ -270,7 +272,7 @@ if [[ "$CREATE_SAMPLE_TESTS" =~ ^[Yy]$ ]]; then
 
     if [[ "$CREATE_SAMPLE_PROTO" =~ ^[Yy]$ ]]; then
         cat > tests/test_person.rs <<EOF
-use ${PROJECT_NAME}::$PACKAGE_NAME::{Person, Address, Status};
+use ${PROJECT_NAME}::$PACKAGE_NAME::{Address, Person, Status};
 use polars_structpath::{ArrowBuffer, IntoArrow};
 
 #[test]
@@ -330,13 +332,11 @@ fn test_person_roundtrip() {
             address: None,
             tags: vec![],
             status: Status::INACTIVE,
-            previous_addresses: vec![
-                Address {
-                    street: "Old St".to_string(),
-                    city: "Oldtown".to_string(),
-                    zip_code: 11111,
-                },
-            ],
+            previous_addresses: vec![Address {
+                street: "Old St".to_string(),
+                city: "Oldtown".to_string(),
+                zip_code: 11111,
+            }],
         },
     ];
 

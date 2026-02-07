@@ -734,7 +734,7 @@ impl BuildConfig {
         }
 
         // Generate Python package if configured
-        if let (Some(python_path), Some(lib_name)) =
+        if let (Some(python_path), Some(_)) =
             (&self.python_package_path, &self.rust_lib_name)
         {
             generate_python_package(python_path, &python_messages)?;

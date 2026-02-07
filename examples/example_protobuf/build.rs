@@ -26,7 +26,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let protos: Vec<&str> = proto_files.iter().map(|s| s.as_str()).collect();
     let includes: &[&str] = &[proto_dir];
     let build_config = polars_protobuf::build::BuildConfig::new(out_dir, &protos, includes);
-    build_config.with_python(PathBuf::from("example_protobuf"), "_example_protobuf_rust").build()?;
+    build_config
+        .with_python(PathBuf::from("example_protobuf"), "_example_protobuf_rust")
+        .build()?;
 
     println!("cargo:rerun-if-changed={}", proto_dir);
     Ok(())
