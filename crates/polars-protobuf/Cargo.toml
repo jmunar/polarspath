@@ -21,9 +21,10 @@ bytes = { workspace = true }
 polars-arrow = { workspace = true }
 polars-core = { workspace = true, features = ["dtype-array", "dtype-struct"] }
 polars-lazy = { workspace = true }
-prost = { workspace = true }
 polars-structpath = { workspace = true, features = ["derive"] }
 polars-structpath-types = { workspace = true }
+prost = { workspace = true }
 prost-build = { workspace = true, optional = true }
 prost-types = { workspace = true, optional = true }
+pyo3-polars = { workspace = true, features = ["derive", "lazy"] }
 rayon = { workspace = true }

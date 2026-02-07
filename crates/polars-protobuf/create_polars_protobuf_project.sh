@@ -121,15 +121,14 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
-extension-module = ["pyo3", "pyo3/extension-module", "pyo3-polars", "serde"]
+extension-module = ["pyo3", "pyo3/extension-module"]
 
 [dependencies]
 prost = { workspace = true }
 polars-structpath = { workspace = true, features = ["derive"] }
 polars-protobuf = { workspace = true }
 pyo3 = { workspace = true, optional = true }
-pyo3-polars = { workspace = true, optional = true }
-serde = { workspace = true, optional = true }
+pyo3-polars = { workspace = true }
 
 [build-dependencies]
 polars-protobuf = { workspace = true, features = ["build"] }
@@ -149,15 +148,14 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
-extension-module = ["pyo3", "pyo3/extension-module", "pyo3-polars", "serde"]
+extension-module = ["pyo3", "pyo3/extension-module"]
 
 [dependencies]
 prost = "*"
 polars-structpath = { version = "*", features = ["derive"] }
 polars-protobuf = { version = "*" }
 pyo3 = { version = "*", optional = true, features = ["abi3-py38"] }
-pyo3-polars = { version = "*", optional = true, features = ["derive"] }
-serde = { version = "*", optional = true, features = ["derive"] }
+pyo3-polars = { version = "*" }
 
 [build-dependencies]
 polars-protobuf = { version = "*", features = ["build"] }
@@ -168,23 +166,49 @@ fi
 
 # Create build.rs
 echo "Creating build.rs..."
-cat > build.rs <<EOF
-use polars_protobuf::build::{build_protobuf, BuildConfig, ExtensionConfig};
+cat > build.rs <<'BUILDRS'
+use std::fs;
+use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    build_protobuf(BuildConfig {
-        proto_dir: "protobuf/$PACKAGE_NAME".to_string(),
-        include_paths: vec!["protobuf/$PACKAGE_NAME".to_string()],
-        generate_extensions: Some(ExtensionConfig {
-            python_package_dir: "$PYTHON_PACKAGE_NAME".to_string(),
-            python_package_name: "$PYTHON_PACKAGE_NAME".to_string(),
-        }),
-    })?;
+    let out_dir = PathBuf::from(std::env::var("OUT_DIR")?);
+BUILDRS
+cat >> build.rs <<EOF
+    let proto_dir = "protobuf/$PACKAGE_NAME";
+EOF
+cat >> build.rs <<'BUILDRS'
 
-    println!("cargo:rerun-if-changed=protobuf/$PACKAGE_NAME");
+    // Discover all .proto files
+    let proto_files: Vec<String> = fs::read_dir(proto_dir)?
+        .filter_map(|entry| {
+            let entry = entry.ok()?;
+            let path = entry.path();
+            if path.extension().is_some_and(|ext| ext == "proto") {
+                Some(path.to_string_lossy().to_string())
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    if proto_files.is_empty() {
+        println!("cargo:warning=No .proto files found in {}", proto_dir);
+        return Ok(());
+    }
+
+    let protos: Vec<&str> = proto_files.iter().map(|s| s.as_str()).collect();
+    let includes: &[&str] = &[proto_dir];
+    let build_config = polars_protobuf::build::BuildConfig::new(out_dir, &protos, includes);
+BUILDRS
+cat >> build.rs <<EOF
+    build_config.with_python(PathBuf::from("$PACKAGE_NAME"), "_${PACKAGE_NAME}_rust").build()?;
+EOF
+cat >> build.rs <<'BUILDRS'
+
+    println!("cargo:rerun-if-changed={}", proto_dir);
     Ok(())
 }
-EOF
+BUILDRS
 
 # Create src/lib.rs
 echo "Creating src/lib.rs..."
@@ -194,7 +218,14 @@ pub mod $PACKAGE_NAME {
 }
 
 #[cfg(feature = "extension-module")]
-include!(concat!(env!("OUT_DIR"), "/extension_generated.rs"));
+use pyo3::prelude::*;
+
+#[cfg(feature = "extension-module")]
+#[pymodule]
+fn _${PACKAGE_NAME}_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add("__version__", env!("CARGO_PKG_VERSION"))?;
+    Ok(())
+}
 EOF
 
 # Create sample protobuf message if requested
@@ -205,24 +236,25 @@ syntax = "proto3";
 
 package $PACKAGE_NAME;
 
+// Address as a top-level message (not nested)
+message Address {
+  string street = 1;
+  string city = 2;
+  int32 zip_code = 3;
+}
+
+// Status as a top-level enum (not nested)
+enum Status {
+  UNKNOWN = 0;
+  ACTIVE = 1;
+  INACTIVE = 2;
+}
+
 message Person {
   string name = 1;
   int64 age = 2;
   optional string email = 3;
   bool is_active = 4;
-
-  message Address {
-    string street = 1;
-    string city = 2;
-    int32 zip_code = 3;
-  }
-
-  enum Status {
-    UNKNOWN = 0;
-    ACTIVE = 1;
-    INACTIVE = 2;
-  }
-
   Address address = 5;
   repeated string tags = 6;
   Status status = 7;
@@ -238,111 +270,112 @@ if [[ "$CREATE_SAMPLE_TESTS" =~ ^[Yy]$ ]]; then
 
     if [[ "$CREATE_SAMPLE_PROTO" =~ ^[Yy]$ ]]; then
         cat > tests/test_person.rs <<EOF
-use ${PROJECT_NAME}::$PACKAGE_NAME;
-use polars_structpath::polars_core::prelude::{AnyValue, DataType};
-use polars_structpath::{data_type_wrapper, HasDataTypeWrapper, StructPath};
+use ${PROJECT_NAME}::$PACKAGE_NAME::{Person, Address, Status};
+use polars_structpath::{ArrowBuffer, IntoArrow};
 
 #[test]
-fn test_get_type_person() -> Result<(), Box<dyn std::error::Error>> {
-    let person_type = $PACKAGE_NAME::Person::data_type();
-    assert!(matches!(person_type, DataType::Struct(_)));
-    Ok(())
+fn test_person_to_arrow() {
+    // Create a person
+    let person = Person {
+        name: "Alice".to_string(),
+        age: 30,
+        email: Some("alice@example.com".to_string()),
+        is_active: true,
+        address: Some(Address {
+            street: "123 Main St".to_string(),
+            city: "Springfield".to_string(),
+            zip_code: 12345,
+        }),
+        tags: vec!["premium".to_string(), "verified".to_string()],
+        status: Status::ACTIVE,
+        previous_addresses: vec![],
+    };
+
+    // Create a buffer and push the person
+    let mut buffer = Person::new_buffer(1);
+    buffer.push(person.clone());
+
+    // Convert to Arrow array
+    let arrow_array = buffer.to_arrow().expect("Failed to convert to Arrow");
+
+    // Verify the array has 1 element
+    assert_eq!(arrow_array.len(), 1);
 }
 
 #[test]
-fn test_get_type_fields() -> Result<(), Box<dyn std::error::Error>> {
-    let name_type = $PACKAGE_NAME::Person::get_type("name")?;
-    assert_eq!(name_type, data_type_wrapper!(String));
+fn test_person_roundtrip() {
+    use polars_structpath::FromArrow;
 
-    let age_type = $PACKAGE_NAME::Person::get_type("age")?;
-    assert_eq!(age_type, data_type_wrapper!(Int64));
+    // Create persons
+    let persons = vec![
+        Person {
+            name: "Alice".to_string(),
+            age: 30,
+            email: Some("alice@example.com".to_string()),
+            is_active: true,
+            address: Some(Address {
+                street: "123 Main St".to_string(),
+                city: "Springfield".to_string(),
+                zip_code: 12345,
+            }),
+            tags: vec!["premium".to_string()],
+            status: Status::ACTIVE,
+            previous_addresses: vec![],
+        },
+        Person {
+            name: "Bob".to_string(),
+            age: 25,
+            email: None,
+            is_active: false,
+            address: None,
+            tags: vec![],
+            status: Status::INACTIVE,
+            previous_addresses: vec![
+                Address {
+                    street: "Old St".to_string(),
+                    city: "Oldtown".to_string(),
+                    zip_code: 11111,
+                },
+            ],
+        },
+    ];
 
-    let email_type = $PACKAGE_NAME::Person::get_type("email")?;
-    assert_eq!(email_type, data_type_wrapper!(Option(String)));
+    // Convert to Arrow
+    let mut buffer = Person::new_buffer(persons.len());
+    for person in &persons {
+        buffer.push(person.clone());
+    }
+    let arrow_array = buffer.to_arrow().expect("Failed to convert to Arrow");
 
-    let street_type = $PACKAGE_NAME::Person::get_type("address.street")?;
-    assert_eq!(street_type, data_type_wrapper!(Option(String)));
+    // Convert back from Arrow
+    let recovered: Vec<Person> = Person::from_arrow(Box::new(arrow_array));
 
-    let tag_type = $PACKAGE_NAME::Person::get_type("tags")?;
-    assert_eq!(tag_type, data_type_wrapper!(List(String)));
-
-    let tag0_type = $PACKAGE_NAME::Person::get_type("tags[0]")?;
-    assert_eq!(tag0_type, data_type_wrapper!(String));
-
-    Ok(())
+    // Verify roundtrip
+    assert_eq!(persons.len(), recovered.len());
+    assert_eq!(persons[0].name, recovered[0].name);
+    assert_eq!(persons[0].age, recovered[0].age);
+    assert_eq!(persons[1].name, recovered[1].name);
+    assert_eq!(persons[1].email, recovered[1].email);
 }
 
 #[test]
-fn test_get_value_person() -> Result<(), Box<dyn std::error::Error>> {
-    let mut person = $PACKAGE_NAME::Person::default();
-    person.name = "Alice".to_string();
-    person.age = 30;
-    person.email = Some("alice@example.com".to_string());
-    person.is_active = true;
+fn test_enum_status() {
+    // Test that enum values are preserved
+    let statuses = vec![Status::UNKNOWN, Status::ACTIVE, Status::INACTIVE];
 
-    person.address = Some($PACKAGE_NAME::person::Address {
-        street: "123 Main St".to_string(),
-        city: "Springfield".to_string(),
-        zip_code: 12345,
-    });
+    let mut buffer = Status::new_buffer(statuses.len());
+    for status in &statuses {
+        buffer.push(status.clone());
+    }
+    let arrow_array = buffer.to_arrow().expect("Failed to convert to Arrow");
 
-    person.tags.push("premium".to_string());
-    person.tags.push("verified".to_string());
-
-    person.status = 1; // ACTIVE
-
-    let name = person.get_value("name")?;
-    assert_eq!(name, AnyValue::String("Alice"));
-
-    let age = person.get_value("age")?;
-    assert_eq!(age, AnyValue::Int64(30));
-
-    let email = person.get_value("email")?;
-    assert_eq!(email, AnyValue::String("alice@example.com"));
-
-    let street = person.get_value("address.street")?;
-    assert_eq!(street, AnyValue::String("123 Main St"));
-
-    let tag0 = person.get_value("tags[0]")?;
-    assert_eq!(tag0, AnyValue::String("premium"));
-
-    Ok(())
-}
-
-#[test]
-fn test_get_value_nested_array() -> Result<(), Box<dyn std::error::Error>> {
-    let mut person = $PACKAGE_NAME::Person::default();
-
-    person
-        .previous_addresses
-        .push(example_protobuf::person::Address {
-            street: "456 Old St".to_string(),
-            city: "Oldtown".to_string(),
-            zip_code: 54321,
-        });
-
-    person
-        .previous_addresses
-        .push(example_protobuf::person::Address {
-            street: "789 New St".to_string(),
-            city: "Newtown".to_string(),
-            zip_code: 98765,
-        });
-
-    let first_old_street = person.get_value("previous_addresses[0].street")?;
-    assert_eq!(first_old_street, AnyValue::String("456 Old St"));
-
-    let second_old_city = person.get_value("previous_addresses[1].city")?;
-    assert_eq!(second_old_city, AnyValue::String("Newtown"));
-
-    Ok(())
+    // Verify the array has correct length
+    assert_eq!(arrow_array.len(), 3);
 }
 EOF
     else
         cat > tests/test_basic.rs <<EOF
 use ${PROJECT_NAME}::$PACKAGE_NAME;
-use polars_structpath::polars_core::prelude::DataType;
-use polars_structpath::StructPath;
 
 #[test]
 fn test_module_loaded() {
@@ -357,6 +390,12 @@ fi
 # Create Python package directory
 echo "Creating Python package structure..."
 mkdir -p "$PYTHON_PACKAGE_NAME"
+
+# Create __init__.py for the Python package
+cat > "$PYTHON_PACKAGE_NAME/__init__.py" <<EOF
+# Auto-generated Python package initialization
+from ._${PYTHON_PACKAGE_NAME}_rust import *
+EOF
 
 # Create pyproject.toml
 echo "Creating pyproject.toml..."
@@ -403,6 +442,7 @@ build-backend = "maturin"
 [tool.maturin]
 bindings = "pyo3"
 features = ["extension-module"]
+module-name = "$PYTHON_PACKAGE_NAME._${PYTHON_PACKAGE_NAME}_rust"
 EOF
 
 # Create Makefile
