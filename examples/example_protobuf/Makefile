@@ -1,9 +1,12 @@
 .PHONY: build clean help
 
+RELEASE ?=
+
 help:
 	@echo "Available commands:"
 	@echo "  make install-uv              - Download and install uv"
-	@echo "  make build                   - Build both Python bindings and Python package"
+	@echo "  make build                   - Build both Python bindings and Python package (debug)"
+	@echo "  make build RELEASE=1         - Build both Python bindings and Python package (release)"
 	@echo "  make build-python            - Build Python package"
 	@echo "  make build-python-bindings   - Add protobuf Python bindings to Python package"
 	@echo "  make clean                   - Clean build artifacts"
@@ -19,6 +22,7 @@ install-uv:
 build-python:
 	@echo "Building Python environment and package..."
 	@uv sync
+	@uv run maturin develop --uv $(if $(RELEASE),--release,)
 
 build-python-bindings:
 	@echo "Building protobuf Python bindings..."

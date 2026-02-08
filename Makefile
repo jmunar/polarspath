@@ -15,7 +15,7 @@ build-python:
 	@echo "Re-creating example_protobuf..."
 	@cd examples && ../crates/polars-protobuf/create_polars_protobuf_project.sh --project-name example_protobuf --sample-proto
 	@echo "Building Python example_protobuf package..."
-	@cd examples/example_protobuf && make build
+	@cd examples/example_protobuf && make build RELEASE=$(RELEASE)
 
 build: build-rust build-python
 
