@@ -10,18 +10,76 @@ NC='\033[0m' # No Color
 
 # Function to display usage
 show_usage() {
-    cat <<EOF
-Usage: $0 [OPTIONS]
+    echo -e "$(cat <<EOF
+${GREEN}polars-protobuf Project Generator${NC}
 
-Options:
-    -n, --project-name NAME     Project name (required, e.g., example_protobuf)
-    -p, --sample-proto          Create a sample protobuf message (optional)
-    -h, --help                  Show this help message
+Creates a complete Rust + Python project for working with Protocol Buffer messages
+using polars-structpath. The generated project includes:
 
-Examples:
-    $0 --project-name my_project
-    $0 -n my_project --sample-proto
+${YELLOW}What This Script Does:${NC}
+  1. Creates a Rust library that auto-generates type-safe structs from .proto files
+  2. Generates Arrow/Polars integration via polars-structpath derive macros
+  3. Sets up Python bindings with maturin for cross-language interop
+  4. Configures the build system to regenerate code on .proto changes
+
+${YELLOW}Project Structure Created:${NC}
+  project_name/
+  ├── Cargo.toml              # Rust dependencies (polars-protobuf, prost, pyo3)
+  ├── build.rs                # Build script that processes .proto files
+  ├── src/lib.rs              # Main Rust library (includes generated code)
+  ├── protobuf/               # Directory for your .proto files
+  │   └── project_name/       # Package-specific proto directory
+  │       └── *.proto         # Your protobuf schemas here
+  ├── project_name/           # Python package directory
+  │   ├── __init__.py         # Auto-generated Python module init
+  │   └── pybindings/         # Auto-generated protobuf Python bindings
+  ├── pyproject.toml          # Python package config (maturin build)
+  └── Makefile                # Build commands for Python package
+
+${YELLOW}Generated Code:${NC}
+  During 'cargo build', the build.rs script generates:
+  - Rust structs with #[derive(StructPath)] for each protobuf message
+  - Rust enums with #[derive(EnumPath)] for each protobuf enum
+  - ArrowMessage trait implementations for encode/decode
+  - Python bindings via maturin/pyo3
+  - Python __init__.py with type stubs and utilities
+
+${YELLOW}Usage:${NC}
+  $0 [OPTIONS]
+
+${YELLOW}Options:${NC}
+  -n, --project-name NAME     Project name (required, e.g., example_protobuf)
+                              Must be a valid Rust crate name (lowercase, underscores)
+  -p, --sample-proto          Create sample person.proto with examples of:
+                              - Basic types (string, int, bool)
+                              - Optional fields
+                              - Nested messages
+                              - Repeated fields
+                              - Enums
+  -h, --help                  Show this help message
+
+${YELLOW}Examples:${NC}
+  # Create minimal project (add your own .proto files)
+  $0 --project-name my_messages
+
+  # Create project with sample person.proto for learning
+  $0 -n my_messages --sample-proto
+
+${YELLOW}Next Steps After Creation:${NC}
+  1. cd project_name
+  2. Add your .proto files to protobuf/project_name/ (or use sample)
+  3. cargo build                  # Generates Rust code
+  4. make build-python            # Builds Python package
+  5. cargo test                   # Run Rust tests
+  6. Check generated code in target/debug/build/.../out/
+
+${YELLOW}Integration Examples:${NC}
+  Rust: use project_name::package_name::MyMessage;
+  Python: from project_name import encode_MyMessage, decode_MyMessage
+
+For more information, see: https://github.com/your-repo/polars-protobuf
 EOF
+)"
 }
 
 # Initialize variables with defaults
@@ -130,51 +188,21 @@ if [ -f "build.rs" ]; then
     echo -e "${YELLOW}build.rs already exists, skipping${NC}"
 else
     echo "Creating build.rs..."
-    cat > build.rs <<'BUILDRS'
-use std::fs;
+    cat > build.rs <<EOF
 use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = PathBuf::from(std::env::var("OUT_DIR")?);
-BUILDRS
-cat >> build.rs <<EOF
     let proto_dir = "protobuf/$PACKAGE_NAME";
-EOF
-cat >> build.rs <<'BUILDRS'
 
-    // Discover all .proto files
-    let proto_files: Vec<String> = fs::read_dir(proto_dir)?
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path.extension().is_some_and(|ext| ext == "proto") {
-                Some(path.to_string_lossy().to_string())
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    if proto_files.is_empty() {
-        println!("cargo:warning=No .proto files found in {}", proto_dir);
-        return Ok(());
-    }
-
-    let protos: Vec<&str> = proto_files.iter().map(|s| s.as_str()).collect();
-    let includes: &[&str] = &[proto_dir];
-    let build_config = polars_protobuf::build::BuildConfig::new(out_dir, &protos, includes);
-BUILDRS
-cat >> build.rs <<EOF
-    build_config
+    polars_protobuf::build::BuildConfig::from_proto_dir(out_dir, proto_dir)?
         .with_python(PathBuf::from("$PACKAGE_NAME"), "_${PACKAGE_NAME}_rust")
         .build()?;
-EOF
-cat >> build.rs <<'BUILDRS'
 
     println!("cargo:rerun-if-changed={}", proto_dir);
     Ok(())
 }
-BUILDRS
+EOF
 fi
 
 # Create src/lib.rs
@@ -256,7 +284,7 @@ else
 name = "$PYTHON_PACKAGE_NAME"
 version = "0.1.0"
 description = "Python package for $PYTHON_PACKAGE_NAME"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -264,7 +292,7 @@ classifiers = [
 ]
 dependencies = [
     "polars",
-    "protobuf==5.29.3",
+    "protobuf",
     "pyarrow",
 ]
 
@@ -274,7 +302,7 @@ dev = [
     "maturin",
     "notebook",
     "pytest",
-    "ruff>=0.12.7",
+    "ruff",
 ]
 
 [tool.hatch.build.targets.sdist]

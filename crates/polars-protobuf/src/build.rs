@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::{create_dir_all, File};
+use std::fs::{create_dir_all, read_dir, File};
 use std::io::{Result, Write};
 use std::path::PathBuf;
 
@@ -344,34 +344,49 @@ impl<'a> MessageDescriptorWrapper<'a> {
         writeln!(buf, "    let decoded_chunks: Vec<Box<dyn ArrowArray>> = chunks")?;
         writeln!(buf, "        .into_iter()")?;
         writeln!(buf, "        .map(|chunk| {{")?;
-        writeln!(buf, "            // Extract bytes from list array")?;
-        writeln!(buf, "            let list_array = chunk")?;
+        writeln!(buf, "            // Try BinaryViewArray first (Python's SerializeToString produces Binary)")?;
+        writeln!(buf, "            let byte_slices: Vec<Option<Vec<u8>>> = if let Some(binary_array) = chunk")?;
+        writeln!(buf, "                .as_any()")?;
+        writeln!(buf, "                .downcast_ref::<::polars_protobuf::polars_arrow::array::BinaryViewArray>()")?;
+        writeln!(buf, "            {{")?;
+        writeln!(buf, "                binary_array.iter().map(|opt| opt.map(|b| b.to_vec())).collect()")?;
+        writeln!(buf, "            }} else if let Some(list_array) = chunk")?;
         writeln!(buf, "                .as_any()")?;
         writeln!(buf, "                .downcast_ref::<::polars_protobuf::polars_arrow::array::ListArray<i64>>()")?;
-        writeln!(buf, "                .or_else(|| {{")?;
-        writeln!(buf, "                    chunk")?;
-        writeln!(buf, "                        .as_any()")?;
-        writeln!(buf, "                        .downcast_ref::<::polars_protobuf::polars_arrow::array::ListArray<i32>>()")?;
-        writeln!(buf, "                        .map(|_| panic!(\"i32 offset not supported, use i64\"))")?;
-        writeln!(buf, "                }})")?;
-        writeln!(buf, "                .ok_or_else(|| {{")?;
-        writeln!(buf, "                    ::polars_protobuf::polars_core::prelude::PolarsError::ComputeError(")?;
-        writeln!(buf, "                        format!(\"Expected ListArray, got {{:?}}\", chunk.dtype()).into(),")?;
-        writeln!(buf, "                    )")?;
-        writeln!(buf, "                }})?;")?;
-        writeln!(buf)?;
-        writeln!(buf, "            let byte_slices: Vec<Option<Vec<u8>>> = list_array")?;
-        writeln!(buf, "                .iter()")?;
-        writeln!(buf, "                .map(|opt_array| {{")?;
-        writeln!(buf, "                    opt_array.map(|byte_array| {{")?;
-        writeln!(buf, "                        let primitive_array = byte_array")?;
-        writeln!(buf, "                            .as_any()")?;
-        writeln!(buf, "                            .downcast_ref::<::polars_protobuf::polars_arrow::array::PrimitiveArray<u8>>()")?;
-        writeln!(buf, "                            .expect(\"Expected PrimitiveArray<u8>\");")?;
-        writeln!(buf, "                        primitive_array.values().as_slice().to_vec()")?;
+        writeln!(buf, "            {{")?;
+        writeln!(buf, "                list_array")?;
+        writeln!(buf, "                    .iter()")?;
+        writeln!(buf, "                    .map(|opt_array| {{")?;
+        writeln!(buf, "                        opt_array.map(|byte_array| {{")?;
+        writeln!(buf, "                            let primitive_array = byte_array")?;
+        writeln!(buf, "                                .as_any()")?;
+        writeln!(buf, "                                .downcast_ref::<::polars_protobuf::polars_arrow::array::PrimitiveArray<u8>>()")?;
+        writeln!(buf, "                                .expect(\"Expected PrimitiveArray<u8>\");")?;
+        writeln!(buf, "                            primitive_array.values().as_slice().to_vec()")?;
+        writeln!(buf, "                        }})")?;
         writeln!(buf, "                    }})")?;
-        writeln!(buf, "                }})")?;
-        writeln!(buf, "                .collect();")?;
+        writeln!(buf, "                    .collect()")?;
+        writeln!(buf, "            }} else if let Some(list_array) = chunk")?;
+        writeln!(buf, "                .as_any()")?;
+        writeln!(buf, "                .downcast_ref::<::polars_protobuf::polars_arrow::array::ListArray<i32>>()")?;
+        writeln!(buf, "            {{")?;
+        writeln!(buf, "                list_array")?;
+        writeln!(buf, "                    .iter()")?;
+        writeln!(buf, "                    .map(|opt_array| {{")?;
+        writeln!(buf, "                        opt_array.map(|byte_array| {{")?;
+        writeln!(buf, "                            let primitive_array = byte_array")?;
+        writeln!(buf, "                                .as_any()")?;
+        writeln!(buf, "                                .downcast_ref::<::polars_protobuf::polars_arrow::array::PrimitiveArray<u8>>()")?;
+        writeln!(buf, "                                .expect(\"Expected PrimitiveArray<u8>\");")?;
+        writeln!(buf, "                            primitive_array.values().as_slice().to_vec()")?;
+        writeln!(buf, "                        }})")?;
+        writeln!(buf, "                    }})")?;
+        writeln!(buf, "                    .collect()")?;
+        writeln!(buf, "            }} else {{")?;
+        writeln!(buf, "                return Err(::polars_protobuf::polars_core::prelude::PolarsError::ComputeError(")?;
+        writeln!(buf, "                    format!(\"Expected BinaryViewArray or ListArray, got {{:?}}\", chunk.dtype()).into(),")?;
+        writeln!(buf, "                ));")?;
+        writeln!(buf, "            }};")?;
         writeln!(buf)?;
         writeln!(buf, "            let decoded: Vec<Option<{message_name}>> = POOL.install(|| {{")?;
         writeln!(buf, "                byte_slices")?;
@@ -648,6 +663,49 @@ impl BuildConfig {
             python_package_path: None,
             rust_lib_name: None,
         }
+    }
+
+    /// Create a new build configuration from a proto directory.
+    ///
+    /// Automatically discovers all .proto files in the specified directory.
+    ///
+    /// # Arguments
+    /// * `out_dir` - Output directory for generated Rust code
+    /// * `proto_dir` - Directory containing .proto files
+    ///
+    /// # Returns
+    /// A BuildConfig with all discovered .proto files and the proto_dir as include path.
+    ///
+    /// # Errors
+    /// Returns an error if the directory cannot be read or contains no .proto files.
+    pub fn from_proto_dir(out_dir: PathBuf, proto_dir: &str) -> Result<Self> {
+        // Discover all .proto files
+        let proto_files: Vec<String> = read_dir(proto_dir)?
+            .filter_map(|entry| {
+                let entry = entry.ok()?;
+                let path = entry.path();
+                if path.extension().is_some_and(|ext| ext == "proto") {
+                    Some(path.to_string_lossy().to_string())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        if proto_files.is_empty() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("No .proto files found in {}", proto_dir),
+            ));
+        }
+
+        Ok(Self {
+            out_dir,
+            protos: proto_files,
+            includes: vec![proto_dir.to_string()],
+            python_package_path: None,
+            rust_lib_name: None,
+        })
     }
 
     /// Enable Python package generation.
