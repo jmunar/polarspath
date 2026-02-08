@@ -743,10 +743,3 @@ impl BuildConfig {
         Ok(())
     }
 }
-
-/// Build protobuf definitions (legacy API for backwards compatibility).
-///
-/// For new code, prefer using `BuildConfig` directly.
-pub fn build(out_dir: PathBuf, protos: &[&str], includes: &[&str]) -> Result<()> {
-    BuildConfig::new(out_dir, protos, includes).build()
-}

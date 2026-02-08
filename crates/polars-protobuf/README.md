@@ -25,12 +25,12 @@ curl -sSL https://raw.githubusercontent.com/jmunar/polarspath/main/crates/polars
 ```
 
 The script will:
-- Create a new cargo project with all necessary dependencies
-- Set up the build configuration (`build.rs`)
-- Create a Python package with the same name
-- Generate a `pyproject.toml` for Python packaging
-- Create a `Makefile` for building the project
-- Optionally create sample protobuf messages (`-p`) and tests (`-t`)
+- Create / update a cargo project with all necessary dependencies
+- Set up the build configuration (`build.rs`), if it doesn't exist
+- Re-create a Python package with the same name
+- Generate a `pyproject.toml` for Python packaging, if it doesn't exist
+- Create a `Makefile` for building the project, if it doesn't exist
+- Optionally create sample protobuf messages (`-p`)
 
 After the scripts finishes creating all the necessary fles, the python environment (including
 the Polars extension) can be created by going into the project folder and running `make build`.
