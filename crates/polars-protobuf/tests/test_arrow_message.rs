@@ -34,7 +34,8 @@ macro_rules! test_encode_decode {
         let messages = vec![$arrow_msg.clone(), $arrow_msg.clone()];
         let series = messages_to_series(messages, "test")?;
         let struct_dtype = series.dtype().clone();
-        let df = DataFrame::new(vec![series.into()])?;
+        let num_rows = series.len();
+        let df = DataFrame::new(num_rows, vec![series.into()])?;
 
         // Encode using lazy API
         let encoded_df = df
