@@ -9,9 +9,10 @@ keywords = ["polars-structpath", "polars", "dataframe", "path", "nested"]
 categories = ["data-structures"]
 
 [dependencies]
+paste = { workspace = true }
+polars-arrow = { workspace = true }
+polars-core = { workspace = true, features = ["dtype-struct", "dtype-categorical"] }
 polars-structpath-derive = { workspace = true, optional = true }
-polars-structpath-types = { workspace = true }
-polars-core = { workspace = true, features = ["dtype-struct"] }
 
 [dev-dependencies]
 polars-structpath-derive = { workspace = true }

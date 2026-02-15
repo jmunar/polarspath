@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "crates/polars-structpath-types",
     "crates/polars-structpath-derive",
     "crates/polars-structpath",
     "crates/polars-protobuf",
@@ -10,16 +9,15 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 license = "MIT"
 
 [workspace.dependencies]
 # Internal dependencies
-polars-structpath-types = { version = "0.3.0", path = "crates/polars-structpath-types" }
-polars-structpath-derive = { version = "0.3.0", path = "crates/polars-structpath-derive" }
-polars-structpath = { version = "0.3.0", path = "crates/polars-structpath" }
-polars-protobuf = { version = "0.3.0", path = "crates/polars-protobuf" }
+polars-structpath-derive = { version = "0.4.0", path = "crates/polars-structpath-derive" }
+polars-structpath = { version = "0.4.0", path = "crates/polars-structpath" }
+polars-protobuf = { version = "0.4.0", path = "crates/polars-protobuf" }
 
 # Common dependencies
 bytes = "1.10.1"

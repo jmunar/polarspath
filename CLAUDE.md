@@ -11,9 +11,8 @@ PolarsPath is a Rust ecosystem for working with nested data structures using pat
 ```
 polarspath/
 ├── crates/
-│   ├── polars-structpath-types/    # Core types and traits (ArrowBuffer, IntoArrow, FromArrow)
 │   ├── polars-structpath-derive/   # Derive macros (StructPath, EnumPath)
-│   ├── polars-structpath/          # Main library, re-exports types + derive
+│   ├── polars-structpath/          # Main library: core types, traits, and derive re-exports
 │   └── polars-protobuf/            # Protobuf integration + build utilities
 └── examples/
     └── example_protobuf/           # Generated example project (created by script)
@@ -21,13 +20,11 @@ polarspath/
 
 ### Dependency Flow
 ```
-polars-structpath-types  ←─────────────────────────────┐
-        ↓                                              │
-polars-structpath-derive ──────────────────────────────┤
-        ↓                                              │
-polars-structpath (re-exports both)                    │
-        ↓                                              │
-polars-protobuf ───────────────────────────────────────┘
+polars-structpath-derive
+        ↓
+polars-structpath (core types + derive re-exports)
+        ↓
+polars-protobuf
 ```
 
 ## Key Concepts
@@ -82,7 +79,7 @@ make clean                 # Clean all artifacts
 
 ### Key Test Files
 - `polars-protobuf/tests/test_arrow_message.rs` - Roundtrip encode/decode tests
-- `polars-structpath-types/tests/test_to_arrow.rs` - Arrow conversion tests
+- `polars-structpath/tests/test_to_arrow.rs` - Arrow conversion tests
 
 ### Running Specific Tests
 ```bash
@@ -106,7 +103,7 @@ When generating code in build.rs:
 ### Derive Macro Paths
 Derive macros generate code using absolute paths:
 ```rust
-::polars_structpath::polars_structpath_types::impl_struct_buffer!(...)
+::polars_structpath::impl_struct_buffer!(...)
 ```
 
 ## Architecture Decisions
@@ -149,9 +146,6 @@ message Person { message Address { ... } }
 
 ## Common Issues & Solutions
 
-### "unresolved module polars_structpath_types"
-The derive macros reference `::polars_structpath::polars_structpath_types`. Ensure `polars-structpath` is a dependency with the `derive` feature.
-
 ### "PythonScan not covered" (pyo3-polars)
 Version incompatibility between pyo3-polars and polars. The script now excludes pyo3-polars to avoid this.
 
@@ -164,7 +158,7 @@ When starting a new session on this codebase:
 1. This file (CLAUDE.md)
 2. `Cargo.toml` (workspace structure)
 3. `crates/polars-protobuf/src/lib.rs` (main exports)
-4. `crates/polars-structpath-types/src/traits.rs` (core traits)
+4. `crates/polars-structpath/src/traits.rs` (core traits)
 
 ## Useful Patterns
 

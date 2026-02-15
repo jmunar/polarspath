@@ -14,7 +14,7 @@ use polars_core::prelude::*;
 /// # Example
 ///
 /// ```rust
-/// use polars_structpath_types::{ArrowBuffer, IntoArrow};
+/// use polars_structpath::{ArrowBuffer, IntoArrow};
 ///
 /// let mut buffer = Option::<String>::new_buffer(2);
 /// buffer.push(Some("hello".to_string()));
@@ -67,7 +67,7 @@ impl<T: ArrowBuffer> ArrowBuffer for ArrowBufferOption<T> {
 /// # Example
 ///
 /// ```rust
-/// use polars_structpath_types::{ArrowBuffer, IntoArrow};
+/// use polars_structpath::{ArrowBuffer, IntoArrow};
 ///
 /// let mut buffer = Vec::<i32>::new_buffer(2);
 /// buffer.push(vec![1, 2, 3]);

@@ -4,7 +4,7 @@ use quote::quote;
 /// Implementation function for the `EnumPath` derive macro.
 ///
 /// This function processes an enum definition and generates code that calls
-/// `impl_enum_buffer!` from `polars_structpath_types` to create Arrow buffer
+/// `impl_enum_buffer!` from `polars_structpath` to create Arrow buffer
 /// implementations for the enum.
 ///
 /// # Panics
@@ -18,7 +18,7 @@ use quote::quote;
 ///
 /// The function generates code in the form:
 /// ```rust,ignore
-/// ::polars_structpath::polars_structpath_types::impl_enum_buffer!(EnumName, [
+/// ::polars_structpath::impl_enum_buffer!(EnumName, [
 ///     (Variant1, 1),
 ///     (Variant2, 2),
 ///     ...
@@ -58,7 +58,7 @@ pub fn derive_enum_path_impl(input: syn::DeriveInput) -> TokenStream {
     }
 
     quote! {
-        ::polars_structpath::polars_structpath_types::impl_enum_buffer!(#enum_name, [#(#variant_data),*]);
+        ::polars_structpath::impl_enum_buffer!(#enum_name, [#(#variant_data),*]);
     }
 }
 
@@ -101,7 +101,7 @@ mod tests {
         let output_str = output.to_string();
         assert_eq!(
             output_str,
-            ":: polars_structpath :: polars_structpath_types :: impl_enum_buffer ! (TestEnum , [(Variant1 , 10) , (Variant2 , 20)]) ;"
+            ":: polars_structpath :: impl_enum_buffer ! (TestEnum , [(Variant1 , 10) , (Variant2 , 20)]) ;"
         );
     }
 }

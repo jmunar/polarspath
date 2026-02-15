@@ -11,8 +11,8 @@ The main user-facing library for converting Rust structures to and from Apache A
 - **Derive Macros**: Procedural macros (`StructPath`, `EnumPath`) that automatically generate Arrow buffer implementations
 - **Polars Integration**: Native support for Polars DataFrames using Arrow arrays
 
-This crate wraps and re-exports functionality from:
-- `polars-structpath-types`: Core types and traits (`ArrowBuffer`, `IntoArrow`, `FromArrow`)
+This crate contains the core types and traits directly, and optionally re-exports derive macros:
+- Core types and traits: `ArrowBuffer`, `IntoArrow`, `FromArrow`
 - `polars-structpath-derive`: Derive macro implementations (optional, enabled via `derive` feature)
 
 ## Quick Start
@@ -210,7 +210,7 @@ The `ArrowBuffer` trait is used internally to accumulate values and convert them
 
 ## Supported Types
 
-The derive macros support all types that implement `IntoArrow` and `FromArrow` from `polars-structpath-types`:
+The derive macros support all types that implement `IntoArrow` and `FromArrow`:
 
 - **Primitive types**: `i32`, `i64`, `u8`, `u32`, `u64`, `f32`, `f64`, `bool`
 - **Strings**: `String`
@@ -257,7 +257,6 @@ let df = DataFrame::new(vec![series.into()]).unwrap();
 ## See Also
 
 - [Main README](../../README.md) - Overview of the entire polars-structpath ecosystem
-- [polars-structpath-types](../polars-structpath-types/README.md) - Core types and traits documentation
 - [polars-structpath-derive](../polars-structpath-derive/README.md) - Derive macro implementation details
 - [polars-protobuf](../polars-protobuf/README.md) - Protocol Buffers integration
 

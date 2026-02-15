@@ -1,5 +1,5 @@
 use crate::sample::{SampleEnum, SampleStruct, SampleSubstruct};
-use polars_structpath_types::impl_struct_buffer;
+use polars_structpath::impl_struct_buffer;
 
 impl_struct_buffer!(SampleSubstruct, [(subf_string, String)]);
 

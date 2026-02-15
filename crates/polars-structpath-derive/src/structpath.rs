@@ -4,7 +4,7 @@ use quote::quote;
 /// Implementation function for the `StructPath` derive macro.
 ///
 /// This function processes a struct definition and generates code that calls
-/// `impl_struct_buffer!` from `polars-structpath-types` to create Arrow buffer
+/// `impl_struct_buffer!` from `polars-structpath` to create Arrow buffer
 /// implementations for the struct.
 ///
 /// # Panics
@@ -16,7 +16,7 @@ use quote::quote;
 ///
 /// The function generates code in the form:
 /// ```rust,ignore
-/// ::polars_structpath::polars_structpath_types::impl_struct_buffer!(StructName, [
+/// ::polars_structpath::impl_struct_buffer!(StructName, [
 ///     (field1, Type1),
 ///     (field2, Type2),
 ///     ...
@@ -45,7 +45,7 @@ pub fn derive_struct_path_impl(input: syn::DeriveInput) -> TokenStream {
     }
 
     quote! {
-        ::polars_structpath::polars_structpath_types::impl_struct_buffer!(#struct_name, [#(#field_entries),*]);
+        ::polars_structpath::impl_struct_buffer!(#struct_name, [#(#field_entries),*]);
     }
 }
 
@@ -83,7 +83,7 @@ mod tests {
         let output = derive_struct_path_impl(input);
         assert_eq!(
             output.to_string(),
-            ":: polars_structpath :: polars_structpath_types :: impl_struct_buffer ! (TestStruct , [(field1 , i32)]) ;"
+            ":: polars_structpath :: impl_struct_buffer ! (TestStruct , [(field1 , i32)]) ;"
         );
     }
 }

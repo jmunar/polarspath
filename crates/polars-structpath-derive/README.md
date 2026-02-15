@@ -6,8 +6,8 @@ This crate provides procedural derive macros for the `polars-structpath` ecosyst
 
 `polars-structpath-derive` is a procedural macro crate that generates code for:
 
-- **StructPath derive macro**: Automatically generates Arrow buffer implementations for structs using `impl_struct_buffer!` from `polars-structpath-types`
-- **EnumPath derive macro**: Automatically generates Arrow buffer implementations for enums using `impl_enum_buffer!` from `polars-structpath-types`
+- **StructPath derive macro**: Automatically generates Arrow buffer implementations for structs using `impl_struct_buffer!` from `polars-structpath`
+- **EnumPath derive macro**: Automatically generates Arrow buffer implementations for enums using `impl_enum_buffer!` from `polars-structpath`
 
 This crate is used by:
 - `polars-structpath`: The main user-facing library that re-exports these derive macros
@@ -21,6 +21,5 @@ For usage examples, see [polars-structpath](../polars-structpath/README.md).
 
 - [Main README](../../README.md) - Overview of the entire `polarspath` ecosystem
 - [polars-structpath](../polars-structpath/README.md) - User-facing API documentation
-- [polars-structpath_types](../polars-structpath-types/README.md) - Core types and traits
 - [polars-protobuf](../polars-protobuf/README.md) - Protocol Buffers integration
 
