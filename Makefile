@@ -17,6 +17,10 @@ build-python:
 	@echo "Building Python example_protobuf package..."
 	@cd examples/example_protobuf && make build RELEASE=$(RELEASE)
 
+build-python-lance:
+	@echo "Building Python polars-lance package..."
+	@cd crates/polars-lance && maturin develop
+
 build: build-rust build-python
 
 format-rust:
@@ -98,4 +102,5 @@ help:
 	@echo "  make clean            - Clean build artifacts for all crates"
 	@echo "  make clean-rust       - Clean Rust build artifacts only"
 	@echo "  make clean-python     - Clean Python build artifacts only"
+	@echo "  make build-python-lance - Build the polars-lance Python package"
 	@echo "  make help             - Show this help message" 

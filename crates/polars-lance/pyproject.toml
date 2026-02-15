@@ -1,0 +1,14 @@
+[project]
+name = "polars-lance"
+version = "0.4.0"
+requires-python = ">=3.10"
+dependencies = ["polars"]
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+bindings = "pyo3"
+features = ["extension-module"]
+module-name = "polars_lance._polars_lance"

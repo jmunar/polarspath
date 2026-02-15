@@ -1,0 +1,34 @@
+[package]
+name = "polars-lance"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+description = "Lance dataset integration for Polars DataFrames"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+extension-module = ["pyo3", "pyo3/extension-module", "pyo3-polars"]
+
+[dependencies]
+lance = { workspace = true }
+arrow = { workspace = true }
+arrow-schema = { workspace = true }
+arrow-array = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+polars-core = { workspace = true, features = ["dtype-struct"] }
+polars-arrow = { workspace = true }
+polars-lazy = { workspace = true }
+pyo3 = { workspace = true, optional = true }
+pyo3-polars = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tempfile = { workspace = true }
+lance = { workspace = true }
+arrow-array = { workspace = true }
+arrow-schema = { workspace = true }
+polars-lazy = { workspace = true }

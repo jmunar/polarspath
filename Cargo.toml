@@ -3,6 +3,7 @@ members = [
     "crates/polars-structpath-derive",
     "crates/polars-structpath",
     "crates/polars-protobuf",
+    "crates/polars-lance",
     "examples/example_protobuf"
 ]
 
@@ -44,7 +45,19 @@ pyo3-polars = { version = "0.26.0", features = ["derive"] }
 # Serialization
 serde = { version = "1.0.228", features = ["derive"] }
 
+# Lance dependencies
+# NOTE: lance pinned to 0.39 due to chrono version conflict:
+# polars-arrow 0.53 requires chrono<=0.4.41, lance>=1.0 requires chrono>=0.4.42 (via datafusion).
+# Upgrade to lance 2.x once polars releases chrono 0.4.42 support (PR pola-rs/polars#26075).
+lance = { version = "0.39", default-features = false }
+arrow = { version = "56.1", default-features = false }
+arrow-schema = { version = "56.1", default-features = false }
+arrow-array = { version = "56.1", default-features = false }
+tokio = { version = "1", features = ["rt-multi-thread"] }
+futures = "0.3"
+
 # Dev dependencies
 trybuild = "1.0"
 rayon = "1.10"
+tempfile = "3"
 
