@@ -208,14 +208,14 @@ macro_rules! impl_struct_buffer {
                         .unwrap();
                     let (_, _, arrays, _) = struct_array.clone().into_data();
                     $(
-                        let [<field_ $field_name>]: Vec<$field_type> = <$field_type as $crate::FromArrow>::from_arrow(arrays[$index].clone());
+                        let mut [<iter_ $field_name>] = <$field_type as $crate::FromArrow>::from_arrow(arrays[$index].clone()).into_iter();
                     )*
                     let len = struct_array.len();
                     (0..len)
-                        .map(|i| {
+                        .map(|_| {
                             $struct_type {
                                 $(
-                                    $field_name: [<field_ $field_name>][i].clone(),
+                                    $field_name: [<iter_ $field_name>].next().unwrap(),
                                 )*
                             }
                         })
@@ -229,30 +229,23 @@ macro_rules! impl_struct_buffer {
                         .unwrap();
                     let (_, _, arrays, validity) = struct_array.clone().into_data();
                     $(
-                        let [<field_ $field_name>]: Vec<$field_type> = <$field_type as $crate::FromArrow>::from_arrow(arrays[$index].clone());
+                        let mut [<iter_ $field_name>] = <$field_type as $crate::FromArrow>::from_arrow(arrays[$index].clone()).into_iter();
                     )*
                     let len = struct_array.len();
                     (0..len)
                         .map(|i| {
-                            match validity {
-                                Some(ref validity) => {
-                                    if validity.get(i).unwrap() {
-                                        Some($struct_type {
-                                            $(
-                                                $field_name: [<field_ $field_name>][i].clone(),
-                                            )*
-                                        })
-                                    } else {
-                                        None
-                                    }
-                                }
-                                None => {
-                                    Some($struct_type {
-                                        $(
-                                            $field_name: [<field_ $field_name>][i].clone(),
-                                        )*
-                                    })
-                                }
+                            $(
+                                let [<val_ $field_name>] = [<iter_ $field_name>].next().unwrap();
+                            )*
+                            let is_valid = validity.as_ref().map_or(true, |v| v.get(i).unwrap());
+                            if is_valid {
+                                Some($struct_type {
+                                    $(
+                                        $field_name: [<val_ $field_name>],
+                                    )*
+                                })
+                            } else {
+                                None
                             }
                         })
                         .collect()

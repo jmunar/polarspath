@@ -54,20 +54,26 @@ Generates Rust code from .proto files:
 ## Common Commands
 
 ```bash
-# Full build and test
-make all-rust              # Format, clippy, test, examples
+# Main targets
+make all                         # Format, check, test, examples (no build)
+make all-python                  # Python format and check only (no build)
+make all-rust                    # Rust format, check, test, examples
 
-# Individual steps
-make format-rust           # cargo fmt
-make check-rust            # cargo clippy -- -D warnings
-make test-rust             # cargo test --workspace
-make examples-rust         # Run all examples
+# Build targets (RELEASE required: 0=debug, 1=release)
+make build-python RELEASE=0      # Build Python package in debug mode
+make build-python RELEASE=1      # Build Python package in release mode
 
-# Python package
-make build-python          # Recreate and build example_protobuf
+# Test and check
+make test-rust                   # cargo test --workspace
+make check-rust                  # cargo clippy -- -D warnings
+make examples-rust               # Run all examples
+
+# Format
+make format-rust                 # cargo fmt
+make format-python               # ruff format
 
 # Clean
-make clean                 # Clean all artifacts
+make clean                       # Clean all artifacts
 ```
 
 ## Testing
