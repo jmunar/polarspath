@@ -3,8 +3,10 @@
 //! This module provides `encode_expr` and `decode_expr` functions that work with
 //! Polars' lazy API, enabling streaming-compatible protobuf serialization.
 //!
-//! The encoding and decoding operations are parallelized using Polars' internal
-//! thread pool (POOL) for better performance on multi-core systems.
+//! Encoding and decoding operations use chunk-level parallelization via Polars'
+//! internal thread pool (POOL). The input Series is split into chunks that are
+//! processed independently in parallel, enabling efficient multi-core utilization
+//! for both Arrow conversions and protobuf serialization.
 
 use crate::ArrowMessage;
 
@@ -17,7 +19,7 @@ use polars_lazy::prelude::*;
 use polars_structpath::{ArrowBuffer, FromArrow, IntoArrow};
 use rayon::prelude::*;
 
-/// Decodes a ListArray of encoded protobuf messages back into Arrow structs.
+/// Decodes a ListArray of encoded protobuf messages back into Arrow structs (sequential).
 ///
 /// The input is a `ListArray<O>` where each element is a byte array (`Vec<u8>`)
 /// containing an encoded protobuf message. The output is an Arrow array containing
@@ -26,125 +28,110 @@ use rayon::prelude::*;
 /// This function is generic over the offset type `O` (i32 or i64) to handle both
 /// `ListArray<i32>` (standard Arrow) and `ListArray<i64>` (Polars internal).
 ///
-/// Decoding is parallelized using Polars' internal thread pool for better performance.
-fn decode_inner_list<O: Offset, T: ArrowMessage + IntoArrow + Send>(
+/// This function is sequential; chunk-level parallelism is handled by `decode_series`.
+fn decode_inner_list<O: Offset, T: ArrowMessage + IntoArrow>(
     array: &ListArray<O>,
 ) -> PolarsResult<Box<dyn Array>>
 where
     <T as IntoArrow>::Buffer: ArrowBuffer<Element = T>,
 {
-    // Extract bytes from each list element (this part must be sequential due to array iteration)
-    let byte_slices: Vec<Option<Vec<u8>>> = array
-        .iter()
-        .map(|opt_array| {
-            opt_array.map(|byte_array| {
+    let mut buffer = T::new_buffer(array.len());
+    for opt_array in array.iter() {
+        match opt_array {
+            Some(byte_array) => {
                 let primitive_array = byte_array
                     .as_any()
                     .downcast_ref::<polars_arrow::array::PrimitiveArray<u8>>()
                     .expect("Expected PrimitiveArray<u8>");
-                primitive_array.values().as_slice().to_vec()
-            })
-        })
-        .collect();
-
-    // Decode messages in parallel using Polars' thread pool
-    let decoded: Vec<Option<T>> = POOL.install(|| {
-        byte_slices
-            .into_par_iter()
-            .map(|opt_bytes| {
-                opt_bytes.map(|bytes| {
-                    T::decode(bytes.as_slice()).expect("Failed to decode protobuf message")
-                })
-            })
-            .collect()
-    });
-
-    // Build the output buffer (sequential, but fast)
-    let mut buffer = T::new_buffer(decoded.len());
-    for message in decoded {
-        match message {
-            Some(msg) => buffer.push(msg),
+                let bytes = primitive_array.values().as_slice();
+                buffer.push(T::decode(bytes).expect("Failed to decode protobuf message"));
+            }
             None => buffer.push_null(),
         }
     }
-
     Ok(Box::new(buffer.to_arrow()?))
 }
 
-/// Decodes a BinaryViewArray of encoded protobuf messages back into Arrow structs.
+/// Decodes a BinaryViewArray of encoded protobuf messages back into Arrow structs (sequential).
 ///
 /// The input is a `BinaryViewArray` where each element is a byte slice containing
 /// an encoded protobuf message. This is the format produced by Python's
 /// `SerializeToString()` when stored in a Polars Binary column.
 ///
-/// Decoding is parallelized using Polars' internal thread pool for better performance.
-fn decode_inner_binary<T: ArrowMessage + IntoArrow + Send>(
+/// This function is sequential; chunk-level parallelism is handled by `decode_series`.
+fn decode_inner_binary<T: ArrowMessage + IntoArrow>(
     array: &BinaryViewArray,
 ) -> PolarsResult<Box<dyn Array>>
 where
     <T as IntoArrow>::Buffer: ArrowBuffer<Element = T>,
 {
-    let byte_slices: Vec<Option<&[u8]>> = array.iter().collect();
-
-    let decoded: Vec<Option<T>> = POOL.install(|| {
-        byte_slices
-            .into_par_iter()
-            .map(|opt_bytes| {
-                opt_bytes.map(|bytes| T::decode(bytes).expect("Failed to decode protobuf message"))
-            })
-            .collect()
-    });
-
-    let mut buffer = T::new_buffer(decoded.len());
-    for message in decoded {
-        match message {
-            Some(msg) => buffer.push(msg),
+    let mut buffer = T::new_buffer(array.len());
+    for opt_bytes in array.iter() {
+        match opt_bytes {
+            Some(bytes) => {
+                buffer.push(T::decode(bytes).expect("Failed to decode protobuf message"));
+            }
             None => buffer.push_null(),
         }
     }
-
     Ok(Box::new(buffer.to_arrow()?))
 }
 
-/// Encodes Arrow struct arrays into protobuf bytes.
+/// Encodes Arrow struct arrays into protobuf bytes (sequential).
 ///
 /// Takes a boxed Arrow array containing struct data and encodes each element
 /// as a protobuf message, returning a `ListArray<i32>` of bytes.
 ///
-/// Encoding is parallelized using Polars' internal thread pool for better performance.
-fn encode_inner<T: ArrowMessage + FromArrow + IntoArrow + Send>(
+/// This function is sequential; chunk-level parallelism is handled by `encode_series`.
+fn encode_inner<T: ArrowMessage + FromArrow + IntoArrow>(
     array: Box<dyn Array>,
 ) -> PolarsResult<Box<dyn Array>>
 where
     <T as IntoArrow>::Buffer: ArrowBuffer<Element = T>,
 {
-    // Extract messages from array (sequential)
     let messages = T::from_arrow_opt(array);
-
-    // Encode messages to bytes in parallel using Polars' thread pool
-    let encoded: Vec<Option<Vec<u8>>> = POOL.install(|| {
-        messages
-            .into_par_iter()
-            .map(|opt_msg| opt_msg.map(|msg| msg.encode_to_vec()))
-            .collect()
-    });
-
-    // Build the output buffer (sequential, but fast)
-    let mut buffer = <Vec<u8>>::new_buffer(encoded.len());
-    for bytes in encoded {
-        match bytes {
-            Some(b) => buffer.push(b),
+    let mut buffer = <Vec<u8>>::new_buffer(messages.len());
+    for opt_msg in messages {
+        match opt_msg {
+            Some(msg) => buffer.push(msg.encode_to_vec()),
             None => buffer.push_null(),
         }
     }
-
     Ok(Box::new(buffer.to_arrow()?))
+}
+
+/// Minimum chunk size for parallel processing. Chunks smaller than this are not
+/// worth the overhead of parallel dispatch.
+const MIN_CHUNK_SIZE: usize = 10_000;
+
+/// Splits a Series into slices for parallel processing.
+///
+/// The number of slices is determined by the thread pool size, targeting ~2 slices
+/// per thread for work-stealing headroom, with a minimum chunk size to avoid overhead.
+fn split_series(series: &Series) -> Vec<Series> {
+    let len = series.len();
+    if len == 0 {
+        return vec![series.clone()];
+    }
+    let num_threads = POOL.current_num_threads();
+    let num_chunks = (num_threads * 2).min(len / MIN_CHUNK_SIZE).max(1);
+    let chunk_size = len.div_ceil(num_chunks);
+    (0..len)
+        .step_by(chunk_size)
+        .map(|offset| {
+            let size = chunk_size.min(len - offset);
+            series.slice(offset as i64, size)
+        })
+        .collect()
 }
 
 /// Encodes a Series of struct data into protobuf bytes.
 ///
 /// Takes a Series containing struct data and encodes each element as a protobuf
 /// message, returning a Series of `List(UInt8)` containing the encoded bytes.
+///
+/// The Series is split into chunks that are processed in parallel using Polars'
+/// internal thread pool, parallelizing both Arrow conversions and protobuf encoding.
 ///
 /// This is the core encode operation used by both `encode_expr` (lazy API) and
 /// generated pyo3-polars plugin functions.
@@ -167,18 +154,54 @@ where
     <T as IntoArrow>::Buffer: ArrowBuffer<Element = T>,
 {
     let name = series.name().clone();
-    let encoded_chunks: Vec<Box<dyn Array>> = series
-        .into_chunks()
-        .into_iter()
-        .map(encode_inner::<T>)
-        .collect::<PolarsResult<Vec<_>>>()?;
-    Series::from_arrow_chunks(name, encoded_chunks)
+    let slices = split_series(&series);
+    let encoded_chunks: PolarsResult<Vec<Box<dyn Array>>> = POOL.install(|| {
+        slices
+            .into_par_iter()
+            .map(|slice| {
+                // Each slice has exactly one chunk (produced by Series::slice)
+                let array = slice.into_chunks().into_iter().next().unwrap();
+                encode_inner::<T>(array)
+            })
+            .collect()
+    });
+    Series::from_arrow_chunks(name, encoded_chunks?)
+}
+
+/// Decodes a single Arrow array chunk by detecting its type and dispatching
+/// to the appropriate decoder.
+fn decode_chunk<T: ArrowMessage + IntoArrow>(chunk: Box<dyn Array>) -> PolarsResult<Box<dyn Array>>
+where
+    <T as IntoArrow>::Buffer: ArrowBuffer<Element = T>,
+{
+    // Try BinaryViewArray first (Python's SerializeToString produces Binary)
+    if let Some(binary_array) = chunk.as_any().downcast_ref::<BinaryViewArray>() {
+        return decode_inner_binary::<T>(binary_array);
+    }
+    // Try ListArray<i32> (what encode_inner produces)
+    if let Some(list_array) = chunk.as_any().downcast_ref::<ListArray<i32>>() {
+        return decode_inner_list::<i32, T>(list_array);
+    }
+    // Try ListArray<i64> (polars may use this internally)
+    if let Some(list_array) = chunk.as_any().downcast_ref::<ListArray<i64>>() {
+        return decode_inner_list::<i64, T>(list_array);
+    }
+    Err(PolarsError::ComputeError(
+        format!(
+            "Expected BinaryViewArray or ListArray, got {:?}",
+            chunk.dtype()
+        )
+        .into(),
+    ))
 }
 
 /// Decodes a Series of protobuf bytes back into struct data.
 ///
 /// Takes a Series containing encoded protobuf bytes (as `BinaryView`, `List(UInt8)`)
 /// and decodes each element back into struct data.
+///
+/// The Series is split into chunks that are processed in parallel using Polars'
+/// internal thread pool, parallelizing both protobuf decoding and Arrow conversions.
 ///
 /// This is the core decode operation used by both `decode_expr` (lazy API) and
 /// generated pyo3-polars plugin functions.
@@ -199,32 +222,18 @@ where
     <T as IntoArrow>::Buffer: ArrowBuffer<Element = T>,
 {
     let name = series.name().clone();
-    let decoded_chunks: Vec<Box<dyn Array>> = series
-        .into_chunks()
-        .into_iter()
-        .map(|chunk| {
-            // Try BinaryViewArray first (Python's SerializeToString produces Binary)
-            if let Some(binary_array) = chunk.as_any().downcast_ref::<BinaryViewArray>() {
-                return decode_inner_binary::<T>(binary_array);
-            }
-            // Try ListArray<i32> (what encode_inner produces)
-            if let Some(list_array) = chunk.as_any().downcast_ref::<ListArray<i32>>() {
-                return decode_inner_list::<i32, T>(list_array);
-            }
-            // Try ListArray<i64> (polars may use this internally)
-            if let Some(list_array) = chunk.as_any().downcast_ref::<ListArray<i64>>() {
-                return decode_inner_list::<i64, T>(list_array);
-            }
-            Err(PolarsError::ComputeError(
-                format!(
-                    "Expected BinaryViewArray or ListArray, got {:?}",
-                    chunk.dtype()
-                )
-                .into(),
-            ))
-        })
-        .collect::<PolarsResult<Vec<_>>>()?;
-    Series::from_arrow_chunks(name, decoded_chunks)
+    let slices = split_series(&series);
+    let decoded_chunks: PolarsResult<Vec<Box<dyn Array>>> = POOL.install(|| {
+        slices
+            .into_par_iter()
+            .map(|slice| {
+                // Each slice has exactly one chunk (produced by Series::slice)
+                let array = slice.into_chunks().into_iter().next().unwrap();
+                decode_chunk::<T>(array)
+            })
+            .collect()
+    });
+    Series::from_arrow_chunks(name, decoded_chunks?)
 }
 
 /// Creates a lazy expression that encodes struct data to protobuf bytes.

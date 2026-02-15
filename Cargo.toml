@@ -28,7 +28,7 @@ thiserror = "1.0.69"
 syn = { version = "2.0.111", features = ["full"] }
 
 # Polars dependencies
-polars-core = { version = "0.53.0", default-features = false }
+polars-core = { version = "0.53.0", default-features = false, features = ["algorithm_group_by"] }
 polars-arrow = { version = "0.53.0", default-features = false }
 polars-lazy = { version = "0.53.0", default-features = false }
 

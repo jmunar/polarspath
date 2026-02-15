@@ -1,18 +1,19 @@
 /*
 This example benchmarks protobuf encode/decode operations comparing:
-1. Sequential processing (one message at a time)
-2. Polars lazy API (uses Polars' internal thread pool)
-3. Parallel processing with Rayon (explicit multi-threading)
+1. Sequential processing (manual step-by-step, no parallelism)
+2. Polars lazy API (uses encode_expr/decode_expr)
+3. Direct API (uses encode_series/decode_series with chunk-level parallelism)
 
 All methods perform the same roundtrip:
   Series (struct) -> encode -> Series (bytes) -> decode -> Series (struct)
 */
 
-use polars_core::{prelude::*, POOL};
+use polars_core::prelude::*;
 use polars_lazy::prelude::*;
-use polars_protobuf::{decode_expr, encode_expr, messages_to_series, ArrowMessage};
+use polars_protobuf::{
+    decode_expr, decode_series, encode_expr, encode_series, messages_to_series, ArrowMessage,
+};
 use polars_structpath::{ArrowBuffer, FromArrow, IntoArrow};
-use rayon::prelude::*;
 
 pub mod benchmark {
     include!(concat!(env!("OUT_DIR"), "/examples/benchmark.rs"));
@@ -120,7 +121,7 @@ fn roundtrip_sequential(input_series: &Series) -> PolarsResult<Series> {
 
 /// Lazy API roundtrip: uses Polars' lazy API for encode/decode
 fn roundtrip_lazy_api(input_series: &Series) -> PolarsResult<Series> {
-    println!("=== Lazy API Roundtrip (Polars threading) ===");
+    println!("=== Lazy API Roundtrip ===");
     let mut total = 0.0;
 
     let struct_dtype = input_series.dtype().clone();
@@ -162,70 +163,38 @@ fn roundtrip_lazy_api(input_series: &Series) -> PolarsResult<Series> {
     Ok(output_series)
 }
 
-/// Parallel roundtrip using Polars' POOL: explicitly parallelizes encode/decode steps
-fn roundtrip_parallel(input_series: &Series) -> PolarsResult<Series> {
-    println!(
-        "=== Parallel Roundtrip (Polars POOL, {} threads) ===",
-        rayon::current_num_threads()
-    );
+/// Direct API roundtrip: uses encode_series/decode_series with chunk-level parallelism
+fn roundtrip_direct(input_series: &Series) -> PolarsResult<Series> {
+    println!("=== Direct API Roundtrip (encode_series/decode_series) ===");
     let mut total = 0.0;
 
-    // Step 1: Extract messages from input Series
+    // Step 1: Encode Series (struct -> bytes)
     let t0 = std::time::Instant::now();
-    let chunks = input_series.clone().into_chunks();
-    let messages = benchmark::SampleMessage::from_arrow(chunks[0].clone());
-    total += print_time("1. Extract messages (Series -> Vec<Message>)", t0);
+    let encoded_series = encode_series::<benchmark::SampleMessage>(input_series.clone())?;
+    total += print_time("1. encode_series (Series[struct] -> Series[bytes])", t0);
 
-    // Step 2: Encode each message to protobuf bytes (PARALLEL via POOL)
+    // Step 2: Decode Series (bytes -> struct)
     let t0 = std::time::Instant::now();
-    let encoded_bytes: Vec<Vec<u8>> =
-        POOL.install(|| messages.par_iter().map(|msg| msg.encode_to_vec()).collect());
-    total += print_time(
-        "2. Encode to bytes (Vec<Message> -> Vec<bytes>) [parallel]",
-        t0,
-    );
-
-    // Step 3: Convert bytes to Series
-    let t0 = std::time::Instant::now();
-    let bytes_series = {
-        let mut buffer = <Vec<u8>>::new_buffer(encoded_bytes.len());
-        for bytes in encoded_bytes.clone() {
-            buffer.push(bytes);
-        }
-        let array = buffer.to_arrow()?;
-        Series::from_arrow_chunks("encoded".into(), vec![Box::new(array)])?
-    };
-    total += print_time("3. Bytes to Series (Vec<bytes> -> Series)", t0);
-
-    // Step 4: Decode from bytes (PARALLEL via POOL)
-    let t0 = std::time::Instant::now();
-    let decoded_messages: Vec<benchmark::SampleMessage> = POOL.install(|| {
-        encoded_bytes
-            .par_iter()
-            .map(|bytes| benchmark::SampleMessage::decode(bytes.as_slice()).unwrap())
-            .collect()
-    });
-    drop(bytes_series); // Ensure we used it
-    total += print_time(
-        "4. Decode from bytes (Vec<bytes> -> Vec<Message>) [parallel]",
-        t0,
-    );
-
-    // Step 5: Convert messages back to Series
-    let t0 = std::time::Instant::now();
-    let output_series = messages_to_series(decoded_messages, input_series.name().as_str())?;
-    total += print_time("5. Messages to Series (Vec<Message> -> Series)", t0);
+    let output_series = decode_series::<benchmark::SampleMessage>(encoded_series)?;
+    total += print_time("2. decode_series (Series[bytes] -> Series[struct])", t0);
 
     print_total(total);
     Ok(output_series)
 }
 
 fn verify_roundtrip(input: &Series, output: &Series, method_name: &str) {
-    let input_chunks = input.clone().into_chunks();
-    let output_chunks = output.clone().into_chunks();
-
-    let input_messages = benchmark::SampleMessage::from_arrow(input_chunks[0].clone());
-    let output_messages = benchmark::SampleMessage::from_arrow(output_chunks[0].clone());
+    let input_messages: Vec<benchmark::SampleMessage> = input
+        .clone()
+        .into_chunks()
+        .into_iter()
+        .flat_map(benchmark::SampleMessage::from_arrow)
+        .collect();
+    let output_messages: Vec<benchmark::SampleMessage> = output
+        .clone()
+        .into_chunks()
+        .into_iter()
+        .flat_map(benchmark::SampleMessage::from_arrow)
+        .collect();
 
     let all_match = input_messages
         .iter()
@@ -263,17 +232,17 @@ fn main() -> PolarsResult<()> {
         input_series.dtype()
     );
 
-    // Run sequential roundtrip
+    // Run sequential roundtrip (baseline, no parallelism)
     let output_seq = roundtrip_sequential(&input_series)?;
     verify_roundtrip(&input_series, &output_seq, "Sequential");
 
-    // Run lazy API roundtrip
+    // Run lazy API roundtrip (Polars expressions)
     let output_lazy = roundtrip_lazy_api(&input_series)?;
     verify_roundtrip(&input_series, &output_lazy, "Lazy API");
 
-    // Run parallel roundtrip
-    let output_par = roundtrip_parallel(&input_series)?;
-    verify_roundtrip(&input_series, &output_par, "Parallel");
+    // Run direct API roundtrip (encode_series/decode_series)
+    let output_direct = roundtrip_direct(&input_series)?;
+    verify_roundtrip(&input_series, &output_direct, "Direct API");
 
     Ok(())
 }
