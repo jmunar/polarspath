@@ -16,7 +16,7 @@ use polars_core::prelude::*;
 /// # Example
 ///
 /// ```rust
-/// use polars_structpath_types::{ArrowBuffer, IntoArrow};
+/// use polars_structpath::{ArrowBuffer, IntoArrow};
 ///
 /// let mut buffer = i32::new_buffer(3);
 /// buffer.push(1);
@@ -65,7 +65,7 @@ pub trait ArrowBuffer {
 /// # Example
 ///
 /// ```rust
-/// use polars_structpath_types::{IntoArrow, ArrowBuffer};
+/// use polars_structpath::{IntoArrow, ArrowBuffer};
 ///
 /// let mut buffer = String::new_buffer(2);
 /// buffer.push("hello");
@@ -94,7 +94,7 @@ pub trait IntoArrow: Sized {
 /// # Example
 ///
 /// ```rust
-/// use polars_structpath_types::{IntoArrow, FromArrow, ArrowBuffer};
+/// use polars_structpath::{IntoArrow, FromArrow, ArrowBuffer};
 ///
 /// // Create and populate a buffer
 /// let mut buffer = i32::new_buffer(3);

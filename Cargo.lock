@@ -1781,7 +1781,6 @@ dependencies = [
  "polars-core",
  "polars-lazy",
  "polars-structpath",
- "polars-structpath-types",
  "prost",
  "prost-build",
  "prost-types",
@@ -1862,9 +1861,10 @@ dependencies = [
 name = "polars-structpath"
 version = "0.3.0"
 dependencies = [
+ "paste",
+ "polars-arrow",
  "polars-core",
  "polars-structpath-derive",
- "polars-structpath-types",
  "trybuild",
 ]
 
@@ -1872,22 +1872,9 @@ dependencies = [
 name = "polars-structpath-derive"
 version = "0.3.0"
 dependencies = [
- "polars-structpath-types",
  "proc-macro2",
  "quote",
  "syn",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "polars-structpath-types"
-version = "0.3.0"
-dependencies = [
- "paste",
- "polars-arrow",
- "polars-core",
- "proc-macro2",
- "quote",
  "thiserror 1.0.69",
 ]
 

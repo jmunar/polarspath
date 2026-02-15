@@ -288,7 +288,7 @@ macro_rules! arrow_idx_to_rust_idx {
 /// # Usage
 ///
 /// ```rust
-/// use polars_structpath_types::impl_enum_buffer;
+/// use polars_structpath::impl_enum_buffer;
 ///
 /// pub enum Status {
 ///     Active = 1,

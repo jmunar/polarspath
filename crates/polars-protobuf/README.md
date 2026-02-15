@@ -184,5 +184,4 @@ Extracting f_submessage_repeated
 ## See Also
 
 - [polars-structpath](../polars-structpath/README.md) - Core polars-structpath library
-- [polars-structpath-types](../polars-structpath-types/README.md) - Core types and traits
 - [example_protobuf](../../examples/example_protobuf/) - Complete working example

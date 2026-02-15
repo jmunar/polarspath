@@ -21,7 +21,7 @@ macro_rules! impl_struct_field_buffer_type {
 /// # Usage
 ///
 /// ```rust
-/// use polars_structpath_types::impl_struct_buffer;
+/// use polars_structpath::impl_struct_buffer;
 ///
 /// pub struct Person {
 ///     name: String,
@@ -57,7 +57,7 @@ macro_rules! impl_struct_field_buffer_type {
 /// # Example with Nested Types
 ///
 /// ```rust
-/// use polars_structpath_types::impl_struct_buffer;
+/// use polars_structpath::impl_struct_buffer;
 ///
 /// #[derive(Debug, Clone, PartialEq)]
 /// pub struct Address {

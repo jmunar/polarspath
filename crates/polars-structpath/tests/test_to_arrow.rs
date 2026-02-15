@@ -2,7 +2,7 @@ mod sample;
 use polars_arrow::array::{Array, PrimitiveArray};
 use polars_arrow::scalar::{BooleanScalar, ListScalar, PrimitiveScalar, Utf8Scalar};
 use polars_core::prelude::Series;
-use polars_structpath_types::{ArrowBuffer, FromArrow, IntoArrow};
+use polars_structpath::{ArrowBuffer, FromArrow, IntoArrow};
 use sample::{sample_struct, sample_struct_null, SampleStruct};
 
 #[test]
