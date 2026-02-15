@@ -10,28 +10,81 @@ NC='\033[0m' # No Color
 
 # Function to display usage
 show_usage() {
-    cat <<EOF
-Usage: $0 [OPTIONS]
+    echo -e "$(cat <<EOF
+${GREEN}polars-protobuf Project Generator${NC}
 
-Options:
-    -n, --project-name NAME     Project name (required, e.g., example_protobuf)
-    -p, --sample-proto          Create a sample protobuf message (optional)
-    -t, --sample-tests          Create sample tests (optional)
-    -w, --use-workspace         Use workspace dependencies in Cargo.toml (optional)
-    -h, --help                  Show this help message
+Creates a complete Rust + Python project for working with Protocol Buffer messages
+using polars-structpath. The generated project includes:
 
-Examples:
-    $0 --project-name my_project
-    $0 -n my_project --sample-proto --sample-tests
-    $0 -n my_project -b /path/to/projects --use-workspace
+${YELLOW}What This Script Does:${NC}
+  1. Creates a Rust library that auto-generates type-safe structs from .proto files
+  2. Generates Arrow/Polars integration via polars-structpath derive macros
+  3. Sets up Python bindings with maturin for cross-language interop
+  4. Configures the build system to regenerate code on .proto changes
+
+${YELLOW}Project Structure Created:${NC}
+  project_name/
+  ├── Cargo.toml              # Rust dependencies (polars-protobuf, prost, pyo3)
+  ├── build.rs                # Build script that processes .proto files
+  ├── src/lib.rs              # Main Rust library (includes generated code)
+  ├── protobuf/               # Directory for your .proto files
+  │   └── project_name/       # Package-specific proto directory
+  │       └── *.proto         # Your protobuf schemas here
+  ├── project_name/           # Python package directory
+  │   ├── __init__.py         # Auto-generated Python module init
+  │   └── pybindings/         # Auto-generated protobuf Python bindings
+  ├── pyproject.toml          # Python package config (maturin build)
+  └── Makefile                # Build commands for Python package
+
+${YELLOW}Generated Code:${NC}
+  During 'cargo build', the build.rs script generates:
+  - Rust structs with #[derive(StructPath)] for each protobuf message
+  - Rust enums with #[derive(EnumPath)] for each protobuf enum
+  - ArrowMessage trait implementations for encode/decode
+  - Python bindings via maturin/pyo3
+  - Python __init__.py with type stubs and utilities
+
+${YELLOW}Usage:${NC}
+  $0 [OPTIONS]
+
+${YELLOW}Options:${NC}
+  -n, --project-name NAME     Project name (required, e.g., example_protobuf)
+                              Must be a valid Rust crate name (lowercase, underscores)
+  -p, --sample-proto          Create sample person.proto with examples of:
+                              - Basic types (string, int, bool)
+                              - Optional fields
+                              - Nested messages
+                              - Repeated fields
+                              - Enums
+  -h, --help                  Show this help message
+
+${YELLOW}Examples:${NC}
+  # Create minimal project (add your own .proto files)
+  $0 --project-name my_messages
+
+  # Create project with sample person.proto for learning
+  $0 -n my_messages --sample-proto
+
+${YELLOW}Next Steps After Creation:${NC}
+  1. cd project_name
+  2. Add your .proto files to protobuf/project_name/ (or use sample)
+  3. cargo build                  # Generates Rust code
+  4. make build-python            # Builds Python package
+  5. cargo test                   # Run Rust tests
+  6. Check generated code in target/debug/build/.../out/
+
+${YELLOW}Integration Examples:${NC}
+  Rust: use project_name::package_name::MyMessage;
+  Python: from project_name import encode_MyMessage, decode_MyMessage
+
+For more information, see: https://github.com/your-repo/polars-protobuf
 EOF
+)"
 }
 
 # Initialize variables with defaults
-USE_WORKSPACE=false
 PROJECT_NAME=""
 CREATE_SAMPLE_PROTO="n"
-CREATE_SAMPLE_TESTS="n"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -42,14 +95,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         -p|--sample-proto)
             CREATE_SAMPLE_PROTO="y"
-            shift
-            ;;
-        -t|--sample-tests)
-            CREATE_SAMPLE_TESTS="y"
-            shift
-            ;;
-        -w|--use-workspace)
-            USE_WORKSPACE=true
             shift
             ;;
         -h|--help)
@@ -83,59 +128,33 @@ echo -e "${GREEN}polars-protobuf Project Generator${NC}"
 echo "=================================="
 echo ""
 
-# Check if project already exists
-if [ -d "$PROJECT_NAME" ]; then
-    echo -e "${RED}Error: Directory '$PROJECT_NAME' already exists${NC}"
-    exit 1
-fi
-
 echo ""
-echo -e "${GREEN}Creating project: ${PROJECT_NAME}${NC}"
+echo -e "${GREEN}Setting up project: ${PROJECT_NAME}${NC}"
 echo ""
 
 # Convert project name to snake_case for package name (already should be)
 PACKAGE_NAME=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | tr '-' '_')
 PYTHON_PACKAGE_NAME="$PACKAGE_NAME"
 
-# Create cargo project
-echo "Creating cargo project..."
-cargo new --lib "$PROJECT_NAME"
-cd "$PROJECT_NAME"
+# Create or enter project directory
+if [ -d "$PROJECT_NAME" ]; then
+    echo -e "${YELLOW}Directory '$PROJECT_NAME' already exists, using existing directory${NC}"
+    cd "$PROJECT_NAME"
+else
+    echo "Creating cargo project..."
+    cargo new --lib "$PROJECT_NAME"
+    cd "$PROJECT_NAME"
+fi
 
 # Create protobuf directory structure
 echo "Creating protobuf directory structure..."
 mkdir -p "protobuf/$PACKAGE_NAME"
 
 # Create Cargo.toml
-echo "Configuring Cargo.toml..."
-if [ "$USE_WORKSPACE" = true ]; then
-    cat > Cargo.toml <<EOF
-[package]
-name = "$PROJECT_NAME"
-edition.workspace = true
-description = "Protocol Buffer messages with polars-structpath support"
-license = "MIT OR Apache-2.0"
-
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[features]
-default = []
-extension-module = ["pyo3", "pyo3/extension-module"]
-
-[dependencies]
-prost = { workspace = true }
-polars-structpath = { workspace = true, features = ["derive"] }
-polars-protobuf = { workspace = true }
-pyo3 = { workspace = true, optional = true }
-pyo3-polars = { workspace = true }
-
-[build-dependencies]
-polars-protobuf = { workspace = true, features = ["build"] }
-prost-build = { workspace = true }
-prost-types = { workspace = true }
-EOF
+if [ -f "Cargo.toml" ]; then
+    echo -e "${YELLOW}Cargo.toml already exists, skipping${NC}"
 else
+    echo "Configuring Cargo.toml..."
     cat > Cargo.toml <<EOF
 [package]
 name = "$PROJECT_NAME"
@@ -165,56 +184,33 @@ EOF
 fi
 
 # Create build.rs
-echo "Creating build.rs..."
-cat > build.rs <<'BUILDRS'
-use std::fs;
+if [ -f "build.rs" ]; then
+    echo -e "${YELLOW}build.rs already exists, skipping${NC}"
+else
+    echo "Creating build.rs..."
+    cat > build.rs <<EOF
 use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = PathBuf::from(std::env::var("OUT_DIR")?);
-BUILDRS
-cat >> build.rs <<EOF
     let proto_dir = "protobuf/$PACKAGE_NAME";
-EOF
-cat >> build.rs <<'BUILDRS'
 
-    // Discover all .proto files
-    let proto_files: Vec<String> = fs::read_dir(proto_dir)?
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path.extension().is_some_and(|ext| ext == "proto") {
-                Some(path.to_string_lossy().to_string())
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    if proto_files.is_empty() {
-        println!("cargo:warning=No .proto files found in {}", proto_dir);
-        return Ok(());
-    }
-
-    let protos: Vec<&str> = proto_files.iter().map(|s| s.as_str()).collect();
-    let includes: &[&str] = &[proto_dir];
-    let build_config = polars_protobuf::build::BuildConfig::new(out_dir, &protos, includes);
-BUILDRS
-cat >> build.rs <<EOF
-    build_config
+    polars_protobuf::build::BuildConfig::from_proto_dir(out_dir, proto_dir)?
         .with_python(PathBuf::from("$PACKAGE_NAME"), "_${PACKAGE_NAME}_rust")
         .build()?;
-EOF
-cat >> build.rs <<'BUILDRS'
 
     println!("cargo:rerun-if-changed={}", proto_dir);
     Ok(())
 }
-BUILDRS
+EOF
+fi
 
 # Create src/lib.rs
-echo "Creating src/lib.rs..."
-cat > src/lib.rs <<EOF
+if [ -f "src/lib.rs" ]; then
+    echo -e "${YELLOW}src/lib.rs already exists, skipping${NC}"
+else
+    echo "Creating src/lib.rs..."
+    cat > src/lib.rs <<EOF
 pub mod $PACKAGE_NAME {
     include!(concat!(env!("OUT_DIR"), "/$PACKAGE_NAME.rs"));
 }
@@ -229,6 +225,7 @@ fn _${PACKAGE_NAME}_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 EOF
+fi
 
 # Create sample protobuf message if requested
 if [[ "$CREATE_SAMPLE_PROTO" =~ ^[Yy]$ ]]; then
@@ -265,147 +262,29 @@ message Person {
 EOF
 fi
 
-# Create sample tests if requested
-if [[ "$CREATE_SAMPLE_TESTS" =~ ^[Yy]$ ]]; then
-    echo "Creating sample tests..."
-    mkdir -p tests
-
-    if [[ "$CREATE_SAMPLE_PROTO" =~ ^[Yy]$ ]]; then
-        cat > tests/test_person.rs <<EOF
-use ${PROJECT_NAME}::$PACKAGE_NAME::{Address, Person, Status};
-use polars_structpath::{ArrowBuffer, IntoArrow};
-
-#[test]
-fn test_person_to_arrow() {
-    // Create a person
-    let person = Person {
-        name: "Alice".to_string(),
-        age: 30,
-        email: Some("alice@example.com".to_string()),
-        is_active: true,
-        address: Some(Address {
-            street: "123 Main St".to_string(),
-            city: "Springfield".to_string(),
-            zip_code: 12345,
-        }),
-        tags: vec!["premium".to_string(), "verified".to_string()],
-        status: Status::ACTIVE,
-        previous_addresses: vec![],
-    };
-
-    // Create a buffer and push the person
-    let mut buffer = Person::new_buffer(1);
-    buffer.push(person.clone());
-
-    // Convert to Arrow array
-    let arrow_array = buffer.to_arrow().expect("Failed to convert to Arrow");
-
-    // Verify the array has 1 element
-    assert_eq!(arrow_array.len(), 1);
-}
-
-#[test]
-fn test_person_roundtrip() {
-    use polars_structpath::FromArrow;
-
-    // Create persons
-    let persons = vec![
-        Person {
-            name: "Alice".to_string(),
-            age: 30,
-            email: Some("alice@example.com".to_string()),
-            is_active: true,
-            address: Some(Address {
-                street: "123 Main St".to_string(),
-                city: "Springfield".to_string(),
-                zip_code: 12345,
-            }),
-            tags: vec!["premium".to_string()],
-            status: Status::ACTIVE,
-            previous_addresses: vec![],
-        },
-        Person {
-            name: "Bob".to_string(),
-            age: 25,
-            email: None,
-            is_active: false,
-            address: None,
-            tags: vec![],
-            status: Status::INACTIVE,
-            previous_addresses: vec![Address {
-                street: "Old St".to_string(),
-                city: "Oldtown".to_string(),
-                zip_code: 11111,
-            }],
-        },
-    ];
-
-    // Convert to Arrow
-    let mut buffer = Person::new_buffer(persons.len());
-    for person in &persons {
-        buffer.push(person.clone());
-    }
-    let arrow_array = buffer.to_arrow().expect("Failed to convert to Arrow");
-
-    // Convert back from Arrow
-    let recovered: Vec<Person> = Person::from_arrow(Box::new(arrow_array));
-
-    // Verify roundtrip
-    assert_eq!(persons.len(), recovered.len());
-    assert_eq!(persons[0].name, recovered[0].name);
-    assert_eq!(persons[0].age, recovered[0].age);
-    assert_eq!(persons[1].name, recovered[1].name);
-    assert_eq!(persons[1].email, recovered[1].email);
-}
-
-#[test]
-fn test_enum_status() {
-    // Test that enum values are preserved
-    let statuses = vec![Status::UNKNOWN, Status::ACTIVE, Status::INACTIVE];
-
-    let mut buffer = Status::new_buffer(statuses.len());
-    for status in &statuses {
-        buffer.push(status.clone());
-    }
-    let arrow_array = buffer.to_arrow().expect("Failed to convert to Arrow");
-
-    // Verify the array has correct length
-    assert_eq!(arrow_array.len(), 3);
-}
-EOF
-    else
-        cat > tests/test_basic.rs <<EOF
-use ${PROJECT_NAME}::$PACKAGE_NAME;
-
-#[test]
-fn test_module_loaded() {
-    // Basic test to ensure the module is loaded correctly
-    // Add your own tests here once you create protobuf messages
-    assert!(true);
-}
-EOF
-    fi
-fi
-
-# Create Python package directory
+# Create Python package directory (always overwrite)
 echo "Creating Python package structure..."
 mkdir -p "$PYTHON_PACKAGE_NAME"
 
 # Create __init__.py placeholder for the Python package
 # This will be overwritten by build.rs during cargo build
+echo "Creating $PYTHON_PACKAGE_NAME/__init__.py..."
 cat > "$PYTHON_PACKAGE_NAME/__init__.py" <<EOF
 # Auto-generated Python package initialization
 # This file is regenerated during cargo build
 EOF
 
 # Create pyproject.toml
-echo "Creating pyproject.toml..."
-cat > pyproject.toml <<EOF
+if [ -f "pyproject.toml" ]; then
+    echo -e "${YELLOW}pyproject.toml already exists, skipping${NC}"
+else
+    echo "Creating pyproject.toml..."
+    cat > pyproject.toml <<EOF
 [project]
 name = "$PYTHON_PACKAGE_NAME"
 version = "0.1.0"
 description = "Python package for $PYTHON_PACKAGE_NAME"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -413,7 +292,7 @@ classifiers = [
 ]
 dependencies = [
     "polars",
-    "protobuf==5.29.3",
+    "protobuf",
     "pyarrow",
 ]
 
@@ -423,7 +302,7 @@ dev = [
     "maturin",
     "notebook",
     "pytest",
-    "ruff>=0.12.7",
+    "ruff",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -445,34 +324,44 @@ bindings = "pyo3"
 features = ["extension-module"]
 module-name = "$PYTHON_PACKAGE_NAME._${PYTHON_PACKAGE_NAME}_rust"
 EOF
+fi
 
 # Create Makefile
-echo "Creating Makefile..."
-cat > Makefile <<EOF
+if [ -f "Makefile" ]; then
+    echo -e "${YELLOW}Makefile already exists, skipping${NC}"
+else
+    echo "Creating Makefile..."
+    cat > Makefile <<'MAKEEOF'
 .PHONY: build clean help
+
+RELEASE ?=
 
 help:
 	@echo "Available commands:"
 	@echo "  make install-uv              - Download and install uv"
-	@echo "  make build                   - Build both Python bindings and Python package"
+	@echo "  make build                   - Build both Python bindings and Python package (debug)"
+	@echo "  make build RELEASE=1         - Build both Python bindings and Python package (release)"
 	@echo "  make build-python            - Build Python package"
 	@echo "  make build-python-bindings   - Add protobuf Python bindings to Python package"
 	@echo "  make clean                   - Clean build artifacts"
 
 install-uv:
-	@if command -v uv >/dev/null 2>&1; then \\
-		echo "uv is already installed"; \\
-	else \\
-		echo "Installing uv..."; \\
-		curl -LsSf https://astral.sh/uv/install.sh | sh; \\
+	@if command -v uv >/dev/null 2>&1; then \
+		echo "uv is already installed"; \
+	else \
+		echo "Installing uv..."; \
+		curl -LsSf https://astral.sh/uv/install.sh | sh; \
 	fi
 
 build-python:
 	@echo "Building Python environment and package..."
 	@uv sync
+	@uv run maturin develop --uv $(if $(RELEASE),--release,)
 
 build-python-bindings:
 	@echo "Building protobuf Python bindings..."
+MAKEEOF
+    cat >> Makefile <<EOF
 	@mkdir -p $PYTHON_PACKAGE_NAME/pybindings && \\
 		protoc \\
 			-I=protobuf/$PACKAGE_NAME \\
@@ -489,9 +378,10 @@ clean:
 	@rm -rf $PYTHON_PACKAGE_NAME/__pycache__
 	@rm -rf $PYTHON_PACKAGE_NAME/*/__pycache__
 EOF
+fi
 
 echo ""
-echo -e "${GREEN}Project created successfully!${NC}"
+echo -e "${GREEN}Project setup completed successfully!${NC}"
 echo ""
 echo "Next steps:"
 echo "  1. Add your .proto files to protobuf/$PACKAGE_NAME/"

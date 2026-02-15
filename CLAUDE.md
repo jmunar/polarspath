@@ -140,13 +140,11 @@ message Person { message Address { ... } }
 
 ```bash
 # Create project with sample proto and tests
-./create_polars_protobuf_project.sh -n my_project -p -t -w
+./create_polars_protobuf_project.sh -n my_project -p
 
 # Options:
 # -n, --project-name NAME    Required: project name
 # -p, --sample-proto         Create sample person.proto
-# -t, --sample-tests         Create sample tests
-# -w, --use-workspace        Use workspace dependencies
 ```
 
 ## Common Issues & Solutions

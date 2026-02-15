@@ -9,7 +9,7 @@
 use crate::ArrowMessage;
 
 use polars_arrow::{
-    array::{Array, ListArray},
+    array::{Array, BinaryViewArray, ListArray},
     offset::Offset,
 };
 use polars_core::{prelude::*, POOL};
@@ -27,7 +27,7 @@ use rayon::prelude::*;
 /// `ListArray<i32>` (standard Arrow) and `ListArray<i64>` (Polars internal).
 ///
 /// Decoding is parallelized using Polars' internal thread pool for better performance.
-fn decode_inner<O: Offset, T: ArrowMessage + IntoArrow + Send>(
+fn decode_inner_list<O: Offset, T: ArrowMessage + IntoArrow + Send>(
     array: &ListArray<O>,
 ) -> PolarsResult<Box<dyn Array>>
 where
@@ -60,6 +60,41 @@ where
     });
 
     // Build the output buffer (sequential, but fast)
+    let mut buffer = T::new_buffer(decoded.len());
+    for message in decoded {
+        match message {
+            Some(msg) => buffer.push(msg),
+            None => buffer.push_null(),
+        }
+    }
+
+    Ok(Box::new(buffer.to_arrow()?))
+}
+
+/// Decodes a BinaryViewArray of encoded protobuf messages back into Arrow structs.
+///
+/// The input is a `BinaryViewArray` where each element is a byte slice containing
+/// an encoded protobuf message. This is the format produced by Python's
+/// `SerializeToString()` when stored in a Polars Binary column.
+///
+/// Decoding is parallelized using Polars' internal thread pool for better performance.
+fn decode_inner_binary<T: ArrowMessage + IntoArrow + Send>(
+    array: &BinaryViewArray,
+) -> PolarsResult<Box<dyn Array>>
+where
+    <T as IntoArrow>::Buffer: ArrowBuffer<Element = T>,
+{
+    let byte_slices: Vec<Option<&[u8]>> = array.iter().collect();
+
+    let decoded: Vec<Option<T>> = POOL.install(|| {
+        byte_slices
+            .into_par_iter()
+            .map(|opt_bytes| {
+                opt_bytes.map(|bytes| T::decode(bytes).expect("Failed to decode protobuf message"))
+            })
+            .collect()
+    });
+
     let mut buffer = T::new_buffer(decoded.len());
     for message in decoded {
         match message {
@@ -106,6 +141,92 @@ where
     Ok(Box::new(buffer.to_arrow()?))
 }
 
+/// Encodes a Series of struct data into protobuf bytes.
+///
+/// Takes a Series containing struct data and encodes each element as a protobuf
+/// message, returning a Series of `List(UInt8)` containing the encoded bytes.
+///
+/// This is the core encode operation used by both `encode_expr` (lazy API) and
+/// generated pyo3-polars plugin functions.
+///
+/// # Type Parameters
+///
+/// * `T` - The message type implementing `ArrowMessage`, `FromArrow`, and `IntoArrow`
+///
+/// # Arguments
+///
+/// * `series` - The input Series containing struct data to encode
+///
+/// # Returns
+///
+/// A `PolarsResult<Series>` containing `List(UInt8)` with encoded protobuf bytes
+pub fn encode_series<T: ArrowMessage + FromArrow + IntoArrow + Send>(
+    series: Series,
+) -> PolarsResult<Series>
+where
+    <T as IntoArrow>::Buffer: ArrowBuffer<Element = T>,
+{
+    let name = series.name().clone();
+    let encoded_chunks: Vec<Box<dyn Array>> = series
+        .into_chunks()
+        .into_iter()
+        .map(encode_inner::<T>)
+        .collect::<PolarsResult<Vec<_>>>()?;
+    Series::from_arrow_chunks(name, encoded_chunks)
+}
+
+/// Decodes a Series of protobuf bytes back into struct data.
+///
+/// Takes a Series containing encoded protobuf bytes (as `BinaryView`, `List(UInt8)`)
+/// and decodes each element back into struct data.
+///
+/// This is the core decode operation used by both `decode_expr` (lazy API) and
+/// generated pyo3-polars plugin functions.
+///
+/// # Type Parameters
+///
+/// * `T` - The message type implementing `ArrowMessage` and `IntoArrow`
+///
+/// # Arguments
+///
+/// * `series` - The input Series containing encoded protobuf bytes
+///
+/// # Returns
+///
+/// A `PolarsResult<Series>` containing struct data with decoded protobuf messages
+pub fn decode_series<T: ArrowMessage + IntoArrow + Send>(series: Series) -> PolarsResult<Series>
+where
+    <T as IntoArrow>::Buffer: ArrowBuffer<Element = T>,
+{
+    let name = series.name().clone();
+    let decoded_chunks: Vec<Box<dyn Array>> = series
+        .into_chunks()
+        .into_iter()
+        .map(|chunk| {
+            // Try BinaryViewArray first (Python's SerializeToString produces Binary)
+            if let Some(binary_array) = chunk.as_any().downcast_ref::<BinaryViewArray>() {
+                return decode_inner_binary::<T>(binary_array);
+            }
+            // Try ListArray<i32> (what encode_inner produces)
+            if let Some(list_array) = chunk.as_any().downcast_ref::<ListArray<i32>>() {
+                return decode_inner_list::<i32, T>(list_array);
+            }
+            // Try ListArray<i64> (polars may use this internally)
+            if let Some(list_array) = chunk.as_any().downcast_ref::<ListArray<i64>>() {
+                return decode_inner_list::<i64, T>(list_array);
+            }
+            Err(PolarsError::ComputeError(
+                format!(
+                    "Expected BinaryViewArray or ListArray, got {:?}",
+                    chunk.dtype()
+                )
+                .into(),
+            ))
+        })
+        .collect::<PolarsResult<Vec<_>>>()?;
+    Series::from_arrow_chunks(name, decoded_chunks)
+}
+
 /// Creates a lazy expression that encodes struct data to protobuf bytes.
 ///
 /// This function wraps an input expression and returns a new expression that,
@@ -141,16 +262,7 @@ where
     expr_in.map(
         |column| {
             let series = column.as_materialized_series().clone();
-            let name = series.name().clone();
-
-            let encoded_chunks: Vec<Box<dyn Array>> = series
-                .into_chunks()
-                .into_iter()
-                .map(|chunk| encode_inner::<T>(chunk))
-                .collect::<PolarsResult<Vec<_>>>()?;
-
-            let encoded_series = Series::from_arrow_chunks(name, encoded_chunks)?;
-            Ok(encoded_series.into_column())
+            Ok(encode_series::<T>(series)?.into_column())
         },
         |_, field| {
             let list_dtype = DataType::List(Box::new(DataType::UInt8));
@@ -198,28 +310,7 @@ where
     expr_in.map(
         |column| {
             let series = column.as_materialized_series().clone();
-            let name = series.name().clone();
-
-            let decoded_chunks: Vec<Box<dyn Array>> = series
-                .into_chunks()
-                .into_iter()
-                .map(|chunk| {
-                    // Try ListArray<i32> first (what encode_inner produces)
-                    if let Some(list_array) = chunk.as_any().downcast_ref::<ListArray<i32>>() {
-                        return decode_inner::<i32, T>(list_array);
-                    }
-                    // Try ListArray<i64> (polars may use this internally)
-                    if let Some(list_array) = chunk.as_any().downcast_ref::<ListArray<i64>>() {
-                        return decode_inner::<i64, T>(list_array);
-                    }
-                    Err(PolarsError::ComputeError(
-                        format!("Expected ListArray, got {:?}", chunk.dtype()).into(),
-                    ))
-                })
-                .collect::<PolarsResult<Vec<_>>>()?;
-
-            let decoded_series = Series::from_arrow_chunks(name, decoded_chunks)?;
-            Ok(decoded_series.into_column())
+            Ok(decode_series::<T>(series)?.into_column())
         },
         move |_, field| Ok(Field::new(field.name().clone(), output_dtype.clone())),
     )

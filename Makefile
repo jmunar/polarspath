@@ -13,10 +13,9 @@ build-rust:
 
 build-python:
 	@echo "Re-creating example_protobuf..."
-	@rm -rf examples/example_protobuf
-	@cd examples && ../crates/polars-protobuf/create_polars_protobuf_project.sh --project-name example_protobuf -p -t -w
+	@cd examples && ../crates/polars-protobuf/create_polars_protobuf_project.sh --project-name example_protobuf --sample-proto
 	@echo "Building Python example_protobuf package..."
-	@cd examples/example_protobuf && make build
+	@cd examples/example_protobuf && make build RELEASE=$(RELEASE)
 
 build: build-rust build-python
 
@@ -26,7 +25,7 @@ format-rust:
 
 format-python:
 	@echo "Format fix in Python example_protobuf..."
-	@cd examples/example_protobuf && uv run ruff format --exclude sample
+	@cd examples/example_protobuf && uv run ruff format --exclude example_protobuf/pybindings
 
 format: format-rust format-python
 
@@ -36,7 +35,7 @@ check-rust:
 
 check-python:
 	@echo "Format check in Python example_protobuf..."
-	@cd examples/example_protobuf && uv run ruff check --exclude sample
+	@cd examples/example_protobuf && uv run ruff check --exclude example_protobuf/pybindings
 
 check: check-rust check-python
 

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::{create_dir_all, File};
+use std::fs::{create_dir_all, read_dir, File};
 use std::io::{Result, Write};
 use std::path::PathBuf;
 
@@ -282,40 +282,7 @@ impl<'a> MessageDescriptorWrapper<'a> {
         writeln!(buf, "#[cfg(feature = \"extension-module\")]")?;
         writeln!(buf, "#[::pyo3_polars::derive::polars_expr(output_type_func={fn_prefix}_encode_output)]")?;
         writeln!(buf, "fn {fn_prefix}_encode(inputs: &[::polars_protobuf::polars_core::prelude::Series]) -> ::polars_protobuf::polars_core::prelude::PolarsResult<::polars_protobuf::polars_core::prelude::Series> {{")?;
-        writeln!(buf, "    use ::polars_protobuf::ArrowMessage;")?;
-        writeln!(buf, "    use ::polars_protobuf::polars_structpath::{{ArrowBuffer, FromArrow, IntoArrow}};")?;
-        writeln!(buf, "    use ::polars_protobuf::rayon::prelude::*;")?;
-        writeln!(buf, "    use ::pyo3_polars::export::polars_core::POOL;")?;
-        writeln!(buf)?;
-        writeln!(buf, "    let series = inputs[0].clone();")?;
-        writeln!(buf, "    let name = series.name().clone();")?;
-        writeln!(buf)?;
-        writeln!(buf, "    let chunks = series.into_chunks();")?;
-        writeln!(buf, "    let encoded_chunks: Vec<Box<dyn ::polars_protobuf::polars_arrow::array::Array>> = chunks")?;
-        writeln!(buf, "        .into_iter()")?;
-        writeln!(buf, "        .map(|chunk| {{")?;
-        writeln!(buf, "            let messages = {message_name}::from_arrow_opt(chunk);")?;
-        writeln!(buf)?;
-        writeln!(buf, "            let encoded: Vec<Option<Vec<u8>>> = POOL.install(|| {{")?;
-        writeln!(buf, "                messages")?;
-        writeln!(buf, "                    .into_par_iter()")?;
-        writeln!(buf, "                    .map(|opt_msg| opt_msg.map(|msg| msg.encode_to_vec()))")?;
-        writeln!(buf, "                    .collect()")?;
-        writeln!(buf, "            }});")?;
-        writeln!(buf)?;
-        writeln!(buf, "            let mut buffer = <Vec<u8>>::new_buffer(encoded.len());")?;
-        writeln!(buf, "            for bytes in encoded {{")?;
-        writeln!(buf, "                match bytes {{")?;
-        writeln!(buf, "                    Some(b) => buffer.push(b),")?;
-        writeln!(buf, "                    None => buffer.push_null(),")?;
-        writeln!(buf, "                }}")?;
-        writeln!(buf, "            }}")?;
-        writeln!(buf)?;
-        writeln!(buf, "            Ok(Box::new(buffer.to_arrow()?) as Box<dyn ::polars_protobuf::polars_arrow::array::Array>)")?;
-        writeln!(buf, "        }})")?;
-        writeln!(buf, "        .collect::<::polars_protobuf::polars_core::prelude::PolarsResult<Vec<_>>>()?;")?;
-        writeln!(buf)?;
-        writeln!(buf, "    ::polars_protobuf::polars_core::prelude::Series::from_arrow_chunks(name, encoded_chunks)")?;
+        writeln!(buf, "    ::polars_protobuf::encode_series::<{message_name}>(inputs[0].clone())")?;
         writeln!(buf, "}}")?;
         writeln!(buf)?;
         // decode output type function
@@ -331,73 +298,7 @@ impl<'a> MessageDescriptorWrapper<'a> {
         writeln!(buf, "#[cfg(feature = \"extension-module\")]")?;
         writeln!(buf, "#[::pyo3_polars::derive::polars_expr(output_type_func={fn_prefix}_decode_output)]")?;
         writeln!(buf, "fn {fn_prefix}_decode(inputs: &[::polars_protobuf::polars_core::prelude::Series]) -> ::polars_protobuf::polars_core::prelude::PolarsResult<::polars_protobuf::polars_core::prelude::Series> {{")?;
-        writeln!(buf, "    use ::polars_protobuf::polars_arrow::array::Array as ArrowArray;")?;
-        writeln!(buf, "    use ::polars_protobuf::ArrowMessage;")?;
-        writeln!(buf, "    use ::polars_protobuf::polars_structpath::{{ArrowBuffer, IntoArrow}};")?;
-        writeln!(buf, "    use ::polars_protobuf::rayon::prelude::*;")?;
-        writeln!(buf, "    use ::pyo3_polars::export::polars_core::POOL;")?;
-        writeln!(buf)?;
-        writeln!(buf, "    let series = inputs[0].clone();")?;
-        writeln!(buf, "    let name = series.name().clone();")?;
-        writeln!(buf)?;
-        writeln!(buf, "    let chunks = series.into_chunks();")?;
-        writeln!(buf, "    let decoded_chunks: Vec<Box<dyn ArrowArray>> = chunks")?;
-        writeln!(buf, "        .into_iter()")?;
-        writeln!(buf, "        .map(|chunk| {{")?;
-        writeln!(buf, "            // Extract bytes from list array")?;
-        writeln!(buf, "            let list_array = chunk")?;
-        writeln!(buf, "                .as_any()")?;
-        writeln!(buf, "                .downcast_ref::<::polars_protobuf::polars_arrow::array::ListArray<i64>>()")?;
-        writeln!(buf, "                .or_else(|| {{")?;
-        writeln!(buf, "                    chunk")?;
-        writeln!(buf, "                        .as_any()")?;
-        writeln!(buf, "                        .downcast_ref::<::polars_protobuf::polars_arrow::array::ListArray<i32>>()")?;
-        writeln!(buf, "                        .map(|_| panic!(\"i32 offset not supported, use i64\"))")?;
-        writeln!(buf, "                }})")?;
-        writeln!(buf, "                .ok_or_else(|| {{")?;
-        writeln!(buf, "                    ::polars_protobuf::polars_core::prelude::PolarsError::ComputeError(")?;
-        writeln!(buf, "                        format!(\"Expected ListArray, got {{:?}}\", chunk.dtype()).into(),")?;
-        writeln!(buf, "                    )")?;
-        writeln!(buf, "                }})?;")?;
-        writeln!(buf)?;
-        writeln!(buf, "            let byte_slices: Vec<Option<Vec<u8>>> = list_array")?;
-        writeln!(buf, "                .iter()")?;
-        writeln!(buf, "                .map(|opt_array| {{")?;
-        writeln!(buf, "                    opt_array.map(|byte_array| {{")?;
-        writeln!(buf, "                        let primitive_array = byte_array")?;
-        writeln!(buf, "                            .as_any()")?;
-        writeln!(buf, "                            .downcast_ref::<::polars_protobuf::polars_arrow::array::PrimitiveArray<u8>>()")?;
-        writeln!(buf, "                            .expect(\"Expected PrimitiveArray<u8>\");")?;
-        writeln!(buf, "                        primitive_array.values().as_slice().to_vec()")?;
-        writeln!(buf, "                    }})")?;
-        writeln!(buf, "                }})")?;
-        writeln!(buf, "                .collect();")?;
-        writeln!(buf)?;
-        writeln!(buf, "            let decoded: Vec<Option<{message_name}>> = POOL.install(|| {{")?;
-        writeln!(buf, "                byte_slices")?;
-        writeln!(buf, "                    .into_par_iter()")?;
-        writeln!(buf, "                    .map(|opt_bytes| {{")?;
-        writeln!(buf, "                        opt_bytes.map(|bytes| {{")?;
-        writeln!(buf, "                            {message_name}::decode(bytes.as_slice())")?;
-        writeln!(buf, "                                .expect(\"Failed to decode protobuf message\")")?;
-        writeln!(buf, "                        }})")?;
-        writeln!(buf, "                    }})")?;
-        writeln!(buf, "                    .collect()")?;
-        writeln!(buf, "            }});")?;
-        writeln!(buf)?;
-        writeln!(buf, "            let mut buffer = {message_name}::new_buffer(decoded.len());")?;
-        writeln!(buf, "            for message in decoded {{")?;
-        writeln!(buf, "                match message {{")?;
-        writeln!(buf, "                    Some(msg) => buffer.push(msg),")?;
-        writeln!(buf, "                    None => buffer.push_null(),")?;
-        writeln!(buf, "                }}")?;
-        writeln!(buf, "            }}")?;
-        writeln!(buf)?;
-        writeln!(buf, "            Ok(Box::new(buffer.to_arrow()?) as Box<dyn ArrowArray>)")?;
-        writeln!(buf, "        }})")?;
-        writeln!(buf, "        .collect::<::polars_protobuf::polars_core::prelude::PolarsResult<Vec<_>>>()?;")?;
-        writeln!(buf)?;
-        writeln!(buf, "    ::polars_protobuf::polars_core::prelude::Series::from_arrow_chunks(name, decoded_chunks)")?;
+        writeln!(buf, "    ::polars_protobuf::decode_series::<{message_name}>(inputs[0].clone())")?;
         writeln!(buf, "}}")?;
         Ok(String::from_utf8(buf).expect("generated code is valid UTF-8"))
     }
@@ -650,6 +551,49 @@ impl BuildConfig {
         }
     }
 
+    /// Create a new build configuration from a proto directory.
+    ///
+    /// Automatically discovers all .proto files in the specified directory.
+    ///
+    /// # Arguments
+    /// * `out_dir` - Output directory for generated Rust code
+    /// * `proto_dir` - Directory containing .proto files
+    ///
+    /// # Returns
+    /// A BuildConfig with all discovered .proto files and the proto_dir as include path.
+    ///
+    /// # Errors
+    /// Returns an error if the directory cannot be read or contains no .proto files.
+    pub fn from_proto_dir(out_dir: PathBuf, proto_dir: &str) -> Result<Self> {
+        // Discover all .proto files
+        let proto_files: Vec<String> = read_dir(proto_dir)?
+            .filter_map(|entry| {
+                let entry = entry.ok()?;
+                let path = entry.path();
+                if path.extension().is_some_and(|ext| ext == "proto") {
+                    Some(path.to_string_lossy().to_string())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        if proto_files.is_empty() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("No .proto files found in {}", proto_dir),
+            ));
+        }
+
+        Ok(Self {
+            out_dir,
+            protos: proto_files,
+            includes: vec![proto_dir.to_string()],
+            python_package_path: None,
+            rust_lib_name: None,
+        })
+    }
+
     /// Enable Python package generation.
     ///
     /// # Arguments
@@ -696,9 +640,9 @@ impl BuildConfig {
             for message in &proto_file.message_type {
                 let wrapper = MessageDescriptorWrapper(message);
                 file_content.push(wrapper.build()?);
+                file_content.push(wrapper.build_dtype()?);
 
                 if generate_python {
-                    file_content.push(wrapper.build_dtype()?);
                     file_content.push(wrapper.build_polars_expr(package_name)?);
 
                     // Collect message info for Python generation
@@ -742,11 +686,4 @@ impl BuildConfig {
 
         Ok(())
     }
-}
-
-/// Build protobuf definitions (legacy API for backwards compatibility).
-///
-/// For new code, prefer using `BuildConfig` directly.
-pub fn build(out_dir: PathBuf, protos: &[&str], includes: &[&str]) -> Result<()> {
-    BuildConfig::new(out_dir, protos, includes).build()
 }

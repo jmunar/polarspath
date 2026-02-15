@@ -9,5 +9,5 @@ mod traits;
 #[cfg(feature = "build")]
 pub mod build;
 
-pub use base::{decode_expr, encode_expr, messages_to_series};
+pub use base::{decode_expr, decode_series, encode_expr, encode_series, messages_to_series};
 pub use traits::ArrowMessage;

@@ -9,7 +9,7 @@ fn main() -> Result<()> {
     let base_dir_str = std::env::var("OUT_DIR").map_err(Error::other)?;
     let base_dir = Path::new(&base_dir_str);
 
-    build::build(
+    let build_config = build::BuildConfig::new(
         base_dir.join("tests"),
         &[
             "tests/sample/empty.proto",
@@ -17,12 +17,15 @@ fn main() -> Result<()> {
             "tests/sample/string.proto",
         ],
         &["tests/sample/"],
-    )?;
-    build::build(
+    );
+    build_config.build()?;
+
+    let build_config = build::BuildConfig::new(
         base_dir.join("examples"),
         &["examples/benchmark.proto", "examples/round_trip.proto"],
         &["examples/"],
-    )?;
+    );
+    build_config.build()?;
 
     Ok(())
 }
