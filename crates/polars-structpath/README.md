@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Use with Polars
     let series = Series::from_arrow("person".into(), Box::new(array))?;
-    let df = DataFrame::new(vec![series.into()])?;
+    let df = DataFrame::new(series.len(), vec![series.into()])?;
     
     Ok(())
 }
@@ -251,7 +251,7 @@ buffer.push(Person { name: "Charlie".to_string(), age: 35 });
 
 let array = buffer.to_arrow().unwrap();
 let series = Series::from_arrow("person".into(), Box::new(array)).unwrap();
-let df = DataFrame::new(vec![series.into()]).unwrap();
+let df = DataFrame::new(series.len(), vec![series.into()]).unwrap();
 ```
 
 ## See Also

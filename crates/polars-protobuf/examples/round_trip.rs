@@ -72,7 +72,7 @@ fn main() -> PolarsResult<()> {
     println!("  len: {}", struct_series.len());
 
     // Step 3: Create a DataFrame with the struct Series
-    let df = DataFrame::new(vec![struct_series.into()])?;
+    let df = DataFrame::new(struct_series.len(), vec![struct_series.into()])?;
     println!("\nStep 3: Created DataFrame");
     println!("{}", df);
 

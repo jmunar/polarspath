@@ -128,7 +128,7 @@ fn roundtrip_lazy_api(input_series: &Series) -> PolarsResult<Series> {
 
     // Step 1: Create DataFrame from input Series
     let t0 = std::time::Instant::now();
-    let df = DataFrame::new(vec![input_series.clone().into()])?;
+    let df = DataFrame::new(input_series.len(), vec![input_series.clone().into()])?;
     total += print_time("1. Create DataFrame (Series -> DataFrame)", t0);
 
     // Step 2: Encode using lazy API (struct -> bytes)
